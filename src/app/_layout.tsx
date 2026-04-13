@@ -33,7 +33,7 @@ export default function RootLayout() {
     SplashScreen.hideAsync().catch(() => {});
 
     // Guard against redirecting before segments are ready
-    if (!segments || segments.length === 0) return;
+    if (!segments || (segments.length as number) === 0) return;
 
     // Check which group the user is currently trying to access
     const inAuthGroup = segments[0] === '(auth)';
