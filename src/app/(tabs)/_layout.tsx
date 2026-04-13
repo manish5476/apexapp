@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 
 import { HapticTab } from '@/src/components/haptic-tab';
 import { IconSymbol } from '@/src/components/ui/icon-symbol';
-import { Colors } from '@/src/constants/theme';
+import { Themes } from '@/src/constants/theme';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 
 export default function TabLayout() {
@@ -21,7 +21,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         // Now TypeScript knows themeKey is exactly 'light' or 'dark'
-        tabBarActiveTintColor: Colors[themeKey].tint,
+        tabBarActiveTintColor: Themes[themeKey].accentPrimary,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: Platform.select({
@@ -55,6 +55,15 @@ export default function TabLayout() {
           title: 'Explore',
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="paperplane.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="users/index"
+        options={{
+          title: 'Users',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="person.3.fill" color={color} />
           ),
         }}
       />

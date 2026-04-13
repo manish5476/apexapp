@@ -11,7 +11,7 @@ export interface User {
   phone: string;
   avatar?: string;
   organizationId: string;
-  branchId?: string;
+  branchId?: string | { _id: string; name: string };
   role?: any;
   isOwner: boolean;
   isSuperAdmin: boolean;
@@ -22,8 +22,8 @@ export interface User {
   maxConcurrentSessions?: number;
   employeeProfile?: {
     employeeId?: string;
-    departmentId?: any;
-    designationId?: any;
+    departmentId?: string | { _id: string; name: string };
+    designationId?: string | { _id: string; name: string };
     dateOfJoining?: Date;
     dateOfBirth?: Date;
     reportingManagerId?: string;
