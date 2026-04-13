@@ -3,10 +3,18 @@
 { pkgs, ... }: {
   # Which nixpkgs channel to use.
   channel = "stable-25.05";
+  
   # Use https://search.nixos.org/packages to find packages
-  packages = [ pkgs.nodejs_20 ];
+  packages = [ 
+    pkgs.nodejs_20 
+    pkgs.tree       # <-- Added tree
+    pkgs.curl       # <-- Added curl (great for testing APIs)
+    pkgs.jq         # <-- Added jq (great for parsing JSON in the terminal)
+  ];
+  
   # Sets environment variables in the workspace
   env = { EXPO_USE_FAST_RESOLVER = 1; };
+  
   idx = {
     # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
     extensions = [
