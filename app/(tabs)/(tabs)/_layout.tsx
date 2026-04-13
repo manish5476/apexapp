@@ -9,7 +9,7 @@ import { useColorScheme } from '@/src/hooks/use-color-scheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-
+  
   /**
    * Narrowing the type: 'colorScheme' can be 'light' | 'dark' | null | undefined.
    * By forcing it to 'dark' or 'light', we ensure it matches the keys in 
@@ -26,6 +26,7 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarStyle: Platform.select({
           ios: {
+            // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
           },
           default: {},
@@ -41,29 +42,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="customers/index"
-        options={{
-          title: 'CRM',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.2.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="explore"
         options={{
           title: 'Explore',
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="paperplane.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
           ),
         }}
       />

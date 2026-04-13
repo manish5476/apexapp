@@ -1,10 +1,10 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { router, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
-import { useAuthStore } from '../store/auth.store';
-import { useAppTheme } from '../hooks/use-app-theme';
+import { useAppTheme } from '../src/hooks/use-app-theme';
+import { useAuthStore } from '../src/store/auth.store';
 
 // Prevent the splash screen from auto-hiding before auth is checked
 SplashScreen.preventAutoHideAsync();

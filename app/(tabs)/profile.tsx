@@ -2,10 +2,10 @@ import React from 'react';
 import { StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '../../components/themed-text';
-import { ThemedView } from '../../components/themed-view';
-import { ThemeSelector } from '../../components/ThemeSelector';
-import { Spacing } from '../../constants/theme';
+import { ThemedText } from '../../src/components/themed-text';
+import { ThemedView } from '../../src/components/themed-view';
+import { ThemeSelector } from '../../src/components/ThemeSelector';
+import { Spacing } from '../../src/constants/theme';
 
 export default function ProfileScreen() {
   return (

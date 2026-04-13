@@ -1,53 +1,364 @@
+import { StyleSheet } from 'react-native';
+
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * 1. TYPOGRAPHY (Fluid-inspired Mobile Scale)
  */
-
-import { Platform } from 'react-native';
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+export const Typography = {
+  size: {
+    xs: 11,
+    sm: 12,
+    base: 13,
+    md: 14,
+    lg: 15,
+    xl: 16,
+    '2xl': 18,
+    '3xl': 22,
+    '4xl': 28,
+    '5xl': 36,
   },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+  weight: {
+    light: '300',
+    normal: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  } as const,
+};
+
+/**
+ * 2. SPACING
+ */
+export const Spacing = {
+  xs: 4,
+  sm: 6,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  '2xl': 24,
+  '3xl': 32,
+  '4xl': 44,
+  '5xl': 56,
+};
+
+/**
+ * 3. UI CONSTANTS
+ */
+export const UI = {
+  borderRadius: {
+    sm: 6,
+    md: 10,
+    lg: 18,
+    xl: 24,
+    pill: 9999,
+  },
+  borderWidth: {
+    thin: 1,
+    base: 2,
   },
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+/**
+ * 4. THEME COLLECTION (APEX CRM v2.0)
+ */
+
+export const Themes = {
+  light: {
+    name: 'Light Default',
+    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter' },
+    bgPrimary: '#ffffff',
+    bgSecondary: '#f8fafc',
+    bgTernary: '#f1f5f9',
+    textPrimary: '#0f172a',
+    textSecondary: '#334155',
+    textTertiary: '#64748b',
+    textLabel: '#94a3b8',
+    borderPrimary: '#e2e8f0',
+    borderSecondary: '#cbd5e1',
+    accentPrimary: '#2563eb',
+    accentSecondary: '#3b82f6',
+    accentHover: '#1d4ed8',
+    success: '#059669',
+    warning: '#d97706',
+    error: '#dc2626',
+    info: '#0284c7',
+    disabled: '#f1f5f9',
+    disabledText: '#94a3b8',
+    elevationShadow: 'rgba(15, 23, 42, 0.07)',
   },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+
+  dark: {
+    name: 'Dark Default',
+    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter' },
+    bgPrimary: '#08080a',
+    bgSecondary: '#111113',
+    bgTernary: '#1c1c1f',
+    textPrimary: '#f4f4f5',
+    textSecondary: '#a1a1aa',
+    textTertiary: '#71717a',
+    textLabel: '#52525b',
+    borderPrimary: '#27272a',
+    borderSecondary: '#3f3f46',
+    accentPrimary: '#818cf8',
+    accentSecondary: '#a5b4fc',
+    accentHover: '#4f46e5',
+    success: '#34d399',
+    warning: '#fbbf24',
+    error: '#f87171',
+    info: '#60a5fa',
+    disabled: '#1c1c1f',
+    disabledText: '#52525b',
+    elevationShadow: 'rgba(0, 0, 0, 0.4)',
   },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+
+  ivory: {
+    name: 'Ivory',
+    fonts: { heading: 'Playfair Display', body: 'Inter' },
+    bgPrimary: '#fdfaf5',
+    bgSecondary: '#f7f2ea',
+    bgTernary: '#ede5d8',
+    textPrimary: '#231f1b',
+    textSecondary: '#4a4440',
+    textTertiary: '#7a706a',
+    textLabel: '#a89f99',
+    borderPrimary: '#e0d8ce',
+    borderSecondary: '#cec4ba',
+    accentPrimary: '#a84e33',
+    accentSecondary: '#c97055',
+    accentHover: '#8b3a22',
+    success: '#3a7553',
+    warning: '#b06a10',
+    error: '#a83224',
+    info: '#3a6880',
+    disabled: '#ede5d8',
+    disabledText: '#a89f99',
+    elevationShadow: 'rgba(35, 31, 27, 0.07)',
   },
-});
+
+  aurora: {
+    name: 'Aurora',
+    fonts: { heading: 'Outfit', body: 'Inter' },
+    bgPrimary: '#f9fbfd',
+    bgSecondary: '#f0f5f9',
+    bgTernary: '#e4ecf3',
+    textPrimary: '#0f2033',
+    textSecondary: '#365068',
+    textTertiary: '#5e7d94',
+    textLabel: '#92afc0',
+    borderPrimary: '#d8e4ed',
+    borderSecondary: '#c4d4e0',
+    accentPrimary: '#2e5fa3',
+    accentSecondary: '#5b88c4',
+    accentHover: '#1e4a8a',
+    success: '#2d8a58',
+    warning: '#b87020',
+    error: '#c02a2a',
+    info: '#1c6aaa',
+    disabled: '#e4ecf3',
+    disabledText: '#92afc0',
+    elevationShadow: 'rgba(46, 95, 163, 0.08)',
+  },
+
+  verdant: {
+    name: 'Verdant',
+    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter' },
+    bgPrimary: '#f8fdf8',
+    bgSecondary: '#eef7ee',
+    bgTernary: '#dfeede',
+    textPrimary: '#122012',
+    textSecondary: '#2e4e2e',
+    textTertiary: '#527252',
+    textLabel: '#88a888',
+    borderPrimary: '#cce5cc',
+    borderSecondary: '#b5d4b5',
+    accentPrimary: '#1f5c1f',
+    accentSecondary: '#4ea04e',
+    accentHover: '#145014',
+    success: '#1a6840',
+    warning: '#8a5c10',
+    error: '#a02020',
+    info: '#1a5898',
+    disabled: '#dfeede',
+    disabledText: '#88a888',
+    elevationShadow: 'rgba(31, 92, 31, 0.08)',
+  },
+
+  coastal: {
+    name: 'Coastal Command',
+    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter' },
+    bgPrimary: '#f3f7f9',
+    bgSecondary: '#ffffff',
+    bgTernary: '#e2ecf1',
+    textPrimary: '#072530',
+    textSecondary: '#1a4d5e',
+    textTertiary: '#427888',
+    textLabel: '#7aaab8',
+    borderPrimary: 'rgba(13,148,136,0.22)',
+    borderSecondary: 'rgba(13,148,136,0.1)',
+    accentPrimary: '#0a857a',
+    accentSecondary: '#0fb3a4',
+    accentHover: '#076e64',
+    success: '#047857',
+    warning: '#9a5c00',
+    error: '#b81818',
+    info: '#0260a8',
+    disabled: '#e2ecf1',
+    disabledText: '#94a3b8',
+    elevationShadow: 'rgba(10, 133, 122, 0.09)',
+  },
+
+  warm: {
+    name: 'Warm Meridian',
+    fonts: { heading: 'Cormorant Garamond', body: 'Plus Jakarta Sans' },
+    bgPrimary: '#faf8f3',
+    bgSecondary: '#ffffff',
+    bgTernary: '#f0ece2',
+    textPrimary: '#162526',
+    textSecondary: '#2e4e4e',
+    textTertiary: '#567070',
+    textLabel: '#8aadad',
+    borderPrimary: 'rgba(10,124,114,0.18)',
+    borderSecondary: 'rgba(10,124,114,0.08)',
+    accentPrimary: '#08726a',
+    accentSecondary: '#0b9488',
+    accentHover: '#065c55',
+    success: '#2d7a52',
+    warning: '#8a5808',
+    error: '#9a2018',
+    info: '#0a5280',
+    disabled: '#ede9e3',
+    disabledText: '#a3a099',
+    elevationShadow: 'rgba(8, 114, 106, 0.07)',
+  },
+
+  daylight: {
+    name: 'Daylight Orange',
+    fonts: { heading: 'Space Grotesk', body: 'Inter' },
+    bgPrimary: '#f5f8fc',
+    bgSecondary: '#ffffff',
+    bgTernary: '#eaeff8',
+    textPrimary: '#00093a',
+    textSecondary: '#16306a',
+    textTertiary: '#3d5888',
+    textLabel: '#7090c0',
+    borderPrimary: 'rgba(234,88,12,0.24)',
+    borderSecondary: 'rgba(0,9,58,0.08)',
+    accentPrimary: '#e86510',
+    accentSecondary: '#f68934',
+    accentHover: '#c94e00',
+    success: '#047857',
+    warning: '#9c5400',
+    error: '#b81818',
+    info: '#0360a0',
+    disabled: '#e8edf6',
+    disabledText: '#94a3b8',
+    elevationShadow: 'rgba(0, 9, 58, 0.07)',
+  },
+
+  naval: {
+    name: 'Naval Dawn',
+    fonts: { heading: 'Playfair Display', body: 'Montserrat' },
+    bgPrimary: '#edf2f8',
+    bgSecondary: '#f9fbfd',
+    bgTernary: '#dce6f0',
+    textPrimary: '#00162e',
+    textSecondary: '#122a4a',
+    textTertiary: '#385a78',
+    textLabel: '#5e88a8',
+    borderPrimary: 'rgba(220,165,0,0.3)',
+    borderSecondary: 'rgba(0,22,46,0.08)',
+    accentPrimary: '#c49600',
+    accentSecondary: '#ddb200',
+    accentHover: '#9a7400',
+    success: '#0a7a4a',
+    warning: '#a86000',
+    error: '#b81818',
+    info: '#0e50a0',
+    disabled: '#ccd5e8',
+    disabledText: '#64748b',
+    elevationShadow: 'rgba(0, 22, 46, 0.08)',
+  },
+
+  sand: {
+    name: 'Sand Dune',
+    fonts: { heading: 'Fraunces', body: 'Inter' },
+    bgPrimary: '#faf4ea',
+    bgSecondary: '#f4e8d0',
+    bgTernary: '#e8d4b4',
+    textPrimary: '#2a1c0a',
+    textSecondary: '#5c3c18',
+    textTertiary: '#8c6040',
+    textLabel: '#b89070',
+    borderPrimary: 'rgba(160,100,40,0.2)',
+    borderSecondary: 'rgba(160,100,40,0.09)',
+    accentPrimary: '#b06020',
+    accentSecondary: '#d08040',
+    accentHover: '#884800',
+    success: '#3a7050',
+    warning: '#8a5808',
+    error: '#903018',
+    info: '#2050a0',
+    disabled: '#e8d4b4',
+    disabledText: '#b89070',
+    elevationShadow: 'rgba(42, 28, 10, 0.08)',
+  },
+
+  sakura: {
+    name: 'Sakura',
+    fonts: { heading: 'Cormorant Garamond', body: 'Plus Jakarta Sans' },
+    bgPrimary: '#fdf8f8',
+    bgSecondary: '#faeef0',
+    bgTernary: '#f4e0e4',
+    textPrimary: '#1e1018',
+    textSecondary: '#4a2838',
+    textTertiary: '#7a5068',
+    textLabel: '#b08898',
+    borderPrimary: 'rgba(220,100,130,0.18)',
+    borderSecondary: 'rgba(220,100,130,0.08)',
+    accentPrimary: '#c45070',
+    accentSecondary: '#e07090',
+    accentHover: '#a03050',
+    success: '#3d8060',
+    warning: '#a07028',
+    error: '#b02040',
+    info: '#3060a0',
+    disabled: '#f4e0e4',
+    disabledText: '#b08898',
+    elevationShadow: 'rgba(30, 16, 24, 0.06)',
+  },
+};
+
+export type ThemeType = keyof typeof Themes;
+export type ThemeColors = typeof Themes.light;
+
+/**
+ * 5. HELPER FOR SHADOWS (Elevation mapping)
+ */
+export const getElevation = (level: 1 | 2 | 3, theme: ThemeColors) => {
+  const shadowColor = theme.elevationShadow;
+
+  const shadows = {
+    1: {
+      shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    2: {
+      shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 10,
+      elevation: 4,
+    },
+    3: {
+      shadowColor,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 20,
+      elevation: 8,
+    },
+  };
+
+  return shadows[level];
+};

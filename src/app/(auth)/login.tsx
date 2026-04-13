@@ -1,23 +1,43 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
   Platform, ScrollView,
-  Text, TextInput, TouchableOpacity,
+  StyleSheet,
+  TextInput, TouchableOpacity,
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { AuthService } from '../../api/authService';
+import { ThemedText } from '../../components/themed-text';
+import { ThemedView } from '../../components/themed-view';
 import { useAuthStore } from '../../store/auth.store';
 
+const ALLOWED_DOMAINS = ['gmail.com', 'outlook.com', 'proton.me', 'protonmail.me', 'yahoo.com', 'icloud.com', 'hotmail.com'];
+
 const loginSchema = z.object({
-  email: z.string().min(1, 'Email is required'),
+  email: z.string()
+    .min(1, 'Email or phone is required')
+    .refine((val) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const phoneRegex = /^\+?[0-9]{7,15}$/;
+      if (emailRegex.test(val)) {
+        const domain = val.split('@')[1]?.toLowerCase();
+        return ALLOWED_DOMAINS.includes(domain);
+      }
+      return phoneRegex.test(val);
+    }, {
+      message: 'Invalid email domain or phone number'
+    }),
   uniqueShopId: z.string().min(1, 'Shop ID is required'),
   password: z.string().min(1, 'Password is required'),
-  remember: z.boolean(),  // ← no .default(), no .optional()
+  remember: z.boolean(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -26,161 +46,286 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showConcurrencyModal, setShowConcurrencyModal] = useState(false);
+  const [activeSessions, setActiveSessions] = useState<any[]>([]);
   const { setAuth } = useAuthStore();
 
-  const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+  const { control, handleSubmit, formState: { errors }, getValues } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', uniqueShopId: '', password: '', remember: false }  });
+    defaultValues: { email: '', uniqueShopId: '', password: '', remember: false }
+  });
 
   const onSubmit = async (data: LoginFormData, forceLogout: boolean = false) => {
     setErrorMessage(null);
     setIsLoading(true);
+    setShowConcurrencyModal(false);
     try {
       const response = await AuthService.login({ ...data, forceLogout });
-      setAuth(response.token, response.data.user);
-      router.replace('/(tabs)' as any);
+      await setAuth(response.token, response.data.user, response.data.organization, response.data.session);
+      router.replace('/(tabs)');
     } catch (err: any) {
-      if (err.response?.status === 409 && err.response?.data?.code === 'SESSION_CONCURRENCY_LIMIT') {
-        Alert.alert(
-          "Session Limit Reached",
-          err.response?.data?.message || "Maximum concurrent sessions reached. Logout from other devices?",
-          [
-            { text: "Cancel", style: "cancel" },
-            { text: "Yes, Logout Others", onPress: () => onSubmit(data, true) }
-          ]
-        );
+      const errorData = err.response?.data;
+      if (err.response?.status === 409 && errorData?.code === 'SESSION_CONCURRENCY_LIMIT') {
+        setActiveSessions(errorData.data?.sessions || []);
+        setShowConcurrencyModal(true);
         return;
       }
-      setErrorMessage(err.response?.data?.message || 'Invalid credentials. Please try again.');
+      setErrorMessage(errorData?.message || 'Invalid credentials. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleForceLogout = () => {
+    const values = getValues();
+    onSubmit(values as unknown as LoginFormData, true);
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
+    <ThemedView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
 
-          <View style={{ marginBottom: 32 }}>
-            <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#111827', marginBottom: 8 }}>Sign in to Apex</Text>
-            <Text style={{ color: '#4B5563', fontSize: 16 }}>Enter your credentials to continue</Text>
-          </View>
+            <ThemedView style={styles.header}>
+              <ThemedText type="title" style={styles.title}>Sign in</ThemedText>
+              <ThemedText style={styles.subtitle}>Welcome back to Workspace 2.0</ThemedText>
+            </ThemedView>
 
-          {errorMessage && (
-            <View style={{ backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', borderWidth: 1, padding: 16, borderRadius: 8, marginBottom: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: '#B91C1C', flex: 1, marginRight: 8 }}>{errorMessage}</Text>
-              <TouchableOpacity onPress={() => setErrorMessage(null)}>
-                <Text style={{ color: '#B91C1C', fontSize: 20, fontWeight: 'bold' }}>×</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={{ gap: 20, borderWidth: 1, borderColor: '#E5E7EB', padding: 24, borderRadius: 12, backgroundColor: 'white' }}>
-
-            {/* Email */}
-            <View>
-              <Text style={{ color: '#1F2937', marginBottom: 8, fontWeight: '600' }}>Email or Phone</Text>
-              <Controller control={control} name="email"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={{ height: 48, paddingHorizontal: 16, borderRadius: 8, borderWidth: focusedField === 'email' ? 2 : 1, borderColor: focusedField === 'email' ? '#2563EB' : errors.email ? '#EF4444' : '#D1D5DB', backgroundColor: 'white', color: '#111827' }}
-                    placeholder="name@company.com" placeholderTextColor="#9CA3AF"
-                    onBlur={() => { onBlur(); setFocusedField(null); }}
-                    onFocus={() => setFocusedField('email')}
-                    onChangeText={onChange} value={value}
-                    autoCapitalize="none" keyboardType="email-address"
-                  />
-                )}
-              />
-              {errors.email && <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 4 }}>{errors.email.message}</Text>}
-            </View>
-
-            {/* Shop ID */}
-            <View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ color: '#1F2937', fontWeight: '600' }}>Shop ID</Text>
-              </View>
-              <Controller control={control} name="uniqueShopId"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={{ height: 48, paddingHorizontal: 16, borderRadius: 8, borderWidth: focusedField === 'shopId' ? 2 : 1, borderColor: focusedField === 'shopId' ? '#2563EB' : errors.uniqueShopId ? '#EF4444' : '#D1D5DB', backgroundColor: 'white', color: '#111827' }}
-                    placeholder="SHOP-1042" placeholderTextColor="#9CA3AF"
-                    autoCapitalize="characters"
-                    onBlur={() => { onBlur(); setFocusedField(null); }}
-                    onFocus={() => setFocusedField('shopId')}
-                    onChangeText={onChange} value={value}
-                  />
-                )}
-              />
-              {errors.uniqueShopId && <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 4 }}>{errors.uniqueShopId.message}</Text>}
-            </View>
-
-            {/* Password */}
-            <View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ color: '#1F2937', fontWeight: '600' }}>Password</Text>
-                <Link href={'/(auth)/forgot-password' as any} asChild>
-                <TouchableOpacity>
-                    <Text style={{ color: '#2563EB', fontSize: 14 }}>Forgot?</Text>
-                  </TouchableOpacity>
-                </Link>
-              </View>
-              <Controller control={control} name="password"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={{ height: 48, paddingHorizontal: 16, borderRadius: 8, borderWidth: focusedField === 'password' ? 2 : 1, borderColor: focusedField === 'password' ? '#2563EB' : errors.password ? '#EF4444' : '#D1D5DB', backgroundColor: 'white', color: '#111827' }}
-                    placeholder="••••••••" placeholderTextColor="#9CA3AF"
-                    secureTextEntry
-                    onBlur={() => { onBlur(); setFocusedField(null); }}
-                    onFocus={() => setFocusedField('password')}
-                    onChangeText={onChange} value={value}
-                  />
-                )}
-              />
-              {errors.password && <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 4 }}>{errors.password.message}</Text>}
-            </View>
-
-            {/* Remember Me */}
-            <Controller control={control} name="remember"
-              render={({ field: { onChange, value } }) => (
-                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }} onPress={() => onChange(!value)} activeOpacity={0.7}>
-                  <View style={{ width: 20, height: 20, borderWidth: 1, borderRadius: 4, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: value ? '#2563EB' : 'white', borderColor: value ? '#2563EB' : '#9CA3AF' }}>
-                    {value && <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>✓</Text>}
-                  </View>
-                  <Text style={{ color: '#374151', fontWeight: '500' }}>Keep me signed in for 30 days</Text>
+            {errorMessage && (
+              <View style={styles.errorBanner}>
+                <Ionicons name="alert-circle" size={20} color="#B91C1C" />
+                <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
+                <TouchableOpacity onPress={() => setErrorMessage(null)}>
+                  <Ionicons name="close" size={20} color="#B91C1C" />
                 </TouchableOpacity>
-              )}
-            />
+              </View>
+            )}
 
-            {/* Submit */}
-            <TouchableOpacity
-              style={{ height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 16, flexDirection: 'row', backgroundColor: isLoading ? '#93C5FD' : '#2563EB' }}
-              onPress={handleSubmit((data) => onSubmit(data, false))}
-              disabled={isLoading} activeOpacity={0.8}
-            >
-              {isLoading ? (
-                <>
-                  <ActivityIndicator color="white" style={{ marginRight: 8 }} />
-                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Signing in...</Text>
-                </>
-              ) : (
-                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Sign in</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+            <View style={styles.formCard}>
+              {/* Email / Phone Field */}
+              <View style={styles.fieldGroup}>
+                <ThemedText style={styles.label}>EMAIL OR PHONE</ThemedText>
+                <Controller control={control} name="email"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={[styles.input, focusedField === 'email' && styles.inputFocused, errors.email && styles.inputError]}
+                      placeholder="name@company.com" placeholderTextColor="#9CA3AF"
+                      onBlur={() => { onBlur(); setFocusedField(null); }}
+                      onFocus={() => setFocusedField('email')}
+                      onChangeText={onChange} value={value}
+                      autoCapitalize="none" keyboardType="email-address"
+                    />
+                  )}
+                />
+                {errors.email && <ThemedText style={styles.helperTextError}>{errors.email.message}</ThemedText>}
+              </View>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 32 }}>
-            <Text style={{ color: '#4B5563' }}>No account? </Text>
-            <Link href={'/(auth)/register' as any} asChild>
-            <TouchableOpacity>
-                <Text style={{ color: '#2563EB', fontWeight: 'bold' }}>Start your free trial</Text>
+              {/* Shop ID Field */}
+              <View style={styles.fieldGroup}>
+                <ThemedText style={styles.label}>SHOP ID</ThemedText>
+                <Controller control={control} name="uniqueShopId"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={[styles.input, focusedField === 'shopId' && styles.inputFocused, errors.uniqueShopId && styles.inputError]}
+                      placeholder="e.g. SHOP-1042" placeholderTextColor="#9CA3AF"
+                      autoCapitalize="characters"
+                      onBlur={() => { onBlur(); setFocusedField(null); }}
+                      onFocus={() => setFocusedField('shopId')}
+                      onChangeText={onChange} value={value}
+                    />
+                  )}
+                />
+                {errors.uniqueShopId && <ThemedText style={styles.helperTextError}>{errors.uniqueShopId.message}</ThemedText>}
+              </View>
+
+              {/* Password Field */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.labelRow}>
+                  <ThemedText style={styles.label}>PASSWORD</ThemedText>
+                  <Link href={'/(auth)/forgot-password' as any} asChild>
+                    <TouchableOpacity>
+                      <ThemedText style={styles.linkText}>Forgot?</ThemedText>
+                    </TouchableOpacity>
+                  </Link>
+                </View>
+                <Controller control={control} name="password"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <View style={styles.passwordContainer}>
+                      <TextInput
+                        style={[styles.input, { flex: 1 }, focusedField === 'password' && styles.inputFocused, errors.password && styles.inputError]}
+                        placeholder="••••••••" placeholderTextColor="#9CA3AF"
+                        secureTextEntry
+                        onBlur={() => { onBlur(); setFocusedField(null); }}
+                        onFocus={() => setFocusedField('password')}
+                        onChangeText={onChange} value={value}
+                      />
+                    </View>
+                  )}
+                />
+                {errors.password && <ThemedText style={styles.helperTextError}>{errors.password.message}</ThemedText>}
+              </View>
+
+              {/* Remember Me */}
+              <Controller control={control} name="remember"
+                render={({ field: { onChange, value } }) => (
+                  <TouchableOpacity style={styles.checkboxRow} onPress={() => onChange(!value)} activeOpacity={0.7}>
+                    <View style={[styles.checkbox, value && styles.checkboxChecked]}>
+                      {value && <Ionicons name="checkmark" size={14} color="white" />}
+                    </View>
+                    <ThemedText style={styles.checkboxLabel}>Keep me signed in for 30 days</ThemedText>
+                  </TouchableOpacity>
+                )}
+              />
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[styles.submitBtn, isLoading && styles.submitBtnDisabled]}
+                onPress={handleSubmit((data) => onSubmit(data as unknown as LoginFormData, false))}
+                disabled={isLoading} activeOpacity={0.8}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <ThemedText style={styles.submitBtnText}>Sign in</ThemedText>
+                    <Ionicons name="arrow-forward" size={18} color="white" />
+                  </>
+                )}
               </TouchableOpacity>
-            </Link>
-          </View>
+            </View>
 
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            <View style={styles.footer}>
+              <ThemedText>No account? </ThemedText>
+              <Link href={'/(auth)/register' as any} asChild>
+                <TouchableOpacity>
+                  <ThemedText style={[styles.linkText, { fontWeight: 'bold' }]}>Start free trial</ThemedText>
+                </TouchableOpacity>
+              </Link>
+            </View>
+
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      {/* Concurrent Session Modal */}
+      <Modal
+        visible={showConcurrencyModal}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="warning-outline" size={32} color="#E8622A" />
+            </View>
+            <ThemedText type="subtitle" style={styles.modalTitle}>Session Limit Reached</ThemedText>
+            <ThemedText style={styles.modalSub}>You are currently logged in on another device. Logging in here will terminate your other session.</ThemedText>
+
+            <View style={styles.sessionList}>
+              {activeSessions.map((session, idx) => (
+                <View key={idx} style={styles.sessionCard}>
+                  < Ionicons name="desktop-outline" size={20} color="#6B7280" />
+                  <View style={styles.sessionInfo}>
+                    <ThemedText style={styles.sessionText}>{session.browser} on {session.os}</ThemedText>
+                    <ThemedText style={styles.sessionSubText}>IP: {session.ip}</ThemedText>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalBtnSecondary} onPress={() => setShowConcurrencyModal(false)}>
+                <ThemedText style={styles.modalBtnTextSecondary}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalBtnPrimary} onPress={handleForceLogout}>
+                <ThemedText style={styles.modalBtnTextPrimary}>Logout Ohers</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+    </ThemedView>
   );
 }
+
+const styles = StyleSheet.create({
+  header: { marginBottom: 40 },
+  title: { fontSize: 32, fontWeight: '800', color: '#0A0A0A', letterSpacing: -1 },
+  subtitle: { fontSize: 16, color: '#737066', marginTop: 4 },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  errorText: { color: '#B91C1C', fontSize: 14, flex: 1 },
+  formCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    gap: 24,
+    borderWidth: 1,
+    borderColor: '#E5E3DE',
+
+    elevation: 2
+  },
+  fieldGroup: { gap: 8 },
+  label: { fontSize: 11, fontWeight: '700', color: '#0A0A0A', letterSpacing: 1 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  input: {
+    height: 52,
+    backgroundColor: '#FAFAFA',
+    borderWidth: 1,
+    borderColor: '#E5E3DE',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#0A0A0A'
+  },
+  inputFocused: { borderColor: '#E8622A', backgroundColor: 'white' },
+  inputError: { borderColor: '#EF4444' },
+  helperTextError: { color: '#EF4444', fontSize: 12 },
+  passwordContainer: { position: 'relative' },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
+  checkbox: { width: 20, height: 20, borderWidth: 1.5, borderColor: '#D1D5DB', borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  checkboxChecked: { backgroundColor: '#E8622A', borderColor: '#E8622A' },
+  checkboxLabel: { fontSize: 14, color: '#737066' },
+  submitBtn: {
+    height: 54,
+    backgroundColor: '#E8622A',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 8
+  },
+  submitBtnDisabled: { opacity: 0.6 },
+  submitBtnText: { color: 'white', fontSize: 16, fontWeight: '700' },
+  linkText: { color: '#E8622A', fontSize: 14 },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 40, gap: 4 },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
+  modalContent: { backgroundColor: 'white', borderRadius: 20, padding: 24, alignItems: 'center' },
+  modalIcon: { width: 64, height: 64, backgroundColor: '#FEF3F2', borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: '#0A0A0A', marginBottom: 8, textAlign: 'center' },
+  modalSub: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  sessionList: { width: '100%', gap: 12, marginBottom: 24 },
+  sessionCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' },
+  sessionInfo: { flex: 1 },
+  sessionText: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  sessionSubText: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  modalActions: { flexDirection: 'row', gap: 12, width: '100%' },
+  modalBtnSecondary: { flex: 1, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  modalBtnPrimary: { flex: 1, height: 48, backgroundColor: '#E8622A', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  modalBtnTextSecondary: { fontWeight: '600', color: '#374151' },
+  modalBtnTextPrimary: { fontWeight: '600', color: 'white' }
+});

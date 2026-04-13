@@ -1,105 +1,78 @@
-import * as SecureStore from 'expo-secure-store';
+import { Storage } from '../utils/storage';
 import { create } from 'zustand';
 
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  role?: any;
-  organization?: string;
-  [key: string]: any;
-}
-
 interface AuthState {
-  token: string | null;
-  user: User | null;
   isAuthenticated: boolean;
-  isHydrated: boolean; // ← true once we've checked SecureStore on boot
-
-  // Actions
-  setAuth: (token: string, user: User) => void;
+  isHydrated: boolean;
+  token: string | null;
+  user: any | null;
+  organization: any | null;
+  session: any | null;
+  initialize: () => Promise<void>;
+  setAuth: (token: string, user: any, organization: any, session: any) => void;
   clearAuth: () => void;
-  initialize: () => Promise<void>; // ← call once from root layout
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
-  user: null,
   isAuthenticated: false,
   isHydrated: false,
+  token: null,
+  user: null,
+  organization: null,
+  session: null,
 
-  /**
-   * Called on app boot from root _layout.tsx.
-   * Reads token + user from SecureStore and hydrates the store.
-   */
   initialize: async () => {
     try {
-      const token = await SecureStore.getItemAsync('apex_auth_token');
-      const userRaw = await SecureStore.getItemAsync('apex_current_user');
-      const user: User | null = userRaw ? JSON.parse(userRaw) : null;
+      const token = await Storage.getItemAsync('apex_auth_token');
+      const userStr = await Storage.getItemAsync('apex_current_user');
+      const orgStr = await Storage.getItemAsync('apex_organization');
+      const sessionStr = await Storage.getItemAsync('apex_session');
 
-      if (token && user) {
-        set({ token, user, isAuthenticated: true, isHydrated: true });
+      if (token && userStr) {
+        set({
+          isAuthenticated: true,
+          token,
+          user: JSON.parse(userStr),
+          organization: orgStr ? JSON.parse(orgStr) : null,
+          session: sessionStr ? JSON.parse(sessionStr) : null,
+          isHydrated: true
+        });
       } else {
-        set({ token: null, user: null, isAuthenticated: false, isHydrated: true });
+        set({ isAuthenticated: false, isHydrated: true });
       }
-    } catch (e) {
-      // SecureStore failure — treat as logged out but still mark hydrated
-      console.error('Auth hydration error:', e);
-      set({ token: null, user: null, isAuthenticated: false, isHydrated: true });
+    } catch (error) {
+      console.error("Failed to hydrate auth", error);
+      set({ isHydrated: true, isAuthenticated: false });
     }
   },
 
-  /**
-   * Called after a successful login.
-   */
-  setAuth: (token, user) => {
-    set({ token, user, isAuthenticated: true });
+  setAuth: async (token, user, organization, session) => {
+    try {
+      await Storage.setItemAsync('apex_auth_token', token);
+      await Storage.setItemAsync('apex_current_user', JSON.stringify(user));
+      if (organization) await Storage.setItemAsync('apex_organization', JSON.stringify(organization));
+      if (session) await Storage.setItemAsync('apex_session', JSON.stringify(session));
+      
+      set({ isAuthenticated: true, token, user, organization, session });
+    } catch (error) {
+      console.error("Failed to persist auth", error);
+    }
   },
 
-  /**
-   * Called on logout or 401.
-   */
   clearAuth: () => {
-    set({ token: null, user: null, isAuthenticated: false });
+    set({ isAuthenticated: false, token: null, user: null, organization: null, session: null });
   },
+
+  logout: async () => {
+    try {
+      await Storage.deleteItemAsync('apex_auth_token');
+      await Storage.deleteItemAsync('apex_current_user');
+      await Storage.deleteItemAsync('apex_organization');
+      await Storage.deleteItemAsync('apex_session');
+      set({ isAuthenticated: false, token: null, user: null, organization: null, session: null });
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  }
 }));
-
-// import * as SecureStore from 'expo-secure-store';
-// import { create } from 'zustand';
-
-// interface AuthState {
-//   token: string | null;
-//   user: any | null;
-//   isAuthenticated: boolean;
-//   setAuth: (token: string, user: any) => void;
-//   clearAuth: () => void;
-//   loadFromStorage: () => Promise<void>;
-// }
-
-// export const useAuthStore = create<AuthState>((set) => ({
-//   token: null,
-//   user: null,
-//   isAuthenticated: false,
-
-//   setAuth: (token, user) => {
-//     set({ token, user, isAuthenticated: true });
-//   },
-
-//   clearAuth: () => {
-//     set({ token: null, user: null, isAuthenticated: false });
-//   },
-
-//   loadFromStorage: async () => {
-//     try {
-//       const token = await SecureStore.getItemAsync('apex_auth_token');
-//       const userStr = await SecureStore.getItemAsync('apex_current_user');
-//       if (token && userStr) {
-//         set({ token, user: JSON.parse(userStr), isAuthenticated: true });
-//       }
-//     } catch (e) {
-//       console.error('Failed to load auth from storage', e);
-//     }
-//   },
-// }));

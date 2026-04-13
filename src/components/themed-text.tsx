@@ -1,7 +1,9 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
-import { useThemeColor } from '@/src/hooks/use-theme-color';
-import React = require('react');
+import { useThemeColor } from '../hooks/use-theme-color';
+import React from 'react';
+import { Typography } from '../constants/theme';
+import { useAppTheme } from '../hooks/use-app-theme';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
@@ -16,12 +18,17 @@ export function ThemedText({
   type = 'default',
   ...rest
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'textPrimary');
+  const theme = useAppTheme();
+
+  const fontFamily = type === 'title' || type === 'subtitle' 
+    ? theme.fonts.heading 
+    : theme.fonts.body;
 
   return (
     <Text
       style={[
-        { color },
+        { color, fontFamily },
         type === 'default' ? styles.default : undefined,
         type === 'title' ? styles.title : undefined,
         type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
@@ -36,26 +43,26 @@ export function ThemedText({
 
 const styles = StyleSheet.create({
   default: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: Typography.size.base,
+    lineHeight: Typography.size.base * 1.5,
   },
   defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
+    fontSize: Typography.size.base,
+    lineHeight: Typography.size.base * 1.5,
+    fontWeight: Typography.weight.semibold,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
+    fontSize: Typography.size['4xl'],
+    fontWeight: Typography.weight.bold,
+    lineHeight: Typography.size['4xl'],
   },
   subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.bold,
   },
   link: {
     lineHeight: 30,
-    fontSize: 16,
+    fontSize: Typography.size.base,
     color: '#0a7ea4',
   },
 });

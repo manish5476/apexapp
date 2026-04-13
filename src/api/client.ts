@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { Storage } from '../utils/storage';
 import { environment } from '../constants/environment';
 import { useAuthStore } from '../store/auth.store';
 
@@ -12,7 +12,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = await SecureStore.getItemAsync('apex_auth_token');
+      const token = await Storage.getItemAsync('apex_auth_token');
       if (token) config.headers.Authorization = `Bearer ${token}`;
     } catch (e) {
       console.error('SecureStore error', e);
@@ -27,9 +27,10 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       // Clear SecureStore
-      await SecureStore.deleteItemAsync('apex_auth_token');
-      await SecureStore.deleteItemAsync('apex_current_user');
-      await SecureStore.deleteItemAsync('orgSlug');
+      await Storage.deleteItemAsync('apex_auth_token');
+      await Storage.deleteItemAsync('apex_current_user');
+      await Storage.deleteItemAsync('apex_organization');
+      await Storage.deleteItemAsync('apex_session');
 
       // ← Also clear the in-memory store so the UI reacts immediately
       // getState() is used here because we're outside a React component

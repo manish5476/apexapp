@@ -42,9 +42,9 @@
       "expo-secure-store",
       "expo-font"
     ],
-  "experiments": {
-  "typedRoutes": true,
-  "reactCompiler": false 
-}
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": false
+    }
   }
 }
