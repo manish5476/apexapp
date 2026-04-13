@@ -17,23 +17,33 @@ export default function RootLayout() {
 
   useEffect(() => {
     initialize();
+    
+    // Safety timeout: Always hide splash screen after 3.5 seconds
+    const timer = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 3500);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     if (!isHydrated) return;
 
     // The store is hydrated, hide the splash screen!
-    SplashScreen.hideAsync();
+    SplashScreen.hideAsync().catch(() => {});
+
+    // Guard against redirecting before segments are ready
+    if (!segments || segments.length === 0) return;
 
     // Check which group the user is currently trying to access
     const inAuthGroup = segments[0] === '(auth)';
 
     if (isAuthenticated && inAuthGroup) {
       // Logged in while in auth group? Send them to home.
-      router.replace('/(tabs)');
+      router.replace('/(tabs)' as any);
     } else if (!isAuthenticated && !inAuthGroup) {
       // Not logged in, but trying to access tabs? Send them to login.
-      router.replace('/(auth)/login');
+      router.replace('/(auth)/login' as any);
     }
   }, [isHydrated, isAuthenticated, segments]);
 
