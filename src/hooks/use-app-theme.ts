@@ -1,4 +1,4 @@
-import { Themes, ThemeColors } from '../constants/theme';
+import { ThemeColors, Themes } from '../constants/theme';
 import { useSettingsStore } from '../store/settings.store';
 
 export function useAppTheme(): ThemeColors {

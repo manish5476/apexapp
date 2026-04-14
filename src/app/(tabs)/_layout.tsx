@@ -1,13 +1,18 @@
 import { Drawer } from 'expo-router/drawer';
 import React, { useMemo } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { IconSymbol } from '@/src/components/ui/icon-symbol';
 import { Themes, ThemeColors, Spacing, Typography } from '@/src/constants/theme';
 import { CustomDrawerContent } from '@/src/components/navigation/custom-drawer-content';
+import { useSocket } from '@/src/hooks/use-socket';
 
 export default function DrawerLayout() {
   const currentTheme = Themes.daylight;
   const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
+
+  // Initialises the socket connection and chat listeners for the entire
+  // authenticated session. Disconnects automatically on logout.
+  const { status } = useSocket();
 
   return (
     <Drawer
@@ -54,6 +59,16 @@ export default function DrawerLayout() {
           drawerLabel: 'Customers',
           drawerIcon: ({ color }) => (
             <IconSymbol size={22} name="person.2.fill" color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="chat/index"
+        options={{
+          title: 'Messages',
+          drawerLabel: 'Chat',
+          drawerIcon: ({ color }) => (
+            <IconSymbol size={22} name="ellipsis.message.fill" color={color} />
           ),
         }}
       />
