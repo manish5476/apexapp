@@ -6,6 +6,7 @@ export const environment = {
   // apiUrl: process.env.EXPO_PUBLIC_API_URL || 'https://apex-1ed5.onrender.com/api',
   // socketUrl: process.env.EXPO_PUBLIC_SOCKET_URL || 'https://apex-1ed5.onrender.com',
 };
+
 // export const environment = {
 //   production: true,
 //   // apiUrl: 'http://localhost:4002/api'
