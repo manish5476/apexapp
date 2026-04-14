@@ -1,4 +1,3 @@
-import { StyleSheet } from 'react-native';
 
 /**
  * 1. TYPOGRAPHY (Fluid-inspired Mobile Scale)
@@ -333,10 +332,17 @@ export type ThemeColors = typeof Themes.light;
 /**
  * 5. HELPER FOR SHADOWS (Elevation mapping)
  */
-export const getElevation = (level: 1 | 2 | 3, theme: ThemeColors) => {
+export const getElevation = (level: 0 | 1 | 2 | 3, theme: ThemeColors) => {
   const shadowColor = theme.elevationShadow;
 
   const shadows = {
+    0: {
+      shadowColor,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+    },
     1: {
       shadowColor,
       shadowOffset: { width: 0, height: 2 },

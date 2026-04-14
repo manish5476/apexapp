@@ -1,45 +1,65 @@
-import { PropsWithChildren, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import React, { PropsWithChildren, useMemo, useState } from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { IconSymbol } from '@/src/components/ui/icon-symbol';
-import { Colors } from '@/src/constants/theme';
-import { useColorScheme } from '@/src/hooks/use-color-scheme';
+import { Spacing, ThemeColors, Typography, UI } from '@/src/constants/theme';
+import { useAppTheme } from '@/src/hooks/use-app-theme';
+
+// --- IMPORT YOUR TOKENS HERE ---
 
 export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const theme = useColorScheme() ?? 'light';
+  const theme = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <ThemedView>
+    <ThemedView variant="secondary" style={styles.container}>
       <TouchableOpacity
         style={styles.heading}
         onPress={() => setIsOpen((value) => !value)}
-        activeOpacity={0.8}>
+        activeOpacity={0.7}>
         <IconSymbol
           name="chevron.right"
-          size={18}
+          size={Typography.size.lg}
           weight="medium"
-          color={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
+          color={theme.textSecondary}
           style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}
         />
-
-        <ThemedText type="defaultSemiBold">{title}</ThemedText>
+        <ThemedText style={styles.titleText}>{title}</ThemedText>
       </TouchableOpacity>
-      {isOpen && <ThemedView style={styles.content}>{children}</ThemedView>}
+      {isOpen && <View style={styles.content}>{children}</View>}
     </ThemedView>
   );
 }
 
-const styles = StyleSheet.create({
+// --- DYNAMIC STYLESHEET BASED ON TOKENS ---
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
+  container: {
+    borderRadius: UI.borderRadius.md,
+    borderWidth: UI.borderWidth.thin,
+    borderColor: theme.borderPrimary,
+    marginBottom: Spacing.md,
+    overflow: 'hidden',
+  },
   heading: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    backgroundColor: theme.bgSecondary,
+  },
+  titleText: {
+    fontFamily: theme.fonts.heading,
+    fontWeight: Typography.weight.bold,
+    fontSize: Typography.size.md,
+    color: theme.textPrimary,
   },
   content: {
-    marginTop: 6,
-    marginLeft: 24,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    paddingTop: Spacing.xs,
+    marginLeft: Spacing.md, // Indent the content slightly
   },
 });

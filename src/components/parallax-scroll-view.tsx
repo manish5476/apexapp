@@ -1,4 +1,5 @@
 import type { PropsWithChildren, ReactElement } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
   interpolate,
@@ -8,14 +9,17 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ThemedView } from '@/src/components/themed-view';
-import { useColorScheme } from '@/src/hooks/use-color-scheme';
-import { useThemeColor } from '@/src/hooks/use-theme-color';
+import { useAppTheme } from '@/src/hooks/use-app-theme';
+import { Spacing, ThemeColors } from '../constants/theme';
+
+// --- IMPORT YOUR TOKENS HERE ---
 
 const HEADER_HEIGHT = 250;
 
 type Props = PropsWithChildren<{
   headerImage: ReactElement;
-  headerBackgroundColor: { dark: string; light: string };
+  // Simplified since our new theme engine handles light/dark dynamically
+  headerBackgroundColor?: string;
 }>;
 
 export default function ParallaxScrollView({
@@ -23,10 +27,12 @@ export default function ParallaxScrollView({
   headerImage,
   headerBackgroundColor,
 }: Props) {
-  const backgroundColor = useThemeColor({}, 'background');
-  const colorScheme = useColorScheme() ?? 'light';
+  const theme = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollOffset(scrollRef);
+
   const headerAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -47,12 +53,15 @@ export default function ParallaxScrollView({
   return (
     <Animated.ScrollView
       ref={scrollRef}
-      style={{ backgroundColor, flex: 1 }}
-      scrollEventThrottle={16}>
+      style={[styles.container, { backgroundColor: theme.bgPrimary }]}
+      scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
+    >
       <Animated.View
         style={[
           styles.header,
-          { backgroundColor: headerBackgroundColor[colorScheme] },
+          // Fallback to the theme's secondary background if no color is provided
+          { backgroundColor: headerBackgroundColor || theme.bgSecondary },
           headerAnimatedStyle,
         ]}>
         {headerImage}
@@ -62,7 +71,8 @@ export default function ParallaxScrollView({
   );
 }
 
-const styles = StyleSheet.create({
+// --- DYNAMIC STYLESHEET BASED ON TOKENS ---
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -72,8 +82,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 32,
-    gap: 16,
+    padding: Spacing['3xl'],
+    gap: Spacing.xl,
     overflow: 'hidden',
   },
 });

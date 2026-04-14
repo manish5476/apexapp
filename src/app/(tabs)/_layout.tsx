@@ -1,81 +1,106 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
-
-import { HapticTab } from '@/src/components/haptic-tab';
+import { Drawer } from 'expo-router/drawer';
+import React, { useMemo } from 'react';
+import { StyleSheet } from 'react-native';
 import { IconSymbol } from '@/src/components/ui/icon-symbol';
-import { Themes } from '@/src/constants/theme';
-import { useColorScheme } from '@/src/hooks/use-color-scheme';
+import { Themes, ThemeColors, Spacing, Typography } from '@/src/constants/theme';
+import { CustomDrawerContent } from '@/src/components/navigation/custom-drawer-content';
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
-  /**
-   * Narrowing the type: 'colorScheme' can be 'light' | 'dark' | null | undefined.
-   * By forcing it to 'dark' or 'light', we ensure it matches the keys in 
-   * our Colors constant, preventing the TS7053 indexing error.
-   */
-  const themeKey = colorScheme === 'dark' ? 'dark' : 'light';
+export default function DrawerLayout() {
+  const currentTheme = Themes.daylight;
+  const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
 
   return (
-    <Tabs
+    <Drawer
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
-        // Now TypeScript knows themeKey is exactly 'light' or 'dark'
-        tabBarActiveTintColor: Themes[themeKey].accentPrimary,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarStyle: Platform.select({
-          ios: {
-            position: 'absolute',
-          },
-          default: {},
-        }),
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: currentTheme.bgPrimary,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: currentTheme.borderPrimary,
+        },
+        headerTitleStyle: {
+          fontFamily: currentTheme.fonts.heading,
+          fontSize: Typography.size.lg,
+          fontWeight: Typography.weight.bold,
+          color: currentTheme.textPrimary,
+        },
+        drawerActiveTintColor: currentTheme.accentPrimary,
+        drawerInactiveTintColor: currentTheme.textTertiary,
+        drawerActiveBackgroundColor: currentTheme.bgTernary,
+        drawerLabelStyle: styles.drawerLabel,
+        drawerItemStyle: styles.drawerItem,
+        drawerStyle: {
+          backgroundColor: currentTheme.bgPrimary,
+          width: 280,
+        },
       }}>
-      <Tabs.Screen
+      <Drawer.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="house.fill" color={color} />
+          title: 'Dashboard',
+          drawerLabel: 'Home',
+          drawerIcon: ({ color }) => (
+            <IconSymbol size={22} name="house.fill" color={color} />
           ),
         }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="customers/index"
         options={{
           title: 'CRM',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.2.fill" color={color} />
+          drawerLabel: 'Customers',
+          drawerIcon: ({ color }) => (
+            <IconSymbol size={22} name="person.2.fill" color={color} />
           ),
         }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="explore"
         options={{
           title: 'Explore',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
+          drawerLabel: 'Modules',
+          drawerIcon: ({ color }) => (
+            <IconSymbol size={22} name="paperplane.fill" color={color} />
           ),
         }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="users/index"
         options={{
-          title: 'Users',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.3.fill" color={color} />
+          title: 'Team Management',
+          drawerLabel: 'Users',
+          drawerIcon: ({ color }) => (
+            <IconSymbol size={22} name="person.3.fill" color={color} />
           ),
         }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
+          title: 'My Profile',
+          drawerLabel: 'Profile',
+          drawerIcon: ({ color }) => (
+            <IconSymbol size={22} name="person.fill" color={color} />
           ),
         }}
       />
-    </Tabs>
+    </Drawer>
   );
 }
+
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
+  drawerLabel: {
+    fontFamily: theme.fonts.body,
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.medium,
+    marginLeft: -Spacing.md,
+  },
+  drawerItem: {
+    borderRadius: 12,
+    marginVertical: 4,
+    paddingHorizontal: 8,
+  }
+});
