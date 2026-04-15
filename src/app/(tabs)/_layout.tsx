@@ -83,6 +83,16 @@ export default function DrawerLayout() {
         }}
       />
       <Drawer.Screen
+        name="payments/index"
+        options={{
+          title: 'Payments',
+          drawerLabel: 'Payments',
+          drawerIcon: ({ color }) => (
+            <IconSymbol size={22} name="creditcard.fill" color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="chat/index"
         options={{
           title: 'Messages',
