@@ -1,512 +1,623 @@
-import { InvoiceService } from '@/src/api/invoiceService';
-import { ProductService } from '@/src/api/productService';
-import { ThemedText } from '@/src/components/themed-text';
-import { ThemedView } from '@/src/components/themed-view';
-import { Spacing, Typography, ThemeColors, UI, getElevation } from '@/src/constants/theme';
-import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as z from 'zod';
 
+// ==========================================
+// 1. THEME TOKENS
+// ==========================================
+const Typography = {
+  size: { xs: 11, sm: 12, base: 13, md: 14, lg: 15, xl: 16, '2xl': 18, '3xl': 22, '4xl': 28 },
+  weight: { light: '300', normal: '400', medium: '500', semibold: '600', bold: '700' } as const,
+};
+const Spacing = { xs: 4, sm: 6, md: 8, lg: 12, xl: 16, '2xl': 24, '3xl': 32 };
+const UI = { borderRadius: { sm: 6, md: 10, lg: 18, xl: 24, pill: 9999 } };
 
-// --- IMPORT YOUR TOKENS HERE ---
+const ActiveTheme = {
+  name: 'Coastal Command',
+  fonts: { heading: 'Plus Jakarta Sans', body: 'Inter', mono: 'Space Mono' },
+  bgPrimary: '#f3f7f9',
+  bgSecondary: '#ffffff',
+  bgTernary: '#e2ecf1',
+  textPrimary: '#072530',
+  textSecondary: '#1a4d5e',
+  textTertiary: '#427888',
+  textLabel: '#7aaab8',
+  borderPrimary: 'rgba(13,148,136,0.22)',
+  accentPrimary: '#0a857a',
+  accentSecondary: '#0fb3a4',
+  success: '#047857',
+  warning: '#9a5c00',
+  error: '#b81818',
+  elevationShadow: 'rgba(10, 133, 122, 0.09)',
+};
 
-// --- VALIDATION SCHEMA ---
-const itemSchema = z.object({
-  productId: z.string(),
-  name: z.string(),
-  hsnCode: z.string().optional(),
-  quantity: z.number().min(1, 'Qty must be at least 1'),
-  price: z.number().min(0, 'Invalid price'),
-  discount: z.number().min(0).default(0),
-  taxRate: z.number().min(0).default(0),
-  currentStock: z.number().default(0),
+const getElevation = (level: number) => ({
+  shadowColor: ActiveTheme.elevationShadow,
+  shadowOffset: { width: 0, height: level * 2 },
+  shadowOpacity: level * 0.05 + 0.05,
+  shadowRadius: level * 3,
+  elevation: level * 2,
 });
 
-const invoiceSchema = z.object({
-  customerId: z.string().min(1, 'Customer is required'),
-  branchId: z.string().min(1, 'Branch is required'),
-  invoiceNumber: z.string().min(1, 'Invoice Number is required'),
-  invoiceDate: z.date(),
-  dueDate: z.date().nullable().optional(),
-  status: z.enum(['draft', 'issued', 'paid', 'cancelled']),
-  items: z.array(itemSchema).min(1, 'Add at least one item to the invoice'),
-  roundOff: z.number().default(0),
-  paidAmount: z.number().min(0).default(0),
-  paymentMethod: z.string().default('cash'),
-  notes: z.string().optional(),
-});
+// ==========================================
+// 2. USER'S HOOK & MOCK API SERVICE
+// ==========================================
+export interface DropdownOption {
+  label: string;
+  value: string; // The _id from MongoDB
+}
+export type DropdownEndpoint = 'customers' | 'branches' | 'products' | 'users' | string;
 
-type InvoiceFormData = z.infer<typeof invoiceSchema>;
+// MOCK API CLIENT (To make this runnable in preview)
+const apiClient = {
+  get: async <T,>(url: string, { params }: any): Promise<{ data: T }> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const endpoint = url.split('/').pop() || 'unknown';
+        const page = parseInt(params.page || '1');
+        const limit = parseInt(params.limit || '20');
+        const searchStr = params.search ? ` (${params.search})` : '';
+
+        // Generate mock paginated data based on the requested endpoint
+        const data = Array.from({ length: limit }).map((_, i) => {
+          const index = (page - 1) * limit + i + 1;
+          let label = `Item ${index}`;
+          if (endpoint === 'customers') label = `Customer ${index}${searchStr}`;
+          if (endpoint === 'branches') label = `Branch Location ${index}${searchStr}`;
+          if (endpoint === 'products') label = `Product ${index}${searchStr}`;
+          return { value: `${endpoint}_id_${index}`, label } as any;
+        });
+
+        // Simulate reaching the end at page 3
+        resolve({ data: page >= 3 ? [] : data } as any);
+      }, 600); // 600ms network delay simulation
+    });
+  }
+};
+
+export const MasterDropdownService = {
+  getDropdownData: async (
+    endpoint: DropdownEndpoint, search: string = '', page: number = 1, searchField?: string, labelField?: string, includeIds?: string[]
+  ): Promise<DropdownOption[]> => {
+    const params: any = { page: page.toString(), limit: '20' };
+    if (search) params.search = search;
+    if (includeIds && includeIds.length > 0) params.includeIds = includeIds.join(',');
+
+    try {
+      const response = await apiClient.get<DropdownOption[]>(`/v1/dropdowns/${endpoint}`, { params });
+      return (response as any).data || [];
+    } catch (error) {
+      console.error(`Error fetching dropdown data for ${endpoint}:`, error);
+      return [];
+    }
+  }
+};
+
+// EXACT HOOK PROVIDED BY USER
+interface UseMasterDropdownProps {
+  endpoint: DropdownEndpoint;
+  initialValue?: string | string[] | null;
+  searchField?: string;
+  labelField?: string;
+  isMulti?: boolean;
+}
+
+export function useMasterDropdown({ endpoint, initialValue, searchField, labelField, isMulti = false }: UseMasterDropdownProps) {
+  const [options, setOptions] = useState<DropdownOption[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLastPage, setIsLastPage] = useState(false);
+  const searchTimeout = useRef<any>(null);
+  const rowsPerPage = 20;
+
+  const fetchData = useCallback(async (reset: boolean = false, includeIds?: string[], search: string = searchTerm, pageNum: number = page) => {
+    if (isLastPage && !reset && !includeIds) return;
+    setLoading(true);
+    try {
+      const newData = await MasterDropdownService.getDropdownData(endpoint, search, pageNum, searchField, labelField, includeIds);
+      if (newData.length < rowsPerPage && !includeIds) setIsLastPage(true);
+      setOptions(prev => {
+        if (reset) return newData;
+        const all = [...prev, ...newData];
+        return all.filter((item, index, self) => index === self.findIndex((t) => t.value === item.value));
+      });
+    } catch (error) {
+      console.error(`[useMasterDropdown] Fetch error for ${endpoint}:`, error);
+    } finally {
+      setLoading(false);
+    }
+  }, [endpoint, isLastPage, searchTerm, page, searchField, labelField]);
+
+  useEffect(() => {
+    fetchData(true, undefined, '', 1);
+    if (initialValue) {
+      const idsToCheck = Array.isArray(initialValue) ? initialValue : [initialValue];
+      fetchData(false, idsToCheck as string[], '', 1);
+    }
+  }, [endpoint]);
+
+  const onSearch = useCallback((text: string) => {
+    setSearchTerm(text);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setPage(1);
+      setIsLastPage(false);
+      fetchData(true, undefined, text, 1);
+    }, 400);
+  }, [fetchData]);
+
+  const onEndReached = useCallback(() => {
+    if (!loading && !isLastPage) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchData(false, undefined, searchTerm, nextPage);
+    }
+  }, [loading, isLastPage, page, searchTerm, fetchData]);
+
+  return { options, loading, searchTerm, onSearch, onEndReached, isLastPage };
+}
+
+// ==========================================
+// 3. MAIN COMPONENT
+// ==========================================
+interface InvoiceItem {
+  id: string; // unique row id
+  productId: string;
+  name: string;
+  sku: string;
+  quantity: number;
+  price: number;
+  discount: number;
+  taxRate: number;
+  currentStock: number;
+}
 
 export default function PosInvoiceScreen() {
-  const { id } = useLocalSearchParams();
-  const editMode = !!id;
-  const theme = useAppTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  // --- Form State ---
+  const [invoiceNumber] = useState(`INV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`);
 
-  // UI State
-  const [isLoading, setIsLoading] = useState(editMode);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Custom states to hold full selected objects for the UI
+  const [selectedCustomer, setSelectedCustomer] = useState<DropdownOption | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<DropdownOption | null>(null);
+
+  const [items, setItems] = useState<InvoiceItem[]>([]);
+  const [notes, setNotes] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
+
+  // --- Master Dropdown Hooks ---
+  const customerDropdown = useMasterDropdown({ endpoint: 'customers' });
+  const branchDropdown = useMasterDropdown({ endpoint: 'branches' });
+  const productDropdown = useMasterDropdown({ endpoint: 'products' });
+
+  // --- UI State ---
   const [selectionMode, setSelectionMode] = useState<'scan' | 'manual'>('scan');
-  const [scanCode, setScanCode] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [scanned, setScanned] = useState(false);
 
-  const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<InvoiceFormData>({
-    resolver: zodResolver(invoiceSchema) as any,
-    defaultValues: {
-      status: 'draft',
-      invoiceDate: new Date(),
-      items: [],
-      paidAmount: 0,
-      roundOff: 0,
-      paymentMethod: 'cash'
-    }
-  });
+  // --- Modal States ---
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showBranchModal, setShowBranchModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
 
-  const { fields: items, append, remove, update } = useFieldArray({ control, name: 'items' });
+  // --- Camera Permissions ---
+  const [permission, requestPermission] = useCameraPermissions();
 
-  // --- REACTIVE CALCULATION ENGINE ---
-  const watchItems = watch('items') || [];
-  const watchPaidAmount = watch('paidAmount') || 0;
-  const watchRoundOff = watch('roundOff') || 0;
-
+  // --- Computed Totals ---
   const totals = useMemo(() => {
     let sub = 0, disc = 0, tax = 0;
-    watchItems.forEach((item) => {
-      const qty = Number(item.quantity) || 0;
-      const price = Number(item.price) || 0;
-      const d = Number(item.discount) || 0;
-      const tRate = Number(item.taxRate) || 0;
-      
-      const lineTotal = price * qty;
-      const taxable = lineTotal - d;
-      const tAmount = (taxable * tRate) / 100;
-      
+    items.forEach(item => {
+      const lineTotal = item.price * item.quantity;
+      const taxable = lineTotal - item.discount;
+      const tAmount = (taxable * item.taxRate) / 100;
       sub += lineTotal;
-      disc += d;
+      disc += item.discount;
       tax += tAmount;
     });
+    const grand = Math.round(sub - disc + tax);
+    const balance = grand - (Number(paidAmount) || 0);
+    return { subTotal: sub, totalDiscount: disc, totalTax: tax, grandTotal: grand, balanceAmount: balance };
+  }, [items, paidAmount]);
 
-    const grand = (sub - disc + tax) + Number(watchRoundOff);
+  // --- Actions ---
+
+  // Mocks fetching full product details since the dropdown only returns {label, value}
+  const fetchFullProductDetails = (productOption: DropdownOption): InvoiceItem => {
     return {
-      subTotal: sub,
-      totalDiscount: disc,
-      totalTax: tax,
-      grandTotal: Math.round(grand),
-      balanceAmount: Math.round(grand) - Number(watchPaidAmount)
+      id: Math.random().toString(),
+      productId: productOption.value,
+      name: productOption.label,
+      sku: `SKU-${productOption.value.split('_').pop()}`,
+      price: Math.floor(Math.random() * 1000) + 99, // Mock Price
+      quantity: 1,
+      discount: 0,
+      taxRate: 18,
+      currentStock: Math.floor(Math.random() * 50) + 1 // Mock Stock
     };
-  }, [watchItems, watchPaidAmount, watchRoundOff]);
+  };
 
-  // --- INITIALIZATION ---
-  useEffect(() => {
-    if (!editMode) {
-      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const random = Math.floor(1000 + Math.random() * 9000);
-      setValue('invoiceNumber', `INV-${dateStr}-${random}`);
-    } else {
-      loadInvoice(id as string);
-    }
-  }, [id]);
-
-  const loadInvoice = async (invoiceId: string) => {
-    try {
-      const res = await InvoiceService.getInvoiceWithStock(invoiceId) as any;
-      const data = res.data?.invoice || res.data;
-      if (data) {
-        reset({
-          ...data,
-          invoiceDate: new Date(data.invoiceDate),
-          dueDate: data.dueDate ? new Date(data.dueDate) : null,
-          customerId: data.customerId?._id || data.customerId,
-          branchId: data.branchId?._id || data.branchId,
-        });
+  const addProductToInvoice = (productOption: DropdownOption) => {
+    setItems(prev => {
+      const existingIdx = prev.findIndex(i => i.productId === productOption.value);
+      if (existingIdx > -1) {
+        const newItems = [...prev];
+        newItems[existingIdx].quantity += 1;
+        return newItems;
       }
-    } catch (err) {
-      Alert.alert('Error', 'Could not load invoice data.');
-      router.back();
-    } finally {
-      setIsLoading(false);
-    }
+      return [...prev, fetchFullProductDetails(productOption)];
+    });
   };
 
-  // --- POS ITEM LOGIC ---
-  const handleScanSubmit = async () => {
-    if (!scanCode.trim()) return;
-    try {
-      const res = await ProductService.scanProduct({ barcode: scanCode.trim() }) as any;
-      if (res?.data?.product) {
-        addProductToCart(res.data.product, res.data.availableStock);
-      }
-    } catch (err) {
-      Alert.alert('Not Found', 'Product not found or out of stock.');
-    } finally {
-      setScanCode('');
-    }
-  };
-
-  const addProductToCart = (product: any, stock: number = 0) => {
-    const existingIndex = watchItems.findIndex(i => i.productId === (product._id || product.id));
-    
-    if (existingIndex > -1) {
-      const item = watchItems[existingIndex];
-      update(existingIndex, { ...item, quantity: item.quantity + 1 });
+  const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+    setScanned(true);
+    if (!selectedBranch) {
+      Alert.alert('Branch Required', 'Please select a branch before scanning.');
     } else {
-      append({
-        productId: product._id || product.id,
-        name: product.name,
-        hsnCode: product.sku || product.hsnCode,
-        price: product.sellingPrice || product.price || 0,
-        taxRate: product.taxRate || 0,
-        discount: 0,
-        quantity: 1,
-        currentStock: stock,
-      });
+      // Mock Barcode translation to product option
+      const mockScannedOption = { label: `Scanned Item (${data.slice(-4)})`, value: data };
+      addProductToInvoice(mockScannedOption);
+      Alert.alert('Success', `Added to cart`);
     }
+    setTimeout(() => setScanned(false), 2000);
   };
 
-  // --- SUBMISSION ---
-  const onSave = async (data: InvoiceFormData, targetStatus: 'draft' | 'issued') => {
+  const updateItemQty = (id: string, qty: number) => {
+    if (qty < 1) return;
+    setItems(prev => prev.map(item => item.id === id ? { ...item, quantity: qty } : item));
+  };
+
+  const removeItem = (id: string) => {
+    setItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleSubmit = (status: 'draft' | 'issued') => {
+    if (!selectedCustomer || !selectedBranch || items.length === 0) {
+      Alert.alert('Validation Error', 'Please select a customer, branch, and add at least one item.');
+      return;
+    }
     setIsSubmitting(true);
-    try {
-      const payload = { ...data, status: targetStatus, ...totals };
-      
-      // MOCK: Check stock before issuing
-      if (targetStatus === 'issued') {
-        // You would normally call InvoiceService.checkStock here
-        // If it fails, Alert the user and abort.
-      }
-
-      if (editMode) {
-        await InvoiceService.updateInvoice(id as string, payload as any);
-      } else {
-        await InvoiceService.createInvoice(payload as any);
-      }
-      
-      Alert.alert('Success', `Invoice has been ${targetStatus === 'draft' ? 'saved as draft' : 'issued'}.`);
-      router.replace('/invoices' as any);
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to save invoice.');
-    } finally {
+    setTimeout(() => {
       setIsSubmitting(false);
-    }
+      Alert.alert('Success', `Invoice #${invoiceNumber} has been ${status === 'draft' ? 'saved as draft' : 'issued'}.`);
+    }, 1000);
   };
 
-  if (isLoading) {
-    return (
-      <ThemedView style={styles.center}>
-        <ActivityIndicator size="large" color={theme.accentPrimary} />
-      </ThemedView>
-    );
-  }
+  // --- Render Helpers ---
+  if (!permission) return <View style={styles.center}><ActivityIndicator color={ActiveTheme.accentPrimary} /></View>;
 
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          
-          {/* STICKY HEADER */}
-          <View style={styles.header}>
-            <View style={styles.headerTop}>
-              <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name="arrow-back" size={24} color={theme.textPrimary} />
-              </TouchableOpacity>
-              <View style={styles.headerTitleContainer}>
-                <ThemedText style={styles.headerTitle}>{editMode ? `Edit ${watch('invoiceNumber')}` : 'New POS Invoice'}</ThemedText>
-                <View style={[styles.statusBadge, { backgroundColor: watch('status') === 'paid' ? `${theme.success}20` : `${theme.warning}20` }]}>
-                  <ThemedText style={[styles.statusText, { color: watch('status') === 'paid' ? theme.success : theme.warning }]}>
-                    {watch('status').toUpperCase()}
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-            
-            <View style={styles.grandTotalBox}>
-              <ThemedText style={styles.grandTotalLabel}>GRAND TOTAL</ThemedText>
-              <ThemedText style={styles.grandTotalValue}>₹{totals.grandTotal.toLocaleString('en-IN')}</ThemedText>
-            </View>
+  const renderDropdownModal = (
+    visible: boolean,
+    setVisible: (v: boolean) => void,
+    title: string,
+    dropdownHook: ReturnType<typeof useMasterDropdown>,
+    onSelect: (option: DropdownOption) => void
+  ) => (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <TouchableOpacity onPress={() => setVisible(false)}>
+            <Ionicons name="close" size={24} color={ActiveTheme.textPrimary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ padding: Spacing.lg, paddingBottom: 0 }}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={20} color={ActiveTheme.textLabel} />
+            <TextInput
+              style={[styles.flex1, { marginLeft: Spacing.sm, color: ActiveTheme.textPrimary }]}
+              placeholder="Search..."
+              value={dropdownHook.searchTerm}
+              onChangeText={dropdownHook.onSearch}
+              autoFocus={visible} // Autofocus when modal opens
+            />
           </View>
+        </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            
-            {/* META DETAILS */}
-            <View style={styles.card}>
-              <View style={styles.row}>
-                <View style={{ flex: 1, marginRight: Spacing.sm }}><FormField label="Customer *" control={control} name="customerId" placeholder="Select Customer" error={errors.customerId} /></View>
-                <View style={{ flex: 1, marginLeft: Spacing.sm }}><FormField label="Branch *" control={control} name="branchId" placeholder="Select Branch" error={errors.branchId} /></View>
-              </View>
-              <View style={styles.row}>
-                <View style={{ flex: 1, marginRight: Spacing.sm }}><FormField label="Invoice Number *" control={control} name="invoiceNumber" error={errors.invoiceNumber} /></View>
-                <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-                  <View style={styles.field}>
-                    <ThemedText style={styles.label}>Invoice Date</ThemedText>
-                    <View style={[styles.input, { justifyContent: 'center' }]}>
-                      <ThemedText>{watch('invoiceDate')?.toLocaleDateString()}</ThemedText>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* POS ITEMIZATION AREA */}
-            <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <ThemedText style={styles.sectionTitle}>Itemization</ThemedText>
-                
-                {/* Mode Toggle */}
-                <View style={styles.segmentControl}>
-                  <TouchableOpacity 
-                    style={[styles.segmentBtn, selectionMode === 'scan' && styles.segmentBtnActive]} 
-                    onPress={() => setSelectionMode('scan')}
-                  >
-                    <Ionicons name="barcode-outline" size={16} color={selectionMode === 'scan' ? theme.bgSecondary : theme.textSecondary} />
-                    <ThemedText style={[styles.segmentText, selectionMode === 'scan' && styles.segmentTextActive]}>Scan</ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.segmentBtn, selectionMode === 'manual' && styles.segmentBtnActive]} 
-                    onPress={() => setSelectionMode('manual')}
-                  >
-                    <Ionicons name="search-outline" size={16} color={selectionMode === 'manual' ? theme.bgSecondary : theme.textSecondary} />
-                    <ThemedText style={[styles.segmentText, selectionMode === 'manual' && styles.segmentTextActive]}>Manual</ThemedText>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Input Area based on mode */}
-              <View style={styles.actionArea}>
-                {selectionMode === 'scan' ? (
-                  <View style={styles.scanInputWrapper}>
-                    <Ionicons name="scan" size={20} color={theme.textTertiary} style={styles.scanIcon} />
-                    <TextInput 
-                      style={styles.scanInput}
-                      placeholder="Scan barcode and press Enter..."
-                      placeholderTextColor={theme.textLabel}
-                      value={scanCode}
-                      onChangeText={setScanCode}
-                      onSubmitEditing={handleScanSubmit}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </View>
-                ) : (
-                  <TouchableOpacity style={styles.manualSearchBtn} activeOpacity={0.7}>
-                    <Ionicons name="search" size={20} color={theme.textTertiary} />
-                    <ThemedText style={{ color: theme.textSecondary, marginLeft: Spacing.sm }}>Tap to search product database...</ThemedText>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* ITEM LIST (MOBILE OPTIMIZED CARDS) */}
-              <View style={styles.itemList}>
-                {errors.items && <ThemedText style={styles.errorText}>{(errors.items as any).message}</ThemedText>}
-                
-                {items.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="cart-outline" size={48} color={theme.borderPrimary} />
-                    <ThemedText style={styles.emptyText}>Cart is empty. Scan or search to add items.</ThemedText>
-                  </View>
-                ) : (
-                  items.map((item, index) => {
-                    // Reactive individual calculations for display
-                    const watchItem = watch(`items.${index}`);
-                    const lineTotal = ((watchItem?.price || 0) * (watchItem?.quantity || 0)) - (watchItem?.discount || 0);
-                    const lineGrand = lineTotal * (1 + ((watchItem?.taxRate || 0) / 100));
-
-                    return (
-                      <View key={item.id} style={styles.itemCard}>
-                        <View style={styles.itemHeader}>
-                          <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.itemName}>{item.name}</ThemedText>
-                            {item.hsnCode && <ThemedText style={styles.itemSku}>SKU: {item.hsnCode}</ThemedText>}
-                          </View>
-                          <TouchableOpacity onPress={() => remove(index)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                            <Ionicons name="close-circle" size={24} color={theme.textTertiary} />
-                          </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.itemControls}>
-                          {/* Qty Control */}
-                          <View style={styles.qtyControl}>
-                            <TouchableOpacity style={styles.qtyBtn} onPress={() => update(index, { ...watchItem, quantity: Math.max(1, watchItem.quantity - 1) })}>
-                              <Ionicons name="remove" size={16} color={theme.textPrimary} />
-                            </TouchableOpacity>
-                            <ThemedText style={styles.qtyText}>{watchItem?.quantity || 0}</ThemedText>
-                            <TouchableOpacity style={styles.qtyBtn} onPress={() => update(index, { ...watchItem, quantity: watchItem.quantity + 1 })}>
-                              <Ionicons name="add" size={16} color={theme.textPrimary} />
-                            </TouchableOpacity>
-                          </View>
-
-                          <View style={styles.itemFinancials}>
-                            <View>
-                              <ThemedText style={styles.itemMiniLabel}>PRICE</ThemedText>
-                              <Controller control={control} name={`items.${index}.price`} render={({ field: { onChange, value } }) => (
-                                <TextInput style={styles.itemInput} keyboardType="numeric" value={String(value)} onChangeText={(v) => onChange(parseFloat(v) || 0)} />
-                              )} />
-                            </View>
-                            <View style={{ alignItems: 'flex-end' }}>
-                              <ThemedText style={styles.itemMiniLabel}>TOTAL</ThemedText>
-                              <ThemedText style={styles.itemTotal}>₹{lineGrand.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</ThemedText>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })
-                )}
-              </View>
-            </View>
-
-            {/* QUICK PAY & NOTES */}
-            <View style={styles.row}>
-              <View style={[styles.card, { flex: 1, marginRight: Spacing.sm }]}>
-                <ThemedText style={styles.sectionTitle}>Quick Pay</ThemedText>
-                <FormField label="Amount Received" control={control} name="paidAmount" keyboardType="numeric" />
-                <FormField label="Payment Mode" control={control} name="paymentMethod" />
-              </View>
-              <View style={[styles.card, { flex: 1, marginLeft: Spacing.sm }]}>
-                <ThemedText style={styles.sectionTitle}>Summary</ThemedText>
-                <View style={styles.summaryRow}><ThemedText style={styles.summaryLabel}>Subtotal</ThemedText><ThemedText style={styles.summaryVal}>₹{totals.subTotal.toLocaleString()}</ThemedText></View>
-                <View style={styles.summaryRow}><ThemedText style={styles.summaryLabel}>Discount</ThemedText><ThemedText style={[styles.summaryVal, { color: theme.error }]}>- ₹{totals.totalDiscount.toLocaleString()}</ThemedText></View>
-                <View style={styles.summaryRow}><ThemedText style={styles.summaryLabel}>Tax</ThemedText><ThemedText style={[styles.summaryVal, { color: theme.success }]}>+ ₹{totals.totalTax.toLocaleString()}</ThemedText></View>
-                <View style={styles.divider} />
-                <View style={styles.summaryRow}><ThemedText style={[styles.summaryLabel, { fontWeight: Typography.weight.bold, color: theme.textPrimary }]}>Balance Due</ThemedText><ThemedText style={[styles.summaryVal, { color: totals.balanceAmount > 0 ? theme.warning : theme.success, fontWeight: Typography.weight.bold }]}>₹{totals.balanceAmount.toLocaleString()}</ThemedText></View>
-              </View>
-            </View>
-
-          </ScrollView>
-
-          {/* STICKY FOOTER ACTIONS */}
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.draftBtn} onPress={handleSubmit((d) => onSave(d, 'draft'))} disabled={isSubmitting}>
-              <Ionicons name="save-outline" size={20} color={theme.textPrimary} />
-              <ThemedText style={styles.draftBtnText}>Save Draft</ThemedText>
+        <FlatList
+          data={dropdownHook.options}
+          keyExtractor={(item: any, index: any) => `${item.value}-${index}`}
+          contentContainerStyle={{ padding: Spacing.lg }}
+          renderItem={({ item }: any) => (
+            <TouchableOpacity style={styles.modalItem} onPress={() => { onSelect(item); setVisible(false); }}>
+              <Text style={styles.modalItemTitle}>{item.label}</Text>
+              <Text style={styles.modalItemSub}>ID: {item.value}</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.issueBtn} onPress={handleSubmit((d) => onSave(d, 'issued'))} disabled={isSubmitting}>
-              {isSubmitting ? <ActivityIndicator color={theme.bgSecondary} /> : (
-                <>
-                  <ThemedText style={styles.issueBtnText}>Issue Invoice</ThemedText>
-                  <Ionicons name="checkmark-circle" size={20} color={theme.bgSecondary} />
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
-        </KeyboardAvoidingView>
+          )}
+          onEndReached={dropdownHook.onEndReached}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            dropdownHook.loading ? <ActivityIndicator style={{ margin: Spacing.xl }} color={ActiveTheme.accentPrimary} /> : null
+          }
+          ListEmptyComponent={
+            !dropdownHook.loading ? <Text style={styles.emptyText}>No results found.</Text> : null
+          }
+        />
       </SafeAreaView>
-    </ThemedView>
+    </Modal>
   );
-}
 
-// --- REUSABLE FIELD ---
-function FormField({ label, control, name, error, keyboardType, ...props }: any) {
-  const theme = useAppTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
-    <View style={styles.field}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
-      <Controller
-        control={control}
-        name={name}
-        render={({ field: { onChange, onBlur, value } }) => (
-          <TextInput
-            style={[styles.input, error && { borderColor: theme.error }]}
-            onBlur={onBlur}
-            onChangeText={(txt) => keyboardType === 'numeric' ? onChange(parseFloat(txt) || 0) : onChange(txt)}
-            value={value !== undefined && value !== null ? String(value) : ''}
-            placeholderTextColor={theme.textLabel}
-            keyboardType={keyboardType}
-            {...props}
-          />
-        )}
-      />
-      {error && <ThemedText style={styles.errorText}>{error.message}</ThemedText>}
-    </View>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex1}>
+
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>New Smart Invoice</Text>
+            <Text style={styles.headerSubtitle}>{invoiceNumber} • New Draft</Text>
+          </View>
+          <View style={styles.headerGrandTotal}>
+            <Text style={styles.grandTotalLabel}>Grand Total</Text>
+            <Text style={styles.grandTotalAmount}>₹{totals.grandTotal.toFixed(2)}</Text>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+          {/* CUSTOMER & BRANCH SECTION */}
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.flex1}>
+                <Text style={styles.label}>Customer *</Text>
+                <TouchableOpacity style={styles.pickerButton} onPress={() => setShowCustomerModal(true)}>
+                  <Ionicons name="person-outline" size={18} color={ActiveTheme.accentPrimary} />
+                  <Text style={[styles.pickerText, !selectedCustomer && { color: ActiveTheme.textLabel }]} numberOfLines={1}>
+                    {selectedCustomer ? selectedCustomer.label : 'Select Customer...'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color={ActiveTheme.textLabel} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.spacer} />
+              <View style={styles.flex1}>
+                <Text style={styles.label}>Branch *</Text>
+                <TouchableOpacity style={styles.pickerButton} onPress={() => setShowBranchModal(true)}>
+                  <Ionicons name="storefront-outline" size={18} color={ActiveTheme.accentPrimary} />
+                  <Text style={[styles.pickerText, !selectedBranch && { color: ActiveTheme.textLabel }]} numberOfLines={1}>
+                    {selectedBranch ? selectedBranch.label : 'Select Branch...'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color={ActiveTheme.textLabel} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* ITEMIZATION SECTION */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Itemization</Text>
+              <View style={styles.modeToggle}>
+                <TouchableOpacity
+                  style={[styles.modeBtn, selectionMode === 'scan' && styles.modeBtnActive]}
+                  onPress={() => setSelectionMode('scan')}>
+                  <Ionicons name="barcode-outline" size={16} color={selectionMode === 'scan' ? '#fff' : ActiveTheme.textSecondary} />
+                  <Text style={[styles.modeBtnText, selectionMode === 'scan' && styles.modeBtnTextActive]}>Scan</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeBtn, selectionMode === 'manual' && styles.modeBtnActive]}
+                  onPress={() => setSelectionMode('manual')}>
+                  <Ionicons name="search-outline" size={16} color={selectionMode === 'manual' ? '#fff' : ActiveTheme.textSecondary} />
+                  <Text style={[styles.modeBtnText, selectionMode === 'manual' && styles.modeBtnTextActive]}>Manual</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* SCANNER OR SEARCH UI */}
+            <View style={styles.inputContainer}>
+              {selectionMode === 'scan' ? (
+                <View style={styles.scannerWrapper}>
+                  {!isCameraActive ? (
+                    <TouchableOpacity style={styles.startScanBtn} onPress={async () => {
+                      if (!permission.granted) await requestPermission();
+                      setIsCameraActive(true);
+                    }}>
+                      <Ionicons name="camera" size={24} color={ActiveTheme.accentPrimary} />
+                      <Text style={styles.startScanText}>Tap to Start Scanner</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.cameraBox}>
+                      <CameraView
+                        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                        barcodeScannerSettings={{ barcodeTypes: ["qr", "ean13", "code128"] }}
+                        style={StyleSheet.absoluteFillObject}
+                      />
+                      {scanned && <View style={styles.scanOverlay}><ActivityIndicator color="#fff" size="large" /></View>}
+                      <TouchableOpacity style={styles.closeCameraBtn} onPress={() => setIsCameraActive(false)}>
+                        <Ionicons name="close-circle" size={32} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.searchBar} onPress={() => setShowProductModal(true)}>
+                  <Ionicons name="search" size={20} color={ActiveTheme.textLabel} />
+                  <Text style={{ color: ActiveTheme.textLabel, marginLeft: Spacing.sm }}>Search product database...</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* ITEMS LIST */}
+            {items.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="basket-outline" size={48} color={ActiveTheme.borderPrimary} />
+                <Text style={styles.emptyText}>No items added. Scan or search to begin.</Text>
+              </View>
+            ) : (
+              <View style={styles.itemList}>
+                {items.map((item) => (
+                  <View key={item.id} style={styles.itemRow}>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName}>{item.name}</Text>
+                      <Text style={styles.itemSku}>SKU: {item.sku} • Stock: <Text style={{ color: item.currentStock < item.quantity ? ActiveTheme.error : ActiveTheme.success }}>{item.currentStock}</Text></Text>
+                    </View>
+                    <View style={styles.qtyControl}>
+                      <TouchableOpacity onPress={() => updateItemQty(item.id, item.quantity - 1)} style={styles.qtyBtn}>
+                        <Ionicons name="remove" size={16} color={ActiveTheme.textPrimary} />
+                      </TouchableOpacity>
+                      <Text style={styles.qtyText}>{item.quantity}</Text>
+                      <TouchableOpacity onPress={() => updateItemQty(item.id, item.quantity + 1)} style={styles.qtyBtn}>
+                        <Ionicons name="add" size={16} color={ActiveTheme.textPrimary} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.priceInfo}>
+                      <Text style={styles.itemTotal}>₹{((item.price * item.quantity) - item.discount).toFixed(2)}</Text>
+                      <Text style={styles.itemPrice}>₹{item.price} /ea</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => removeItem(item.id)} style={styles.deleteBtn}>
+                      <Ionicons name="trash-outline" size={20} color={ActiveTheme.error} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* QUICK PAY */}
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.iconCircle}><Ionicons name="wallet-outline" size={24} color={ActiveTheme.accentPrimary} /></View>
+              <View style={styles.flex1}>
+                <Text style={styles.label}>Quick Payment Received (₹)</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="0.00"
+                  value={paidAmount}
+                  onChangeText={setPaidAmount}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View style={{ height: Spacing['3xl'] * 4 }} /> {/* Scroll Padding for Fixed Footer */}
+        </ScrollView>
+
+        {/* FLOATING FOOTER */}
+        <View style={styles.footer}>
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>Subtotal</Text>
+            <Text style={styles.totalsValue}>₹{totals.subTotal.toFixed(2)}</Text>
+          </View>
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>Tax (GST)</Text>
+            <Text style={[styles.totalsValue, { color: ActiveTheme.success }]}>+ ₹{totals.totalTax.toFixed(2)}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.totalsRow}>
+            <Text style={styles.balanceLabel}>Balance Due</Text>
+            <Text style={styles.balanceValue}>₹{totals.balanceAmount.toFixed(2)}</Text>
+          </View>
+
+          <View style={[styles.row, { marginTop: Spacing.lg }]}>
+            <TouchableOpacity style={styles.draftBtn} onPress={() => handleSubmit('draft')} disabled={isSubmitting}>
+              <Text style={styles.draftBtnText}>Save Draft</Text>
+            </TouchableOpacity>
+            <View style={styles.spacer} />
+            <TouchableOpacity style={styles.issueBtn} onPress={() => handleSubmit('issued')} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.issueBtnText}>Issue Invoice</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+      </KeyboardAvoidingView>
+
+      {/* RENDER MODALS POWERED BY useMasterDropdown */}
+      {renderDropdownModal(showCustomerModal, setShowCustomerModal, 'Select Customer', customerDropdown, setSelectedCustomer)}
+      {renderDropdownModal(showBranchModal, setShowBranchModal, 'Select Branch', branchDropdown, setSelectedBranch)}
+      {renderDropdownModal(showProductModal, setShowProductModal, 'Search Product', productDropdown, addProductToInvoice)}
+
+    </SafeAreaView>
   );
 }
 
-// --- DYNAMIC STYLESHEET BASED ON TOKENS ---
-const createStyles = (theme: ThemeColors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.bgSecondary },
-  safeArea: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.bgSecondary },
-  scrollContent: { padding: Spacing.xl, paddingBottom: 100 },
-  
-  // HEADER
-  header: { backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, paddingBottom: Spacing.xl, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
-  headerTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg, marginBottom: Spacing.lg },
-  headerTitleContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  headerTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size.xl, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  statusBadge: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: UI.borderRadius.sm },
-  statusText: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, textTransform: 'uppercase' },
-  grandTotalBox: { backgroundColor: theme.textPrimary, borderRadius: UI.borderRadius.lg, padding: Spacing.lg, alignItems: 'center', justifyContent: 'center', ...getElevation(2, theme) },
-  grandTotalLabel: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: theme.textTertiary, letterSpacing: 1 },
-  grandTotalValue: { fontFamily: theme.fonts.heading, fontSize: 32, fontWeight: Typography.weight.bold, color: theme.bgSecondary, marginTop: 4 },
-
-  card: { backgroundColor: theme.bgPrimary, borderRadius: UI.borderRadius.xl, padding: Spacing.xl, marginBottom: Spacing.xl, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary, ...getElevation(1, theme) },
-  row: { flexDirection: 'row' },
-  field: { marginBottom: Spacing.md },
-  label: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, marginBottom: Spacing.xs, color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: { fontFamily: theme.fonts.body, height: 48, backgroundColor: theme.bgSecondary, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, fontSize: Typography.size.md, color: theme.textPrimary },
-  errorText: { fontFamily: theme.fonts.body, color: theme.error, fontSize: Typography.size.xs, marginTop: Spacing.xs },
-
-  // POS SECTION
+// ==========================================
+// 4. STYLES
+// ==========================================
+const styles = StyleSheet.create({
+  flex1: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  spacer: { width: Spacing.lg },
+  container: { flex: 1, backgroundColor: ActiveTheme.bgPrimary },
+  scrollContent: { padding: Spacing.lg },
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg,
+    backgroundColor: ActiveTheme.bgSecondary, borderBottomWidth: 1, borderBottomColor: ActiveTheme.borderPrimary,
+  },
+  headerTitle: { fontFamily: ActiveTheme.fonts.heading, fontSize: Typography.size['2xl'], fontWeight: Typography.weight.bold, color: ActiveTheme.textPrimary },
+  headerSubtitle: { fontFamily: ActiveTheme.fonts.body, fontSize: Typography.size.sm, color: ActiveTheme.textTertiary, marginTop: Spacing.xs },
+  headerGrandTotal: { alignItems: 'flex-end' },
+  grandTotalLabel: { fontSize: Typography.size.xs, color: ActiveTheme.textTertiary, textTransform: 'uppercase' },
+  grandTotalAmount: { fontFamily: ActiveTheme.fonts.heading, fontSize: Typography.size['2xl'], fontWeight: Typography.weight.bold, color: ActiveTheme.accentPrimary },
+  card: { backgroundColor: ActiveTheme.bgSecondary, borderRadius: UI.borderRadius.lg, padding: Spacing.xl, marginBottom: Spacing.lg, ...getElevation(1) },
+  label: { fontFamily: ActiveTheme.fonts.body, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, color: ActiveTheme.textSecondary, marginBottom: Spacing.sm },
+  pickerButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: ActiveTheme.bgPrimary, borderWidth: 1, borderColor: ActiveTheme.borderPrimary, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.md, height: 44 },
+  pickerText: { flex: 1, marginLeft: Spacing.sm, fontFamily: ActiveTheme.fonts.body, fontSize: Typography.size.md, color: ActiveTheme.textPrimary },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
-  sectionTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  segmentControl: { flexDirection: 'row', backgroundColor: theme.bgSecondary, padding: 4, borderRadius: UI.borderRadius.md, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
-  segmentBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.xs, borderRadius: UI.borderRadius.sm },
-  segmentBtnActive: { backgroundColor: theme.textPrimary },
-  segmentText: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, color: theme.textSecondary },
-  segmentTextActive: { color: theme.bgSecondary },
-  
-  actionArea: { marginBottom: Spacing.xl },
-  scanInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.bgSecondary, borderWidth: 2, borderColor: theme.accentPrimary, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, height: 56 },
-  scanIcon: { marginRight: Spacing.md },
-  scanInput: { flex: 1, fontFamily: theme.fonts.body, fontSize: Typography.size.md, color: theme.textPrimary, height: '100%' },
-  manualSearchBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.bgSecondary, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, height: 56 },
+  sectionTitle: { fontFamily: ActiveTheme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: ActiveTheme.textPrimary },
+  modeToggle: { flexDirection: 'row', backgroundColor: ActiveTheme.bgTernary, borderRadius: UI.borderRadius.pill, padding: 4 },
+  modeBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.xs, paddingHorizontal: Spacing.lg, borderRadius: UI.borderRadius.pill },
+  modeBtnActive: { backgroundColor: ActiveTheme.accentPrimary, ...getElevation(1) },
+  modeBtnText: { marginLeft: Spacing.xs, fontSize: Typography.size.sm, fontWeight: Typography.weight.medium, color: ActiveTheme.textSecondary },
+  modeBtnTextActive: { color: '#fff' },
+  inputContainer: { marginBottom: Spacing.lg },
+  scannerWrapper: { height: 180, backgroundColor: '#000', borderRadius: UI.borderRadius.lg, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+  startScanBtn: { alignItems: 'center' },
+  startScanText: { color: ActiveTheme.accentSecondary, marginTop: Spacing.sm, fontWeight: Typography.weight.medium },
+  cameraBox: { width: '100%', height: '100%' },
+  scanOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  closeCameraBtn: { position: 'absolute', top: Spacing.sm, right: Spacing.sm },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: ActiveTheme.bgPrimary, borderWidth: 1, borderColor: ActiveTheme.accentPrimary, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.md, height: 48 },
+  emptyState: { alignItems: 'center', paddingVertical: Spacing['3xl'] },
+  emptyText: { marginTop: Spacing.md, color: ActiveTheme.textTertiary, fontSize: Typography.size.md, textAlign: 'center' },
+  itemList: { borderTopWidth: 1, borderTopColor: ActiveTheme.borderPrimary, paddingTop: Spacing.md },
+  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: ActiveTheme.borderPrimary },
+  itemInfo: { flex: 2 },
+  itemName: { fontFamily: ActiveTheme.fonts.heading, fontWeight: Typography.weight.semibold, fontSize: Typography.size.md, color: ActiveTheme.textPrimary },
+  itemSku: { fontSize: Typography.size.xs, color: ActiveTheme.textTertiary, marginTop: 2, fontFamily: ActiveTheme.fonts.mono },
+  qtyControl: { flexDirection: 'row', alignItems: 'center', backgroundColor: ActiveTheme.bgTernary, borderRadius: UI.borderRadius.md, marginHorizontal: Spacing.md },
+  qtyBtn: { padding: Spacing.xs },
+  qtyText: { width: 24, textAlign: 'center', fontWeight: Typography.weight.bold },
+  priceInfo: { flex: 1, alignItems: 'flex-end', marginRight: Spacing.md },
+  itemTotal: { fontWeight: Typography.weight.bold, color: ActiveTheme.accentPrimary, fontSize: Typography.size.md },
+  itemPrice: { fontSize: Typography.size.xs, color: ActiveTheme.textTertiary },
+  deleteBtn: { padding: Spacing.xs },
+  iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: ActiveTheme.bgTernary, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.lg },
+  input: { backgroundColor: ActiveTheme.bgPrimary, borderWidth: 1, borderColor: ActiveTheme.borderPrimary, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.md, height: 44, color: ActiveTheme.textPrimary, fontFamily: ActiveTheme.fonts.mono },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: ActiveTheme.bgSecondary, borderTopLeftRadius: UI.borderRadius.xl, borderTopRightRadius: UI.borderRadius.xl, padding: Spacing.xl, ...getElevation(3) },
+  totalsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.xs },
+  totalsLabel: { color: ActiveTheme.textSecondary, fontSize: Typography.size.md },
+  totalsValue: { color: ActiveTheme.textPrimary, fontWeight: Typography.weight.semibold, fontSize: Typography.size.md },
+  divider: { height: 1, backgroundColor: ActiveTheme.borderPrimary, marginVertical: Spacing.sm },
+  balanceLabel: { color: ActiveTheme.textPrimary, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold },
+  balanceValue: { color: ActiveTheme.error, fontSize: Typography.size.xl, fontWeight: Typography.weight.bold },
+  draftBtn: { flex: 1, borderWidth: 1, borderColor: ActiveTheme.accentPrimary, borderRadius: UI.borderRadius.md, height: 48, justifyContent: 'center', alignItems: 'center' },
+  draftBtnText: { color: ActiveTheme.accentPrimary, fontWeight: Typography.weight.bold },
+  issueBtn: { flex: 2, backgroundColor: ActiveTheme.accentPrimary, borderRadius: UI.borderRadius.md, height: 48, justifyContent: 'center', alignItems: 'center', ...getElevation(2) },
+  issueBtnText: { color: '#fff', fontWeight: Typography.weight.bold, fontSize: Typography.size.lg },
 
-  // MOBILE ITEM CARDS
-  itemList: { gap: Spacing.md },
-  itemCard: { backgroundColor: theme.bgSecondary, borderRadius: UI.borderRadius.lg, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary, padding: Spacing.lg },
-  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.md },
-  itemName: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  itemSku: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, color: theme.textTertiary, marginTop: 2 },
-  itemControls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  qtyControl: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.bgPrimary, borderRadius: UI.borderRadius.md, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
-  qtyBtn: { padding: Spacing.sm },
-  qtyText: { fontFamily: theme.fonts.body, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary, paddingHorizontal: Spacing.sm, minWidth: 30, textAlign: 'center' },
-  itemFinancials: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', marginLeft: Spacing.xl },
-  itemMiniLabel: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: Typography.weight.bold, color: theme.textTertiary, marginBottom: 4 },
-  itemInput: { fontFamily: theme.fonts.body, height: 36, backgroundColor: theme.bgPrimary, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary, borderRadius: UI.borderRadius.sm, paddingHorizontal: Spacing.md, fontSize: Typography.size.sm, color: theme.textPrimary, minWidth: 80 },
-  itemTotal: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  
-  emptyState: { padding: Spacing['3xl'], alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', borderWidth: 2, borderColor: theme.borderPrimary, borderRadius: UI.borderRadius.lg },
-  emptyText: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, color: theme.textTertiary, marginTop: Spacing.md },
-
-  // SUMMARY
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
-  summaryLabel: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, color: theme.textSecondary },
-  summaryVal: { fontFamily: theme.fonts.body, fontSize: Typography.size.md, fontWeight: Typography.weight.semibold, color: theme.textPrimary },
-  divider: { height: 1, backgroundColor: theme.borderPrimary, marginVertical: Spacing.md },
-
-  // FOOTER
-  footer: { flexDirection: 'row', gap: Spacing.md, padding: Spacing.xl, backgroundColor: theme.bgPrimary, borderTopWidth: UI.borderWidth.thin, borderTopColor: theme.borderPrimary, paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.xl },
-  draftBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, height: 56, backgroundColor: theme.bgSecondary, borderRadius: UI.borderRadius.lg, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
-  draftBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  issueBtn: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, height: 56, backgroundColor: theme.accentPrimary, borderRadius: UI.borderRadius.lg, ...getElevation(2, theme) },
-  issueBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.bgSecondary },
+  // Modal Specific Styles
+  modalContainer: { flex: 1, backgroundColor: ActiveTheme.bgSecondary },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, borderBottomWidth: 1, borderBottomColor: ActiveTheme.borderPrimary },
+  modalTitle: { fontSize: Typography.size.xl, fontWeight: Typography.weight.bold, color: ActiveTheme.textPrimary },
+  modalItem: { paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: ActiveTheme.borderPrimary },
+  modalItemTitle: { fontSize: Typography.size.md, fontWeight: Typography.weight.semibold, color: ActiveTheme.textPrimary },
+  modalItemSub: { fontSize: Typography.size.xs, color: ActiveTheme.textTertiary, marginTop: 4, fontFamily: ActiveTheme.fonts.mono },
 });

@@ -2,23 +2,28 @@ import { EmiService } from '@/src/api/EmiService';
 import { InvoiceService } from '@/src/api/invoiceService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
+import { environment } from '@/src/constants/environment';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
+import { Storage } from '@/src/utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
+import * as FileSystem from 'expo-file-system/legacy';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as z from 'zod';
@@ -48,7 +53,7 @@ export default function InvoiceDetailsScreen() {
   const [invoice, setInvoice] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [existingEmiId, setExistingEmiId] = useState<string | null>(null);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -137,9 +142,39 @@ export default function InvoiceDetailsScreen() {
   const handleDownload = async () => {
     setIsProcessing(true);
     try {
-      await InvoiceService.downloadInvoicePDF(id as string);
-      // Native download handling goes here (e.g., expo-file-system, expo-sharing)
+      const fileName = `Invoice_${invoice.invoiceNumber || id}.pdf`;
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+
+      const token = await Storage.getItemAsync('apex_auth_token');
+      const downloadUrl = `${environment.apiUrl}/v1/invoices/${id}/download`;
+
+      // Use FileSystem.downloadAsync for a cleaner native download experience
+      const downloadRes = await FileSystem.downloadAsync(
+        downloadUrl,
+        fileUri,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (downloadRes.status !== 200) {
+        throw new Error('Server returned error during download');
+      }
+
+      // Check if sharing is available and share it
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(downloadRes.uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Download Invoice',
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        Alert.alert('Download Complete', `File saved to: ${downloadRes.uri}`);
+      }
     } catch (err) {
+      console.error('Download error:', err);
       setErrorMsg('Failed to download PDF.');
     } finally {
       setIsProcessing(false);
@@ -148,7 +183,7 @@ export default function InvoiceDetailsScreen() {
 
   // --- UTILS ---
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val || 0);
-  
+
   const getStatusTheme = (status: string) => {
     const s = status?.toLowerCase() || 'draft';
     if (['paid'].includes(s)) return { bg: `${theme.success}15`, text: theme.success };
@@ -186,7 +221,7 @@ export default function InvoiceDetailsScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        
+
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBackBtn}>
@@ -218,7 +253,7 @@ export default function InvoiceDetailsScreen() {
         )}
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
+
           {/* PARTIES */}
           <View style={styles.card}>
             <View style={styles.partyBlock}>
@@ -234,7 +269,7 @@ export default function InvoiceDetailsScreen() {
                 </View>
               </View>
             </View>
-            
+
             <View style={styles.partyDivider} />
 
             <View style={styles.partyBlock}>
@@ -263,7 +298,7 @@ export default function InvoiceDetailsScreen() {
             </View>
             <View style={styles.itemList}>
               {invoice.items?.map((item: any, index: number) => {
-                const lineTotal = ((item.quantity * item.price) - item.discount) * (1 + item.taxRate/100);
+                const lineTotal = ((item.quantity * item.price) - item.discount) * (1 + item.taxRate / 100);
                 return (
                   <View key={index} style={styles.itemRow}>
                     <View style={styles.itemTop}>
@@ -326,9 +361,9 @@ export default function InvoiceDetailsScreen() {
               <View style={styles.calcRow}><ThemedText style={styles.calcLabel}>Tax</ThemedText><ThemedText style={styles.calcVal}>{formatCurrency(invoice.totalTax)}</ThemedText></View>
               {invoice.totalDiscount > 0 && <View style={styles.calcRow}><ThemedText style={styles.calcLabel}>Discount</ThemedText><ThemedText style={[styles.calcVal, { color: theme.error }]}>-{formatCurrency(invoice.totalDiscount)}</ThemedText></View>}
               {invoice.roundOff !== 0 && <View style={styles.calcRow}><ThemedText style={styles.calcLabel}>Round Off</ThemedText><ThemedText style={styles.calcVal}>{formatCurrency(invoice.roundOff)}</ThemedText></View>}
-              
+
               <View style={styles.divider} />
-              
+
               <View style={styles.calcRow}>
                 <ThemedText style={styles.grandTotalLabel}>Grand Total</ThemedText>
                 <ThemedText style={styles.grandTotalVal}>{formatCurrency(invoice.grandTotal)}</ThemedText>
@@ -369,7 +404,7 @@ export default function InvoiceDetailsScreen() {
                 </TouchableOpacity>
               )
             )}
-            
+
             <TouchableOpacity style={styles.actionBtn} onPress={handleDownload}>
               <View style={[styles.actionIcon, { backgroundColor: `${theme.error}15` }]}><Ionicons name="document-text" size={20} color={theme.error} /></View>
               <ThemedText style={styles.actionText}>Download PDF</ThemedText>
@@ -403,9 +438,9 @@ export default function InvoiceDetailsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <ThemedText style={styles.modalTitle}>Record Payment</ThemedText>
-              <TouchableOpacity onPress={() => setShowPaymentModal(false)}><Ionicons name="close" size={24} color={theme.textPrimary}/></TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowPaymentModal(false)}><Ionicons name="close" size={24} color={theme.textPrimary} /></TouchableOpacity>
             </View>
-            
+
             <View style={styles.modalBody}>
               <View style={styles.field}>
                 <ThemedText style={styles.label}>Amount Received (₹)</ThemedText>
@@ -430,7 +465,7 @@ export default function InvoiceDetailsScreen() {
             <View style={styles.modalFooter}>
               <TouchableOpacity style={styles.modalBtnSec} onPress={() => setShowPaymentModal(false)}><ThemedText style={styles.modalBtnSecText}>Cancel</ThemedText></TouchableOpacity>
               <TouchableOpacity style={styles.modalBtnPri} onPress={paymentForm.handleSubmit(submitPayment)} disabled={isProcessing}>
-                {isProcessing ? <ActivityIndicator color={theme.bgSecondary}/> : <ThemedText style={styles.modalBtnPriText}>Confirm</ThemedText>}
+                {isProcessing ? <ActivityIndicator color={theme.bgSecondary} /> : <ThemedText style={styles.modalBtnPriText}>Confirm</ThemedText>}
               </TouchableOpacity>
             </View>
           </View>
@@ -443,9 +478,9 @@ export default function InvoiceDetailsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <ThemedText style={styles.modalTitle}>Cancel Invoice</ThemedText>
-              <TouchableOpacity onPress={() => setShowCancelModal(false)}><Ionicons name="close" size={24} color={theme.textPrimary}/></TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowCancelModal(false)}><Ionicons name="close" size={24} color={theme.textPrimary} /></TouchableOpacity>
             </View>
-            
+
             <View style={styles.modalBody}>
               <View style={styles.warningBox}>
                 <Ionicons name="warning" size={20} color={theme.warning} />
@@ -464,7 +499,7 @@ export default function InvoiceDetailsScreen() {
             <View style={styles.modalFooter}>
               <TouchableOpacity style={styles.modalBtnSec} onPress={() => setShowCancelModal(false)}><ThemedText style={styles.modalBtnSecText}>Keep Invoice</ThemedText></TouchableOpacity>
               <TouchableOpacity style={[styles.modalBtnPri, { backgroundColor: theme.error }]} onPress={cancelForm.handleSubmit(submitCancel)} disabled={isProcessing}>
-                {isProcessing ? <ActivityIndicator color={theme.bgSecondary}/> : <ThemedText style={styles.modalBtnPriText}>Confirm Cancel</ThemedText>}
+                {isProcessing ? <ActivityIndicator color={theme.bgSecondary} /> : <ThemedText style={styles.modalBtnPriText}>Confirm Cancel</ThemedText>}
               </TouchableOpacity>
             </View>
           </View>
@@ -481,7 +516,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   safeArea: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { padding: Spacing.xl, paddingBottom: 40 },
-  
+
   // HEADER
   header: { backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary, flexDirection: 'row', alignItems: 'center' },
   headerBackBtn: { marginRight: Spacing.lg },
@@ -493,7 +528,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, color: theme.textTertiary },
   metaDivider: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, color: theme.textTertiary, marginHorizontal: 2 },
-  
+
   // ERROR BANNER
   errorBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: `${theme.error}15`, padding: Spacing.md, margin: Spacing.xl, marginBottom: 0, borderRadius: UI.borderRadius.md, borderWidth: UI.borderWidth.thin, borderColor: `${theme.error}30` },
   errorBannerText: { flex: 1, fontFamily: theme.fonts.body, fontSize: Typography.size.sm, color: theme.error, marginLeft: Spacing.sm },
@@ -553,7 +588,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: Spacing.md },
   grandTotalLabel: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.bgSecondary },
   grandTotalVal: { fontFamily: theme.fonts.heading, fontSize: Typography.size['2xl'], fontWeight: Typography.weight.bold, color: theme.accentPrimary },
-  
+
   progressContainer: { marginTop: Spacing.xl },
   progressTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden', marginBottom: Spacing.sm },
   progressFill: { height: '100%', backgroundColor: theme.success, borderRadius: 3 },

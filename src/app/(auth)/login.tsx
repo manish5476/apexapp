@@ -73,7 +73,7 @@ export default function LoginScreen() {
     try {
       const response = await AuthService.login({ ...data, forceLogout });
       await setAuth(response.token, response.data.user, response.data.organization, response.data.session);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (err: any) {
       const errorData = err.response?.data;
       if (err.response?.status === 409 && errorData?.code === 'SESSION_CONCURRENCY_LIMIT') {

@@ -58,7 +58,7 @@ export default function DrawerLayout() {
       />
 
       <Drawer.Screen
-        name="customers"
+        name="customers/index"
         options={{
           title: 'CRM',
           drawerLabel: 'Customers',
@@ -69,7 +69,7 @@ export default function DrawerLayout() {
       />
 
       <Drawer.Screen
-        name="product"
+        name="product/index"
         options={{
           title: 'Product',
           drawerLabel: 'Product',
@@ -80,7 +80,7 @@ export default function DrawerLayout() {
       />
 
       <Drawer.Screen
-        name="invoice"
+        name="invoice/index"
         options={{
           title: 'Invoice',
           drawerLabel: 'Invoice',
@@ -91,7 +91,7 @@ export default function DrawerLayout() {
       />
 
       <Drawer.Screen
-        name="payments"
+        name="payments/index"
         options={{
           title: 'Payments',
           drawerLabel: 'Payments',
@@ -102,7 +102,7 @@ export default function DrawerLayout() {
       />
 
       <Drawer.Screen
-        name="chat"
+        name="chat/index"
         options={{
           title: 'Messages',
           drawerLabel: 'Chat',
@@ -124,7 +124,7 @@ export default function DrawerLayout() {
       />
 
       <Drawer.Screen
-        name="users"
+        name="users/index"
         options={{
           title: 'Team Management',
           drawerLabel: 'Users',
