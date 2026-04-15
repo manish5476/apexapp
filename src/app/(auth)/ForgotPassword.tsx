@@ -44,6 +44,10 @@ export const ActiveTheme = {
   success: '#047857',
   warning: '#9a5c00',
   error: '#b81818',
+  borderSecondary: 'rgba(13,148,136,0.1)',
+  accentHover: '#076e64',
+  disabled: '#e2ecf1',
+  disabledText: '#94a3b8',
   elevationShadow: 'rgba(10, 133, 122, 0.09)',
 };
 

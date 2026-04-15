@@ -1,6 +1,13 @@
+import { InvoiceService } from '@/src/api/invoiceService';
+import { DropdownOption } from '@/src/api/masterDropdownService';
+import { ProductService } from '@/src/api/productService';
+import { ActiveTheme } from '@/src/app/(auth)/findShopScreen';
+import { Spacing, Typography, UI, getElevation } from '@/src/constants/theme';
+import { useMasterDropdown } from '@/src/hooks/use-master-dropdown';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,165 +25,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ==========================================
-// 1. THEME TOKENS
+// 2. TYPES
 // ==========================================
-const Typography = {
-  size: { xs: 11, sm: 12, base: 13, md: 14, lg: 15, xl: 16, '2xl': 18, '3xl': 22, '4xl': 28 },
-  weight: { light: '300', normal: '400', medium: '500', semibold: '600', bold: '700' } as const,
-};
-const Spacing = { xs: 4, sm: 6, md: 8, lg: 12, xl: 16, '2xl': 24, '3xl': 32 };
-const UI = { borderRadius: { sm: 6, md: 10, lg: 18, xl: 24, pill: 9999 } };
-
-const ActiveTheme = {
-  name: 'Coastal Command',
-  fonts: { heading: 'Plus Jakarta Sans', body: 'Inter', mono: 'Space Mono' },
-  bgPrimary: '#f3f7f9',
-  bgSecondary: '#ffffff',
-  bgTernary: '#e2ecf1',
-  textPrimary: '#072530',
-  textSecondary: '#1a4d5e',
-  textTertiary: '#427888',
-  textLabel: '#7aaab8',
-  borderPrimary: 'rgba(13,148,136,0.22)',
-  accentPrimary: '#0a857a',
-  accentSecondary: '#0fb3a4',
-  success: '#047857',
-  warning: '#9a5c00',
-  error: '#b81818',
-  elevationShadow: 'rgba(10, 133, 122, 0.09)',
-};
-
-const getElevation = (level: number) => ({
-  shadowColor: ActiveTheme.elevationShadow,
-  shadowOffset: { width: 0, height: level * 2 },
-  shadowOpacity: level * 0.05 + 0.05,
-  shadowRadius: level * 3,
-  elevation: level * 2,
-});
-
-// ==========================================
-// 2. USER'S HOOK & MOCK API SERVICE
-// ==========================================
-export interface DropdownOption {
-  label: string;
-  value: string; // The _id from MongoDB
-}
-export type DropdownEndpoint = 'customers' | 'branches' | 'products' | 'users' | string;
-
-// MOCK API CLIENT (To make this runnable in preview)
-const apiClient = {
-  get: async <T,>(url: string, { params }: any): Promise<{ data: T }> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const endpoint = url.split('/').pop() || 'unknown';
-        const page = parseInt(params.page || '1');
-        const limit = parseInt(params.limit || '20');
-        const searchStr = params.search ? ` (${params.search})` : '';
-
-        // Generate mock paginated data based on the requested endpoint
-        const data = Array.from({ length: limit }).map((_, i) => {
-          const index = (page - 1) * limit + i + 1;
-          let label = `Item ${index}`;
-          if (endpoint === 'customers') label = `Customer ${index}${searchStr}`;
-          if (endpoint === 'branches') label = `Branch Location ${index}${searchStr}`;
-          if (endpoint === 'products') label = `Product ${index}${searchStr}`;
-          return { value: `${endpoint}_id_${index}`, label } as any;
-        });
-
-        // Simulate reaching the end at page 3
-        resolve({ data: page >= 3 ? [] : data } as any);
-      }, 600); // 600ms network delay simulation
-    });
-  }
-};
-
-export const MasterDropdownService = {
-  getDropdownData: async (
-    endpoint: DropdownEndpoint, search: string = '', page: number = 1, searchField?: string, labelField?: string, includeIds?: string[]
-  ): Promise<DropdownOption[]> => {
-    const params: any = { page: page.toString(), limit: '20' };
-    if (search) params.search = search;
-    if (includeIds && includeIds.length > 0) params.includeIds = includeIds.join(',');
-
-    try {
-      const response = await apiClient.get<DropdownOption[]>(`/v1/dropdowns/${endpoint}`, { params });
-      return (response as any).data || [];
-    } catch (error) {
-      console.error(`Error fetching dropdown data for ${endpoint}:`, error);
-      return [];
-    }
-  }
-};
-
-// EXACT HOOK PROVIDED BY USER
-interface UseMasterDropdownProps {
-  endpoint: DropdownEndpoint;
-  initialValue?: string | string[] | null;
-  searchField?: string;
-  labelField?: string;
-  isMulti?: boolean;
-}
-
-export function useMasterDropdown({ endpoint, initialValue, searchField, labelField, isMulti = false }: UseMasterDropdownProps) {
-  const [options, setOptions] = useState<DropdownOption[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLastPage, setIsLastPage] = useState(false);
-  const searchTimeout = useRef<any>(null);
-  const rowsPerPage = 20;
-
-  const fetchData = useCallback(async (reset: boolean = false, includeIds?: string[], search: string = searchTerm, pageNum: number = page) => {
-    if (isLastPage && !reset && !includeIds) return;
-    setLoading(true);
-    try {
-      const newData = await MasterDropdownService.getDropdownData(endpoint, search, pageNum, searchField, labelField, includeIds);
-      if (newData.length < rowsPerPage && !includeIds) setIsLastPage(true);
-      setOptions(prev => {
-        if (reset) return newData;
-        const all = [...prev, ...newData];
-        return all.filter((item, index, self) => index === self.findIndex((t) => t.value === item.value));
-      });
-    } catch (error) {
-      console.error(`[useMasterDropdown] Fetch error for ${endpoint}:`, error);
-    } finally {
-      setLoading(false);
-    }
-  }, [endpoint, isLastPage, searchTerm, page, searchField, labelField]);
-
-  useEffect(() => {
-    fetchData(true, undefined, '', 1);
-    if (initialValue) {
-      const idsToCheck = Array.isArray(initialValue) ? initialValue : [initialValue];
-      fetchData(false, idsToCheck as string[], '', 1);
-    }
-  }, [endpoint]);
-
-  const onSearch = useCallback((text: string) => {
-    setSearchTerm(text);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
-      setPage(1);
-      setIsLastPage(false);
-      fetchData(true, undefined, text, 1);
-    }, 400);
-  }, [fetchData]);
-
-  const onEndReached = useCallback(() => {
-    if (!loading && !isLastPage) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchData(false, undefined, searchTerm, nextPage);
-    }
-  }, [loading, isLastPage, page, searchTerm, fetchData]);
-
-  return { options, loading, searchTerm, onSearch, onEndReached, isLastPage };
-}
-
-// ==========================================
-// 3. MAIN COMPONENT
-// ==========================================
-interface InvoiceItem {
+export interface InvoiceItem {
   id: string; // unique row id
   productId: string;
   name: string;
@@ -235,46 +86,75 @@ export default function PosInvoiceScreen() {
     return { subTotal: sub, totalDiscount: disc, totalTax: tax, grandTotal: grand, balanceAmount: balance };
   }, [items, paidAmount]);
 
-  // --- Actions ---
-
-  // Mocks fetching full product details since the dropdown only returns {label, value}
-  const fetchFullProductDetails = (productOption: DropdownOption): InvoiceItem => {
+  // Standardizes how a product object is converted to an invoice row item
+  const mapProductToInvoiceItem = (product: any): InvoiceItem => {
     return {
-      id: Math.random().toString(),
-      productId: productOption.value,
-      name: productOption.label,
-      sku: `SKU-${productOption.value.split('_').pop()}`,
-      price: Math.floor(Math.random() * 1000) + 99, // Mock Price
+      id: Math.random().toString(36).substring(7),
+      productId: product._id || product.id,
+      name: product.name,
+      sku: product.sku || 'N/A',
+      price: product.price || 0,
       quantity: 1,
       discount: 0,
-      taxRate: 18,
-      currentStock: Math.floor(Math.random() * 50) + 1 // Mock Stock
+      taxRate: product.taxes?.rate || product.taxRate || 0,
+      currentStock: product.stockQuantity || product.currentStock || 0
     };
   };
 
-  const addProductToInvoice = (productOption: DropdownOption) => {
+  const addProductToInvoice = (product: any) => {
     setItems(prev => {
-      const existingIdx = prev.findIndex(i => i.productId === productOption.value);
+      const productId = product._id || product.id;
+      const existingIdx = prev.findIndex(i => i.productId === productId);
       if (existingIdx > -1) {
         const newItems = [...prev];
         newItems[existingIdx].quantity += 1;
         return newItems;
       }
-      return [...prev, fetchFullProductDetails(productOption)];
+      return [...prev, mapProductToInvoiceItem(product)];
     });
   };
 
-  const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+  const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
+    if (scanned) return;
     setScanned(true);
+
     if (!selectedBranch) {
       Alert.alert('Branch Required', 'Please select a branch before scanning.');
-    } else {
-      // Mock Barcode translation to product option
-      const mockScannedOption = { label: `Scanned Item (${data.slice(-4)})`, value: data };
-      addProductToInvoice(mockScannedOption);
-      Alert.alert('Success', `Added to cart`);
+      setScanned(false);
+      return;
     }
-    setTimeout(() => setScanned(false), 2000);
+
+    try {
+      // Real API call to find product by barcode/SKU
+      const response = await ProductService.scanProduct({ barcode: data });
+      const product = (response as any).data;
+
+      if (product) {
+        addProductToInvoice(product);
+        // Optional: haptic feedback or subtle toast instead of Alert
+      } else {
+        Alert.alert('Not Found', `No product found with barcode: ${data}`);
+      }
+    } catch (err) {
+      console.error('Scan error:', err);
+      Alert.alert('Error', 'Failed to lookup product.');
+    } finally {
+      // Lock for 1.5 seconds to prevent accidental double scans
+      setTimeout(() => setScanned(false), 1500);
+    }
+  };
+
+  const handleManualProductSelect = async (option: DropdownOption) => {
+    setShowProductModal(false);
+    try {
+      const response = await ProductService.getProductById(option.value);
+      const product = (response as any).data;
+      if (product) {
+        addProductToInvoice(product);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to fetch product details.');
+    }
   };
 
   const updateItemQty = (id: string, qty: number) => {
@@ -286,16 +166,41 @@ export default function PosInvoiceScreen() {
     setItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleSubmit = (status: 'draft' | 'issued') => {
+  const handleSubmit = async (status: 'draft' | 'issued') => {
     if (!selectedCustomer || !selectedBranch || items.length === 0) {
       Alert.alert('Validation Error', 'Please select a customer, branch, and add at least one item.');
       return;
     }
+
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const payload = {
+        invoiceNumber,
+        customerId: selectedCustomer.value,
+        branchId: selectedBranch.value,
+        status: status,
+        items: items.map(i => ({
+          product: i.productId,
+          quantity: i.quantity,
+          price: i.price,
+          discount: i.discount,
+          taxRate: i.taxRate
+        })),
+        notes,
+        paidAmount: Number(paidAmount) || 0,
+        ...totals
+      };
+
+      await InvoiceService.createInvoice(payload);
+      Alert.alert('Success', `Invoice #${invoiceNumber} has been ${status === 'draft' ? 'saved as draft' : 'issued'}.`, [
+        { text: 'OK', onPress: () => router.push('/') }
+      ]);
+    } catch (err: any) {
+      console.error('Submit error:', err);
+      Alert.alert('Error', err.response?.data?.message || 'Failed to create invoice.');
+    } finally {
       setIsSubmitting(false);
-      Alert.alert('Success', `Invoice #${invoiceNumber} has been ${status === 'draft' ? 'saved as draft' : 'issued'}.`);
-    }, 1000);
+    }
   };
 
   // --- Render Helpers ---
@@ -540,7 +445,7 @@ export default function PosInvoiceScreen() {
       {/* RENDER MODALS POWERED BY useMasterDropdown */}
       {renderDropdownModal(showCustomerModal, setShowCustomerModal, 'Select Customer', customerDropdown, setSelectedCustomer)}
       {renderDropdownModal(showBranchModal, setShowBranchModal, 'Select Branch', branchDropdown, setSelectedBranch)}
-      {renderDropdownModal(showProductModal, setShowProductModal, 'Search Product', productDropdown, addProductToInvoice)}
+      {renderDropdownModal(showProductModal, setShowProductModal, 'Search Product', productDropdown, handleManualProductSelect)}
 
     </SafeAreaView>
   );
@@ -566,7 +471,7 @@ const styles = StyleSheet.create({
   headerGrandTotal: { alignItems: 'flex-end' },
   grandTotalLabel: { fontSize: Typography.size.xs, color: ActiveTheme.textTertiary, textTransform: 'uppercase' },
   grandTotalAmount: { fontFamily: ActiveTheme.fonts.heading, fontSize: Typography.size['2xl'], fontWeight: Typography.weight.bold, color: ActiveTheme.accentPrimary },
-  card: { backgroundColor: ActiveTheme.bgSecondary, borderRadius: UI.borderRadius.lg, padding: Spacing.xl, marginBottom: Spacing.lg, ...getElevation(1) },
+  card: { backgroundColor: ActiveTheme.bgSecondary, borderRadius: UI.borderRadius.lg, padding: Spacing.xl, marginBottom: Spacing.lg, ...getElevation(1, ActiveTheme) },
   label: { fontFamily: ActiveTheme.fonts.body, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, color: ActiveTheme.textSecondary, marginBottom: Spacing.sm },
   pickerButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: ActiveTheme.bgPrimary, borderWidth: 1, borderColor: ActiveTheme.borderPrimary, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.md, height: 44 },
   pickerText: { flex: 1, marginLeft: Spacing.sm, fontFamily: ActiveTheme.fonts.body, fontSize: Typography.size.md, color: ActiveTheme.textPrimary },
@@ -574,7 +479,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: ActiveTheme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: ActiveTheme.textPrimary },
   modeToggle: { flexDirection: 'row', backgroundColor: ActiveTheme.bgTernary, borderRadius: UI.borderRadius.pill, padding: 4 },
   modeBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.xs, paddingHorizontal: Spacing.lg, borderRadius: UI.borderRadius.pill },
-  modeBtnActive: { backgroundColor: ActiveTheme.accentPrimary, ...getElevation(1) },
+  modeBtnActive: { backgroundColor: ActiveTheme.accentPrimary, ...getElevation(1, ActiveTheme) },
   modeBtnText: { marginLeft: Spacing.xs, fontSize: Typography.size.sm, fontWeight: Typography.weight.medium, color: ActiveTheme.textSecondary },
   modeBtnTextActive: { color: '#fff' },
   inputContainer: { marginBottom: Spacing.lg },
@@ -601,7 +506,7 @@ const styles = StyleSheet.create({
   deleteBtn: { padding: Spacing.xs },
   iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: ActiveTheme.bgTernary, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.lg },
   input: { backgroundColor: ActiveTheme.bgPrimary, borderWidth: 1, borderColor: ActiveTheme.borderPrimary, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.md, height: 44, color: ActiveTheme.textPrimary, fontFamily: ActiveTheme.fonts.mono },
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: ActiveTheme.bgSecondary, borderTopLeftRadius: UI.borderRadius.xl, borderTopRightRadius: UI.borderRadius.xl, padding: Spacing.xl, ...getElevation(3) },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: ActiveTheme.bgSecondary, borderTopLeftRadius: UI.borderRadius.xl, borderTopRightRadius: UI.borderRadius.xl, padding: Spacing.xl, ...getElevation(3, ActiveTheme) },
   totalsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.xs },
   totalsLabel: { color: ActiveTheme.textSecondary, fontSize: Typography.size.md },
   totalsValue: { color: ActiveTheme.textPrimary, fontWeight: Typography.weight.semibold, fontSize: Typography.size.md },
@@ -610,7 +515,7 @@ const styles = StyleSheet.create({
   balanceValue: { color: ActiveTheme.error, fontSize: Typography.size.xl, fontWeight: Typography.weight.bold },
   draftBtn: { flex: 1, borderWidth: 1, borderColor: ActiveTheme.accentPrimary, borderRadius: UI.borderRadius.md, height: 48, justifyContent: 'center', alignItems: 'center' },
   draftBtnText: { color: ActiveTheme.accentPrimary, fontWeight: Typography.weight.bold },
-  issueBtn: { flex: 2, backgroundColor: ActiveTheme.accentPrimary, borderRadius: UI.borderRadius.md, height: 48, justifyContent: 'center', alignItems: 'center', ...getElevation(2) },
+  issueBtn: { flex: 2, backgroundColor: ActiveTheme.accentPrimary, borderRadius: UI.borderRadius.md, height: 48, justifyContent: 'center', alignItems: 'center', ...getElevation(2, ActiveTheme) },
   issueBtnText: { color: '#fff', fontWeight: Typography.weight.bold, fontSize: Typography.size.lg },
 
   // Modal Specific Styles
