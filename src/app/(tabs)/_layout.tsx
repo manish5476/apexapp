@@ -1,10 +1,10 @@
+import { CustomDrawerContent } from '@/src/components/navigation/custom-drawer-content';
+import { IconSymbol } from '@/src/components/ui/icon-symbol';
+import { Spacing, ThemeColors, Themes, Typography } from '@/src/constants/theme';
+import { useSocket } from '@/src/hooks/use-socket';
 import { Drawer } from 'expo-router/drawer';
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { IconSymbol } from '@/src/components/ui/icon-symbol';
-import { Themes, ThemeColors, Spacing, Typography } from '@/src/constants/theme';
-import { CustomDrawerContent } from '@/src/components/navigation/custom-drawer-content';
-import { useSocket } from '@/src/hooks/use-socket';
+import { StyleSheet } from 'react-native';
 
 export default function DrawerLayout() {
   const currentTheme = Themes.daylight;
@@ -57,6 +57,26 @@ export default function DrawerLayout() {
         options={{
           title: 'CRM',
           drawerLabel: 'Customers',
+          drawerIcon: ({ color }) => (
+            <IconSymbol size={22} name="person.2.fill" color={color} />
+          ),
+        }}
+      />
+        <Drawer.Screen
+        name="product/index"
+        options={{
+          title: 'Product',
+          drawerLabel: 'Product',
+          drawerIcon: ({ color }) => (
+            <IconSymbol size={22} name="person.2.fill" color={color} />
+          ),
+        }}
+      />
+       <Drawer.Screen
+        name="invoice/index"
+        options={{
+          title: 'Invoice',
+          drawerLabel: 'Invoice',
           drawerIcon: ({ color }) => (
             <IconSymbol size={22} name="person.2.fill" color={color} />
           ),

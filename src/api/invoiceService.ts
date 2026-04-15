@@ -3,8 +3,6 @@ import apiClient from './client';
 export const InvoiceService = {
   endpoint: '/v1/invoices',
 
-  // --- ANALYTICS ---
-
   getProfitSummary: (filters?: any) => {
     return apiClient.get(`${InvoiceService.endpoint}/invoiceanalytics/profit-summary`, { params: filters });
   },

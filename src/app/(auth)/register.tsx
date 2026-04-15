@@ -95,7 +95,7 @@ export default function RegisterScreen() {
       const { terms, ...payload } = data;
       payload.uniqueShopId = payload.uniqueShopId.toUpperCase();
       await AuthService.employeeSignup(payload);
-      router.replace('/(auth)/login' as any);
+      router.replace('/(auth)/org' as any);
     } catch (err: any) {
       setErrorMessage(
         err.response?.data?.message ||

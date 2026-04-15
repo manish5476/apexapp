@@ -42,7 +42,7 @@ export const Spacing = {
 /**
  * 3. UI CONSTANTS
  */
-export const UI = {
+export const UI:any = {
   borderRadius: {
     sm: 6,
     md: 10,
@@ -63,7 +63,7 @@ export const UI = {
 export const Themes = {
   light: {
     name: 'Light Default',
-    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter' },
+    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter', mono: 'Space Mono' },
     bgPrimary: '#ffffff',
     bgSecondary: '#f8fafc',
     bgTernary: '#f1f5f9',
@@ -87,7 +87,7 @@ export const Themes = {
 
   dark: {
     name: 'Dark Default',
-    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter' },
+    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter', mono: 'Space Mono' },
     bgPrimary: '#08080a',
     bgSecondary: '#111113',
     bgTernary: '#1c1c1f',
@@ -111,7 +111,7 @@ export const Themes = {
 
   ivory: {
     name: 'Ivory',
-    fonts: { heading: 'Playfair Display', body: 'Inter' },
+    fonts: { heading: 'Playfair Display', body: 'Inter', mono: 'Space Mono' },
     bgPrimary: '#fdfaf5',
     bgSecondary: '#f7f2ea',
     bgTernary: '#ede5d8',
@@ -135,7 +135,7 @@ export const Themes = {
 
   aurora: {
     name: 'Aurora',
-    fonts: { heading: 'Outfit', body: 'Inter' },
+    fonts: { heading: 'Outfit', body: 'Inter', mono: 'Space Mono' },
     bgPrimary: '#f9fbfd',
     bgSecondary: '#f0f5f9',
     bgTernary: '#e4ecf3',
@@ -159,7 +159,7 @@ export const Themes = {
 
   verdant: {
     name: 'Verdant',
-    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter' },
+    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter', mono: 'Space Mono' },
     bgPrimary: '#f8fdf8',
     bgSecondary: '#eef7ee',
     bgTernary: '#dfeede',
@@ -183,7 +183,7 @@ export const Themes = {
 
   coastal: {
     name: 'Coastal Command',
-    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter' },
+    fonts: { heading: 'Plus Jakarta Sans', body: 'Inter', mono: 'Space Mono' },
     bgPrimary: '#f3f7f9',
     bgSecondary: '#ffffff',
     bgTernary: '#e2ecf1',
@@ -207,7 +207,7 @@ export const Themes = {
 
   warm: {
     name: 'Warm Meridian',
-    fonts: { heading: 'Cormorant Garamond', body: 'Plus Jakarta Sans' },
+    fonts: { heading: 'Cormorant Garamond', body: 'Plus Jakarta Sans', mono: 'Space Mono' },
     bgPrimary: '#faf8f3',
     bgSecondary: '#ffffff',
     bgTernary: '#f0ece2',
@@ -231,7 +231,7 @@ export const Themes = {
 
   daylight: {
     name: 'Daylight Orange',
-    fonts: { heading: 'Space Grotesk', body: 'Inter' },
+    fonts: { heading: 'Space Grotesk', body: 'Inter', mono: 'Space Mono' },
     bgPrimary: '#f5f8fc',
     bgSecondary: '#ffffff',
     bgTernary: '#eaeff8',
@@ -255,7 +255,7 @@ export const Themes = {
 
   naval: {
     name: 'Naval Dawn',
-    fonts: { heading: 'Playfair Display', body: 'Montserrat' },
+    fonts: { heading: 'Playfair Display', body: 'Montserrat', mono: 'Space Mono' },
     bgPrimary: '#edf2f8',
     bgSecondary: '#f9fbfd',
     bgTernary: '#dce6f0',
@@ -279,7 +279,7 @@ export const Themes = {
 
   sand: {
     name: 'Sand Dune',
-    fonts: { heading: 'Fraunces', body: 'Inter' },
+    fonts: { heading: 'Fraunces', body: 'Inter', mono: 'Space Mono' },
     bgPrimary: '#faf4ea',
     bgSecondary: '#f4e8d0',
     bgTernary: '#e8d4b4',
@@ -303,7 +303,7 @@ export const Themes = {
 
   sakura: {
     name: 'Sakura',
-    fonts: { heading: 'Cormorant Garamond', body: 'Plus Jakarta Sans' },
+    fonts: { heading: 'Cormorant Garamond', body: 'Plus Jakarta Sans', mono: 'Space Mono' },
     bgPrimary: '#fdf8f8',
     bgSecondary: '#faeef0',
     bgTernary: '#f4e0e4',
