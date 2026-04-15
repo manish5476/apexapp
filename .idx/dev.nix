@@ -9,7 +9,8 @@
     pkgs.nodejs_20 
     pkgs.tree       # <-- Added tree
     pkgs.curl       # <-- Added curl (great for testing APIs)
-    pkgs.jq         # <-- Added jq (great for parsing JSON in the terminal)
+    pkgs.jq 
+    pkgs.eas-cli    # <-- ADD THIS LINE HERE        # <-- Added jq (great for parsing JSON in the terminal)
   ];
   
   # Sets environment variables in the workspace
