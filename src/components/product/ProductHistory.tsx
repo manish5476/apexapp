@@ -55,14 +55,25 @@ export default function ProductHistoryScreen() {
         startDate = firstDay.toISOString().split('T')[0];
       }
 
+      console.log(`Fetching history for ${id} with filter ${filterMode}`);
       const res = await ProductService.getProductHistory(id as string, { startDate, endDate }) as any;
+      console.log('History Response:', res);
       
-      if (res?.status === 'success') {
-        setHistory(res.data?.history || []);
-      } else {
-        setHistory([]);
+      // Handle various common API response structures
+      let hList = [];
+      if (Array.isArray(res)) {
+        hList = res;
+      } else if (res.data && Array.isArray(res.data)) {
+        hList = res.data;
+      } else if (res.history && Array.isArray(res.history)) {
+        hList = res.history;
+      } else if (res.data?.history && Array.isArray(res.data.history)) {
+        hList = res.data.history;
       }
+
+      setHistory(hList);
     } catch (err: any) {
+      console.error('History Fetch Error:', err);
       Alert.alert('Error', err.response?.data?.message || 'Failed to load product history.');
     } finally {
       setIsLoading(false);

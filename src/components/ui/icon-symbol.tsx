@@ -20,6 +20,14 @@ const MAPPING = {
   'person.fill': 'person',
   'chevron.left.forwardslash.chevron.right': 'code-slash',
   'chevron.right': 'chevron-forward',
+  'shippingbox.fill': 'cube',
+  'doc.text.fill': 'document-text',
+  'creditcard.fill': 'card',
+  'ellipsis.message.fill': 'chatbubble-ellipses',
+  'chart.bar.fill': 'bar-chart',
+  'exclamationmark.triangle.fill': 'alert-circle',
+  'building.2.fill': 'business',
+  'cart.fill': 'cart',
 } as IconMapping;
 
 /**

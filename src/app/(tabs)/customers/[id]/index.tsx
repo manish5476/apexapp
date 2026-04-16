@@ -469,8 +469,17 @@ export default function CustomerDetailsScreen() {
   const renderItem = ({ item }: { item: any }) => {
     if (activeTab === 'ledger') {
       const isDebit = item.debit > 0;
+      const invId = item.invoiceId?._id || item.invoiceId;
+      const payId = item.paymentId?._id || item.paymentId;
+      const targetRoute = invId ? `/invoice/${invId}` : payId ? `/payments/${payId}` : null;
+      
       return (
-        <View style={styles.listItem}>
+        <TouchableOpacity 
+          style={styles.listItem}
+          disabled={!targetRoute}
+          onPress={() => targetRoute && router.push(targetRoute as any)}
+          activeOpacity={0.7}
+        >
           <View style={styles.listRow}>
             <View style={[styles.txnIconWrap, { backgroundColor: isDebit ? `${currentTheme.error}12` : `${currentTheme.success}12` }]}>
               <Ionicons
@@ -480,7 +489,10 @@ export default function CustomerDetailsScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <ThemedText style={styles.itemTitle}>{item.description || 'Transaction'}</ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <ThemedText style={styles.itemTitle}>{item.description || 'Transaction'}</ThemedText>
+                {targetRoute && <Ionicons name="chevron-forward" size={12} color={currentTheme.textTertiary} />}
+              </View>
               <ThemedText style={styles.itemSubtitle}>{formatDate(item.date)}</ThemedText>
             </View>
             <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -492,7 +504,7 @@ export default function CustomerDetailsScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       );
     }
 
@@ -507,7 +519,7 @@ export default function CustomerDetailsScreen() {
       return (
         <TouchableOpacity
           style={styles.listItem}
-          onPress={() => router.push(`/invoices/${item._id}` as any)}
+          onPress={() => router.push(`/invoice/${item._id}` as any)}
           activeOpacity={0.7}
         >
           <View style={styles.listRow}>

@@ -1,8 +1,9 @@
 import { getElevation, Spacing, ThemeColors, Typography, UI } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '../../components/themed-text';
 import { ThemedView } from '../../components/themed-view';
@@ -83,21 +84,33 @@ export default function HomeScreen() {
           {/* Quick Actions */}
           <ThemedText style={styles.sectionTitle}>Quick Actions</ThemedText>
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionCard} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              activeOpacity={0.7}
+              onPress={() => router.push('/(tabs)/users' as any)}
+            >
               <View style={[styles.actionIconBg, { backgroundColor: `${currentTheme.info}15` }]}>
                 <Ionicons name="people-outline" size={28} color={currentTheme.info} />
               </View>
               <ThemedText style={styles.actionLabel}>Employees</ThemedText>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              activeOpacity={0.7}
+              onPress={() => Alert.alert('Attendance', 'Attendance module is currently under maintenance. Please check back soon!')}
+            >
               <View style={[styles.actionIconBg, { backgroundColor: `${currentTheme.accentPrimary}15` }]}>
                 <Ionicons name="clipboard-outline" size={28} color={currentTheme.accentPrimary} />
               </View>
               <ThemedText style={styles.actionLabel}>Attendance</ThemedText>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              activeOpacity={0.7}
+              onPress={() => router.push('/(tabs)/product/low-stock' as any)}
+            >
               <View style={[styles.actionIconBg, { backgroundColor: `${currentTheme.success}15` }]}>
                 <Ionicons name="stats-chart-outline" size={28} color={currentTheme.success} />
               </View>
