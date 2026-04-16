@@ -7,7 +7,8 @@ module.exports = function (api) {
           root: ['./'],
           alias: { '@': './' }
         }],
-        'transform-import-meta'
+        'transform-import-meta',
+        'react-native-reanimated/plugin'
       ]
     };
   };

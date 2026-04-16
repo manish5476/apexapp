@@ -329,7 +329,7 @@ export default function ProductDetailsScreen() {
               <View><ThemedText style={styles.actionItemTitle}>Transfer Stock</ThemedText><ThemedText style={styles.actionItemSub}>Move items between branches</ThemedText></View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); /* Trigger History */ }}>
+            <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); router.push(`/product/${product._id}/history` as any); }}>
               <View style={[styles.actionIconBox, { backgroundColor: `${theme.textTertiary}15` }]}><Ionicons name="time" size={20} color={theme.textTertiary} /></View>
               <View><ThemedText style={styles.actionItemTitle}>View History</ThemedText><ThemedText style={styles.actionItemSub}>Audit trail of movements</ThemedText></View>
             </TouchableOpacity>

@@ -42,7 +42,7 @@ export const Spacing = {
 /**
  * 3. UI CONSTANTS
  */
-export const UI:any = {
+export const UI: any = {
   borderRadius: {
     sm: 6,
     md: 10,

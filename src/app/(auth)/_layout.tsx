@@ -38,14 +38,7 @@ export default function AuthLayout() {
         {/* I noticed you linked to this in the register screen, so I added it here! */}
         <Stack.Screen name="org" />
 
-        <Stack.Screen
-          name="forgot-password"
-          options={{
-            // Sometimes forgot-password screens feel better as a modal pop-up
-            // Change to 'modal' if you want it to slide up from the bottom instead
-            presentation: 'card',
-          }}
-        />
+
       </Stack>
     </>
   );
