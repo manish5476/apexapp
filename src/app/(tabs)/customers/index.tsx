@@ -286,7 +286,12 @@ export default function CustomerListScreen() {
 
       setHasNextPage(pagination?.hasNextPage ?? false);
       setTotalCount(pagination?.totalResults ?? 0);
-      setData((prev) => (isReset ? fetchedData : [...prev, ...fetchedData]));
+      setData((prev) => {
+        if (isReset) return fetchedData;
+        const existingIds = new Set(prev.map((item) => item._id));
+        const newUniqueItems = fetchedData.filter((item: any) => !existingIds.has(item._id));
+        return [...prev, ...newUniqueItems];
+      });
       setCurrentPage(targetPage + 1);
     } catch (error) {
       console.error('Failed to fetch customers', error);
@@ -341,7 +346,7 @@ export default function CustomerListScreen() {
     [currentTheme, styles, confirmDelete]
   );
 
-  const keyExtractor = useCallback((item: any) => item._id, []);
+  const keyExtractor = useCallback((item: any, index: number) => item._id || `cust-${index}`, []);
 
   return (
     <ThemedView style={styles.container}>

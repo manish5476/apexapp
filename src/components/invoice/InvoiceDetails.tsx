@@ -114,10 +114,16 @@ export default function InvoiceDetailsScreen() {
   const submitPayment = async (data: PaymentFormData) => {
     setIsProcessing(true);
     try {
-      await InvoiceService.addPaymentToInvoice(id as string, data as any);
+      const res = await InvoiceService.addPaymentToInvoice(id as string, data as any) as any;
       setShowPaymentModal(false);
       paymentForm.reset();
-      loadData(); // Refresh data
+
+      const newPaymentId = res.data?.data?._id || res.data?._id;
+      if (newPaymentId) {
+        router.push(`/payments/${newPaymentId}` as any);
+      } else {
+        loadData(); // Fallback to refresh if ID not found
+      }
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Failed to process payment.');
     } finally {
@@ -278,14 +284,14 @@ export default function InvoiceDetailsScreen() {
                 <View style={[styles.iconBox, { backgroundColor: `${theme.info}15` }]}>
                   <Ionicons name="person" size={20} color={theme.info} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <TouchableOpacity style={{ flex: 1 }} onPress={() => invoice.customerId?._id && router.push(`/customers/${invoice.customerId._id}` as any)}>
                   <ThemedText style={styles.partyTitle}>{invoice.customerId?.name}</ThemedText>
                   <View style={styles.contactRow}>
                     {invoice.customerId?.phone && <><Ionicons name="call-outline" size={12} color={theme.textTertiary} /><ThemedText style={styles.contactText}>{invoice.customerId?.phone}</ThemedText></>}
                     {invoice.customerId?.email && <><Ionicons name="mail-outline" size={12} color={theme.textTertiary} style={{ marginLeft: 8 }} /><ThemedText style={styles.contactText} numberOfLines={1}>{invoice.customerId?.email}</ThemedText></>}
                   </View>
                   <ThemedText style={styles.partyAddress}>{invoice.billingAddress || 'No address provided'}</ThemedText>
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -299,8 +305,14 @@ export default function InvoiceDetailsScreen() {
             <View style={styles.itemList}>
               {invoice.items?.map((item: any, index: number) => {
                 const lineTotal = ((item.quantity * item.price) - item.discount) * (1 + item.taxRate / 100);
+                const productId = item.productId || item.id || item._id; // Preferred order
                 return (
-                  <View key={index} style={styles.itemRow}>
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.itemRow}
+                    onPress={() => productId && router.push(`/product/${productId}` as any)}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.itemTop}>
                       <ThemedText style={styles.itemName}>{item.name}</ThemedText>
                       <ThemedText style={styles.itemTotal}>{formatCurrency(lineTotal)}</ThemedText>
@@ -309,7 +321,7 @@ export default function InvoiceDetailsScreen() {
                       <ThemedText style={styles.itemCalc}>{item.quantity} {item.unit} × {formatCurrency(item.price)}</ThemedText>
                       {item.taxRate > 0 && <ThemedText style={styles.itemTax}>+ {item.taxRate}% Tax</ThemedText>}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -334,7 +346,11 @@ export default function InvoiceDetailsScreen() {
                         <View style={styles.tDot} />
                         {!isLast && <View style={styles.tLine} />}
                       </View>
-                      <View style={styles.timelineDataCol}>
+                      <TouchableOpacity
+                        style={styles.timelineDataCol}
+                        onPress={() => router.push(`/payments/${pay._id}` as any)}
+                        activeOpacity={0.7}
+                      >
                         <View style={styles.payCard}>
                           <View style={styles.payCardTop}>
                             <ThemedText style={styles.payMethod}>{pay.paymentMethod.toUpperCase()}</ThemedText>
@@ -342,7 +358,7 @@ export default function InvoiceDetailsScreen() {
                           </View>
                           {pay.transactionId && <ThemedText style={styles.payRef}>Ref: {pay.transactionId}</ThemedText>}
                         </View>
-                      </View>
+                      </TouchableOpacity>
                     </View>
                   );
                 })}
