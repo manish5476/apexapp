@@ -1,36 +1,62 @@
-
 import apiClient from './client';
 
 export interface DropdownOption {
   label: string;
-  value: string; // The _id from MongoDB
+  value: string;
+  data?: any; // The full raw object from the backend
+  meta?: any; // Additional rich data (e.g. stock, balance)
 }
 
 interface DropdownResponse {
   status: string;
   results: number;
+  total: number;
+  hasMore: boolean;
   data: DropdownOption[];
 }
 
+// export type DropdownEndpoint =
+//   | 'users' | 'branches' | 'roles' | 'customers' | 'suppliers' | 'masters' | 'channels' | 'transfer-requests'
+//   | 'products' | 'purchases' | 'sales' | 'sales-returns' | 'purchase-returns'
+//   | 'accounts' | 'invoices' | 'payments' | 'emis'
+//   | 'departments' | 'designations' | 'shifts' | 'holidays' | 'geofencing'
+//   | 'attendance-machines' | 'attendance-requests' | 'leave-requests'
+//   | 'meetings' | 'brands' | 'categories' | 'units' | 'taxes';
+
 export type DropdownEndpoint =
-  | 'users' | 'branches' | 'roles' | 'customers' | 'suppliers' | 'masters'
-  | 'products' | 'purchases' | 'sales'
+  | 'users' | 'branches' | 'roles' | 'customers' | 'suppliers' | 'masters' | 'channels' | 'transfer-requests'
+  | 'products' | 'purchases' | 'sales' | 'sales-returns' | 'purchase-returns'
+  | 'brands' | 'categories' | 'subcategories' | 'units' | 'taxes'
   | 'accounts' | 'invoices' | 'payments' | 'emis'
-  | 'departments' | 'designations' | 'shifts' | 'holidays' | 'geofencing'
-  | 'shift-assignments' | 'attendance-machines';
+  | 'departments' | 'designations' | 'shifts' | 'shift-assignments'
+  | 'holidays' | 'geofencing' | 'attendance-machines' | 'attendance-requests' | 'leave-requests'
+  | 'meetings';
+
+const cache = new Map<string, DropdownResponse>();
 
 export const MasterDropdownService = {
   getDropdownData: async (
     endpoint: DropdownEndpoint,
     search: string = '',
     page: number = 1,
+    limit: number = 50,
     searchField?: string,
     labelField?: string,
-    includeIds?: string[]
-  ): Promise<DropdownOption[]> => {
+    includeIds?: string[],
+    extraParams: any = {}
+  ): Promise<DropdownResponse> => {
+    // Generate a unique cache key based on all parameters
+    const cacheKey = JSON.stringify({ endpoint, search, page, limit, searchField, labelField, includeIds, extraParams });
+
+    // Return cached result if it exists
+    if (cache.has(cacheKey)) {
+      return cache.get(cacheKey)!;
+    }
+
     const params: any = {
       page: page.toString(),
-      limit: '50',
+      limit: limit.toString(),
+      ...extraParams,
     };
 
     if (search) params.search = search;
@@ -40,15 +66,124 @@ export const MasterDropdownService = {
 
     try {
       const response = await apiClient.get<DropdownResponse>(`/v1/dropdowns/${endpoint}`, { params });
-      // The interceptor already returns 'response.data' if configured that way, 
-      // but if it returns the full AxiosResponse, we'd need 'response.data.data'.
-      // Based on client.ts: 'apiClient.interceptors.response.use((response) => response.data, ...)'
-      // So 'response' here IS already the body.
-      return (response as any).data || [];
+
+      // Handle the case where the interceptor already unwrapped the response
+      const responseData = (response as any).data || response;
+
+      const result: DropdownResponse = {
+        status: responseData.status || 'success',
+        results: responseData.results || 0,
+        total: responseData.total || responseData.results || 0,
+        hasMore: responseData.hasMore ?? (responseData.data?.length === limit),
+        data: responseData.data || [],
+      };
+
+      // ✅ Cache the successful result
+      if (result.status === 'success') {
+        cache.set(cacheKey, result);
+      }
+
+      return result;
     } catch (error) {
       console.error(`Error fetching dropdown data for ${endpoint}:`, error);
-      return [];
+      return { status: 'error', results: 0, total: 0, hasMore: false, data: [] };
     }
+  },
+
+  /**
+   * Manually clear the dropdown cache.
+   */
+  clearCache: () => {
+    cache.clear();
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import apiClient from './client';
+
+// export interface DropdownOption {
+//   label: string;
+//   value: string; // The _id from MongoDB
+// }
+
+// interface DropdownResponse {
+//   status: string;
+//   results: number;
+//   data: DropdownOption[];
+// }
+
+// export type DropdownEndpoint =
+//   | 'users' | 'branches' | 'roles' | 'customers' | 'suppliers' | 'masters'
+//   | 'products' | 'purchases' | 'sales'
+//   | 'accounts' | 'invoices' | 'payments' | 'emis'
+//   | 'departments' | 'designations' | 'shifts' | 'holidays' | 'geofencing'
+//   | 'shift-assignments' | 'attendance-machines';
+
+// export const MasterDropdownService = {
+//   getDropdownData: async (
+//     endpoint: DropdownEndpoint,
+//     search: string = '',
+//     page: number = 1,
+//     searchField?: string,
+//     labelField?: string,
+//     includeIds?: string[]
+//   ): Promise<DropdownOption[]> => {
+//     const params: any = {
+//       page: page.toString(),
+//       limit: '50',
+//     };
+
+//     if (search) params.search = search;
+//     if (searchField) params.searchField = searchField;
+//     if (labelField) params.labelField = labelField;
+//     if (includeIds && includeIds.length > 0) params.includeIds = includeIds.join(',');
+
+//     try {
+//       const response = await apiClient.get<DropdownResponse>(`/v1/dropdowns/${endpoint}`, { params });
+//       // The interceptor already returns 'response.data' if configured that way, 
+//       // but if it returns the full AxiosResponse, we'd need 'response.data.data'.
+//       // Based on client.ts: 'apiClient.interceptors.response.use((response) => response.data, ...)'
+//       // So 'response' here IS already the body.
+//       return (response as any).data || [];
+//     } catch (error) {
+//       console.error(`Error fetching dropdown data for ${endpoint}:`, error);
+//       return [];
+//     }
+//   }
+// };
 

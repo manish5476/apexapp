@@ -18,6 +18,7 @@ export default function DrawerLayout() {
   return (
     <Drawer
       drawerContent={(props) => <CustomDrawerContent {...props} />}
+      backBehavior="history"
       screenOptions={{
         headerShown: true,
         headerStyle: {
@@ -249,7 +250,7 @@ export default function DrawerLayout() {
       />
 
       <Drawer.Screen
-        name="purchase/return/details"
+        name="purchase/return/details/[id]"
         options={{
           drawerItemStyle: { display: 'none' },
         }}

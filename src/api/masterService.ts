@@ -52,34 +52,44 @@ export const MasterService = {
   /**
    * Get master list data (all entities)
    */
-  getMasterList: (filters?: any) => {
-    return apiClient.get('/v1/master-list', { params: filters });
+  getMasters: (params?: any) => {
+    return apiClient.get('/v1/masters', { params });
   },
 
-  /**
-   * Fetch specific list with filters
-   */
+  createMaster: (data: any) => {
+    return apiClient.post('/v1/masters', data);
+  },
+
+  updateMaster: (id: string, data: any) => {
+    return apiClient.patch(`/v1/masters/${id}`, data);
+  },
+
+  deleteMaster: (id: string) => {
+    return apiClient.delete(`/v1/masters/${id}`);
+  },
+
+  bulkDeleteMasters: (ids: string[]) => {
+    return apiClient.delete('/v1/masters/bulk', { data: { ids } });
+  },
+
+  // ... rest of existing methods
+  // getRoles: (params?: any) => {
+  //   return apiClient.get('/v1/roles', { params });
+  // },
+
+  // (Keep the other existing helper methods below)
   getSpecificList: (type: string, filters?: any) => {
     return apiClient.get('/v1/master-list/list', { params: { type, ...filters } });
   },
 
-  /**
-   * Get filter options for a specific type
-   */
   getFilterOptions: (type: string) => {
     return apiClient.get('/v1/master-list/filter-options', { params: { type } });
   },
 
-  /**
-   * Get quick stats dashboard
-   */
   getQuickStats: (period: string = 'month') => {
     return apiClient.get('/v1/master-list/quick-stats', { params: { period } });
   },
 
-  /**
-   * Get entity details by type and ID
-   */
   getEntityDetails: (type: string, id: string) => {
     return apiClient.get(`/v1/master-list/details/${type}/${id}`);
   }

@@ -79,9 +79,7 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          // Use 'fade' at the root level. 
-          // This makes the jump from Login -> Home feel like a state change, not a screen push.
-          animation: 'fade',
+          animation: 'default',
           contentStyle: { backgroundColor: theme.bgPrimary }
         }}
       >
@@ -91,7 +89,6 @@ export default function RootLayout() {
           name="modal" 
           options={{ 
             presentation: 'modal',
-            // Modals should still slide up from the bottom natively
             animation: 'slide_from_bottom' 
           }} 
         />
