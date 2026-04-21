@@ -81,7 +81,7 @@ const ReturnCard = React.memo(({ item, theme, styles }: { item: PurchaseReturn, 
 
         {item.reason ? (
           <View style={styles.reasonBox}>
-            <ThemedText style={styles.reasonText} numberOfLines={2}>"{item.reason}"</ThemedText>
+            <ThemedText style={styles.reasonText} numberOfLines={2}>&quot;{item.reason}&quot;</ThemedText>
           </View>
         ) : null}
       </View>
@@ -93,6 +93,7 @@ const ReturnCard = React.memo(({ item, theme, styles }: { item: PurchaseReturn, 
     </TouchableOpacity>
   );
 });
+ReturnCard.displayName = 'ReturnCard';
 
 // ==========================================
 // MAIN SCREEN

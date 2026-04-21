@@ -18,7 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { UI, getElevation } from '../branch/[id]';
+import { UI, getElevation } from '@/src/constants/theme';
 
 const DARK_BLUE_ACCENT = '#1d4ed8';
 const BORDER_WIDTH = UI.borderWidth.base;

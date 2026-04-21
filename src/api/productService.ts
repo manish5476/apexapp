@@ -17,13 +17,17 @@ export interface CreateProductPayload {
 }
 
 export interface StockAdjustmentPayload {
+  branchId: string;
+  type: string;     // 'add' or 'subtract'
   quantity: number; // The amount to change
   reason: string;   // e.g., 'Damaged', 'Restock'
 }
 
 export interface StockTransferPayload {
+  fromBranchId: string;
   toBranchId: string;
   quantity: number;
+  description?: string;
 }
 
 export interface ScanProductPayload {
@@ -70,11 +74,8 @@ export const ProductService = {
     return apiClient.patch(`${ProductService.endpoint}/${productId}/restore`, {});
   },
 
-  uploadProductFile: (productId: string, file: any) => {
-    const formData = new FormData();
-    formData.append('file', file as any);
-
-    return apiClient.patch(`${ProductService.endpoint}/${productId}/upload`, formData, {
+  uploadProductFile: (productId: string, fileData: any) => {
+    return apiClient.patch(`${ProductService.endpoint}/${productId}/upload`, fileData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },

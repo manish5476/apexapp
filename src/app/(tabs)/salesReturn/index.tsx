@@ -1,4 +1,4 @@
-import { SalesReturnService } from '@/src/api/SalesReturnService';
+import { salesReturnService } from '@/src/features/sales-return/services/sales-return.service';
 import { ThemedText } from '@/src/components/themed-text';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -117,6 +117,7 @@ const ReturnCard = React.memo(({ item, onAction, theme, styles }: { item: SalesR
     </TouchableOpacity>
   );
 });
+ReturnCard.displayName = 'SalesReturnCard';
 
 // ==========================================
 // MAIN SCREEN
@@ -146,7 +147,7 @@ export default function SalesReturnListScreen() {
     else setIsFetchingMore(true);
 
     try {
-      const res = await SalesReturnService.getAllReturns({ page: pageNum, limit: 20, search: searchQuery, status: activeFilters.status });
+      const res = await salesReturnService.list({ page: pageNum, limit: 20, search: searchQuery, status: activeFilters.status });
       const resData = res.data?.data || res.data;
       const fetchedItems = Array.isArray(resData) ? resData : (resData.docs || []);
       setData(prev => (isRefresh || pageNum === 1 ? fetchedItems : [...prev, ...fetchedItems]));
@@ -172,9 +173,9 @@ export default function SalesReturnListScreen() {
     setIsProcessingAction(true);
     try {
       if (actionModal.type === 'approve') {
-        await SalesReturnService.approveReturn(actionModal.item!._id);
+        await salesReturnService.approve(actionModal.item!._id);
       } else {
-        await SalesReturnService.rejectReturn(actionModal.item!._id, actionReason);
+        await salesReturnService.reject(actionModal.item!._id, actionReason);
       }
       setActionModal({ visible: false, type: null, item: null });
       setActionReason('');
@@ -194,7 +195,7 @@ export default function SalesReturnListScreen() {
             <ThemedText style={styles.pageTitle}>Sales Returns</ThemedText>
             <ThemedText style={styles.pageSubtitle}>Review & process credit notes</ThemedText>
           </View>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/salesReturn/CreateSalesReturnScreen' as any)}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/salesReturn/CreateSalesReturnScreen' as any)}>
             <Ionicons name="add" size={20} color={theme.bgPrimary} />
             <ThemedText style={styles.primaryBtnText}>Issue Return</ThemedText>
           </TouchableOpacity>

@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
-import { AuthService } from '../../api/authService';
+import { authService } from '@/src/features/auth/services/auth.service';
 import { ThemedText } from '../../components/themed-text';
 import { useAuthStore } from '../../store/auth.store';
 
@@ -96,7 +96,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     setShowConcurrencyModal(false);
     try {
-      const response = await AuthService.login({ ...data, forceLogout });
+      const response = await authService.login({ ...data, forceLogout });
       await setAuth(response.token, response.data.user, response.data.organization, response.data.session);
       router.replace('/');
     } catch (err: any) {
@@ -335,7 +335,7 @@ export default function LoginScreen() {
             </View>
             <ThemedText style={styles.modalTitle}>Session Limit Reached</ThemedText>
             <ThemedText style={styles.modalSub}>
-              You're signed in on another device. Continuing will log out that session.
+              You are signed in on another device. Continuing will log out that session.
             </ThemedText>
             <View style={styles.sessionList}>
               {activeSessions.map((session, idx) => (

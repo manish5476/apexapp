@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,73 +18,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-// ==========================================
-// 1. THEME TOKENS
-// ==========================================
-export const Typography = {
-  size: { xs: 11, sm: 12, base: 13, md: 14, lg: 15, xl: 16, '2xl': 18, '3xl': 22, '4xl': 28, '5xl': 36 },
-  weight: { light: '300', normal: '400', medium: '500', semibold: '600', bold: '700' } as const,
-};
-
-export const Spacing = { xs: 4, sm: 6, md: 8, lg: 12, xl: 16, '2xl': 24, '3xl': 32, '4xl': 44 };
-export const UI = { borderRadius: { sm: 6, md: 10, lg: 18, xl: 24, pill: 9999 }, borderWidth: { thin: 1, base: 2 } };
-
-export const ActiveTheme = {
-  name: 'Coastal Command',
-  fonts: { heading: 'System', body: 'System', mono: 'monospace' },
-  bgPrimary: '#f3f7f9',
-  bgSecondary: '#ffffff',
-  bgTernary: '#e2ecf1',
-  textPrimary: '#072530',
-  textSecondary: '#1a4d5e',
-  textTertiary: '#427888',
-  textLabel: '#7aaab8',
-  borderPrimary: 'rgba(13,148,136,0.22)',
-  accentPrimary: '#0a857a',
-  accentSecondary: '#0fb3a4',
-  success: '#047857',
-  warning: '#9a5c00',
-  error: '#b81818',
-  borderSecondary: 'rgba(13,148,136,0.1)',
-  accentHover: '#076e64',
-  disabled: '#e2ecf1',
-  disabledText: '#94a3b8',
-  elevationShadow: 'rgba(10, 133, 122, 0.09)',
-};
-
-export type ThemeColors = typeof ActiveTheme;
-
-export const getElevation = (level: number, theme: ThemeColors = ActiveTheme) => ({
-  shadowColor: theme.elevationShadow,
-  shadowOffset: { width: 0, height: level * 2 },
-  shadowOpacity: level * 0.05 + 0.1,
-  shadowRadius: level * 3,
-  elevation: level * 2,
-});
-
-export const useAppTheme = () => ActiveTheme;
-
-// ==========================================
-// 2. MOCK ROUTER & SERVICES
-// ==========================================
-const router = {
-  back: () => Alert.alert('Navigation', 'Returning to previous screen...'),
-};
-
-const AuthService = {
-  updateUserPassword: async (data: any) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (data.currentPassword === 'error') {
-          reject(new Error('Current password is incorrect.'));
-        } else {
-          resolve({ success: true });
-        }
-      }, 1500);
-    });
-  }
-};
+import api from '@/src/core/api/client';
+import { getElevation, Spacing, ThemeColors, Typography, UI } from '@/src/constants/theme';
+import { useAppTheme } from '@/src/hooks/use-app-theme';
 
 // ==========================================
 // 3. MAIN COMPONENT
@@ -133,10 +70,10 @@ export default function UpdatePasswordScreen() {
     setIsLoading(true);
 
     try {
-      await AuthService.updateUserPassword({
+      await api.patch('/v1/users/updateMyPassword', {
         currentPassword,
-        newPassword,
-        newPasswordConfirm
+        password: newPassword,
+        passwordConfirm: newPasswordConfirm,
       });
 
       setSuccessMessage('Password updated successfully!');

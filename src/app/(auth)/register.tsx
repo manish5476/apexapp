@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
-import { AuthService } from '../../api/authService';
+import { authService } from '@/src/features/auth/services/auth.service';
 
 const { width, height } = Dimensions.get('window');
 
@@ -113,7 +113,7 @@ export default function RegisterScreen() {
     try {
       const { terms, ...payload } = data;
       payload.uniqueShopId = payload.uniqueShopId.toUpperCase();
-      await AuthService.employeeSignup(payload);
+      await authService.signup(payload);
       router.replace('/(auth)/org' as any);
     } catch (err: any) {
       setErrorMessage(

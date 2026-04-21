@@ -1,4 +1,4 @@
-import { InvoiceService } from '@/src/api/invoiceService';
+import { salesService } from '@/src/features/sales/services/sales.service';
 import { ThemedText } from '@/src/components/themed-text';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Spacing } from '../branch/[id]';
+import { Spacing } from '@/src/constants/theme';
 
 const DARK_BLUE_ACCENT = '#1d4ed8';
 
@@ -169,6 +169,7 @@ const SalesCard = React.memo(({ item, theme, styles }: { item: SaleRecord, theme
     </TouchableOpacity>
   );
 });
+SalesCard.displayName = 'SalesCard';
 
 // ==========================================
 // MAIN SCREEN
@@ -206,7 +207,7 @@ export default function SalesListScreen() {
         paymentStatus: activeFilters.paymentStatus
       };
 
-      const res = await InvoiceService.getAllInvoices(filterParams);
+      const res = await salesService.list(filterParams);
       const resData = res.data?.data || res.data;
       const fetchedItems = Array.isArray(resData) ? resData : (resData.docs || []);
       const totalPages = resData.pagination?.totalPages || 1;
@@ -254,7 +255,7 @@ export default function SalesListScreen() {
             <ThemedText style={styles.pageTitle}>Sales Register</ThemedText>
             <ThemedText style={styles.pageSubtitle}>Manage orders & revenue</ThemedText>
           </View>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/invoice/create' as any)}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/invoice/create' as any)}>
             <Ionicons name="add" size={20} color={theme.bgPrimary} />
             <ThemedText style={styles.primaryBtnText}>New Sale</ThemedText>
           </TouchableOpacity>

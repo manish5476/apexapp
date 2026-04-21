@@ -32,7 +32,7 @@ export default function ExploreScreen() {
 
           <ThemedText style={styles.title}>Explore</ThemedText>
           <ThemedText style={styles.subtitle}>
-            We're building powerful new tools to help you discover insights, analyze trends, and grow your business.
+            We are building powerful new tools to help you discover insights, analyze trends, and grow your business.
           </ThemedText>
 
         </View>

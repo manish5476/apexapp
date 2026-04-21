@@ -83,7 +83,7 @@ export default function UserListScreen() {
             <ThemedText style={styles.subtitle}>{total} members found</ThemedText>
           </View>
           <TouchableOpacity 
-            onPress={() => router.push('/users/create' as any)}
+            onPress={() => router.push('/(tabs)/users/create' as any)}
             style={[styles.addButton, { backgroundColor: theme.accentPrimary }]}
           >
             <Ionicons name="add" size={24} color="white" />

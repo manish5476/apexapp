@@ -1,4 +1,4 @@
-import { ProductService } from '@/src/api/productService';
+import { productService } from '@/src/features/product/services/product.service';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
@@ -63,7 +63,7 @@ export default function ProductListScreen() {
         category: activeFilters.category || undefined,
       };
 
-      const res = await ProductService.getAllProducts(params) as any;
+      const res = await productService.list(params) as any;
       const newData = res.data?.data || res.data || [];
       
       setProducts(isRefresh || pageNum === 1 ? newData : [...products, ...newData]);
@@ -118,7 +118,7 @@ export default function ProductListScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await ProductService.deleteProductById(selectedProduct._id);
+              await productService.remove(selectedProduct._id);
               Alert.alert('Success', 'Product deleted.');
               setSelectedProduct(null);
               fetchProducts(1, true);
@@ -150,7 +150,7 @@ export default function ProductListScreen() {
         } as any);
 
         setIsLoading(true);
-        await ProductService.uploadProductFile(selectedProduct._id, formData);
+        await productService.uploadImage(selectedProduct._id, formData);
         Alert.alert('Success', 'Image uploaded.');
         setSelectedProduct(null);
         fetchProducts(1, true);
@@ -274,7 +274,7 @@ export default function ProductListScreen() {
               <ThemedText style={styles.pageSubtitle}>Manage inventory & pricing</ThemedText>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/product/create' as any)}>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/product/create' as any)}>
                 <Ionicons name="add" size={20} color={theme.bgSecondary} />
                 <ThemedText style={styles.primaryBtnText}>New</ThemedText>
               </TouchableOpacity>

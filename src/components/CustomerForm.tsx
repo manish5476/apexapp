@@ -52,7 +52,11 @@ const schema = z.object({
   openingBalance: z.number().default(0),
   creditLimit: z.number().default(0),
   paymentTerms: z.string().optional(),
-  tags: z.string().optional(),
+  tags: z.string()
+    .optional()
+    .transform((val) =>
+      val ? val.split(',').map((tag) => tag.trim()).filter(Boolean) : []
+    ),
   notes: z.string().optional(),
   isActive: z.boolean().default(true),
 });

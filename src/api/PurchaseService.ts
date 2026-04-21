@@ -76,7 +76,7 @@ export const PurchaseService = {
       formData.append('attachments', {
         uri: file.uri,
         name: file.name || `file-${Date.now()}`,
-        type: file.type || 'application/octet-stream',
+        type: file.mimeType || file.type || 'application/octet-stream',
       } as any);
     });
 

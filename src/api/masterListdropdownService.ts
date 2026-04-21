@@ -1,5 +1,4 @@
 import apiClient from './client'; // Your configured Axios instance
-import { MasterList, QuickStats } from '../types/master';
 
 export const MasterService = {
   endpoint: '/v1/masters',
