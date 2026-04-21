@@ -15,7 +15,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Spacing, Typography, UI, getElevation } from '../branch/[id]';
+import { Spacing, Typography, UI, getElevation } from '@/src/constants/theme';
 
 // Adjust path to your design system
 // import { Spacing, Themes, Typography, UI, getElevation } from './theme';
@@ -111,6 +111,7 @@ const SessionCard = React.memo(({
     </TouchableOpacity>
   );
 });
+SessionCard.displayName = 'SessionCard';
 
 // ==========================================
 // MAIN SCREEN

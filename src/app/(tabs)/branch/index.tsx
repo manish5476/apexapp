@@ -47,7 +47,7 @@ export default function BranchListScreen() {
   const renderBranchItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.card} 
-      onPress={() => router.push(`/branch/${item._id}` as any)}
+      onPress={() => router.push(`/(tabs)/branch/${item._id}` as any)}
       activeOpacity={0.7}
     >
       <View style={styles.cardIcon}>
@@ -70,8 +70,15 @@ export default function BranchListScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>Branches</ThemedText>
-          <ThemedText style={styles.headerSubtitle}>Manage warehouse & shop locations</ThemedText>
+          <View style={styles.headerRow}>
+            <View>
+              <ThemedText style={styles.headerTitle}>Branches</ThemedText>
+              <ThemedText style={styles.headerSubtitle}>Manage warehouse & shop locations</ThemedText>
+            </View>
+            <TouchableOpacity style={styles.newButton} onPress={() => router.push('/(tabs)/branch/create' as any)}>
+              <Ionicons name="add" size={18} color={theme.bgPrimary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isLoading && !isRefreshing ? (
@@ -113,6 +120,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.borderPrimary,
   },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: {
     fontFamily: theme.fonts.heading,
     fontSize: Typography.size['2xl'],
@@ -124,6 +132,14 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: Typography.size.sm,
     color: theme.textSecondary,
     marginTop: 4,
+  },
+  newButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.accentPrimary,
   },
   list: { padding: Spacing.md },
   card: {

@@ -31,21 +31,20 @@ export default function RootLayout() {
     // The store is hydrated, hide the splash screen!
     SplashScreen.hideAsync().catch(() => {});
 
-    // Guard against redirecting before segments are ready
-    // if (!segments || segments.length === 0) return;
-    if (!segments || (segments.length as number) === 0) return;
-
-    // Check which group the user is currently trying to access
+    // segments[0] is '' when on the root index route — treat that as needing redirect too
     const inAuthGroup = segments[0] === '(auth)';
+    const inTabsGroup = segments[0] === '(tabs)';
+    const onRootIndex = !segments[0] || segments[0] === '';
 
-    if (isAuthenticated && inAuthGroup) {
-      // Logged in while in auth group? Send them to home.
+    if (isAuthenticated && (inAuthGroup || onRootIndex)) {
+      // Logged in while in auth group or root? Send them to home.
       router.replace('/(tabs)');
-    } else if (!isAuthenticated && !inAuthGroup) {
-      // Not logged in, but trying to access tabs? Send them to login.
+    } else if (!isAuthenticated && (inTabsGroup || onRootIndex)) {
+      // Not logged in, but trying to access tabs or root? Send them to login.
       router.replace('/(auth)/login');
     }
   }, [isHydrated, isAuthenticated, segments]);
+
 
   const navigationTheme = useMemo(() => {
     // Determine if the current theme is considered "Dark" based on background or name
@@ -80,11 +79,13 @@ export default function RootLayout() {
         screenOptions={{
           headerShown: false,
           animation: 'default',
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
           contentStyle: { backgroundColor: theme.bgPrimary }
         }}
       >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
         <Stack.Screen 
           name="modal" 
           options={{ 

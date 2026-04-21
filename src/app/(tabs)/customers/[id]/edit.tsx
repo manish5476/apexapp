@@ -7,7 +7,7 @@ import { CustomerService } from '../../../../api/customerService';
 import { CustomerForm } from '../../../../components/CustomerForm';
 import { ThemedText } from '../../../../components/themed-text';
 import { ThemedView } from '../../../../components/themed-view';
-import { CustomerFormData } from '../../../../constants/customer.schema';
+import { CustomerFormData } from '../../../../components/CustomerForm';
 
 // --- IMPORT YOUR TOKENS HERE ---
 
@@ -27,7 +27,8 @@ export default function EditCustomerScreen() {
   const fetchCustomer = async () => {
     try {
       const res = (await CustomerService.getCustomerDataWithId(id as string)) as any;
-      const data = res.data?.data || res.data || res;
+      const body = res.data || res;
+      const data = body.data?.customer || body.customer || body.data || body;
       setInitialData(data);
     } catch (err) {
       console.error(err);
@@ -77,9 +78,6 @@ export default function EditCustomerScreen() {
           <ThemedText style={styles.subtitle}>Update contact and financial details</ThemedText>
         </View>
 
-        {/* Note: Ensure your CustomerForm component is also updated to accept 
-          and use the theme tokens internally for its inputs and buttons! 
-        */}
         <CustomerForm
           initialData={initialData}
           onSubmit={onSubmit}
@@ -203,11 +201,11 @@ const createStyles = (theme: ThemeColors) =>
 //         <ThemedText type="title">Edit Profile</ThemedText>
 //         <ThemedText style={styles.subtitle}>Update contact and financial details</ThemedText>
 //       </ThemedView>
-//       <CustomerForm 
-//         initialData={initialData} 
-//         onSubmit={onSubmit} 
-//         isSubmitting={isSubmitting} 
-//         editMode 
+//       <CustomerForm
+//         initialData={initialData}
+//         onSubmit={onSubmit}
+//         isSubmitting={isSubmitting}
+//         editMode
 //       />
 //     </ThemedView>
 //   );

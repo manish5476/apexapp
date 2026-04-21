@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // Adjust path to your design system
 import { AssetRecord, AssetsService } from '@/src/api/AssetsService';
 import { Themes } from '@/src/constants/theme';
-import { Spacing, Typography, UI, getElevation } from '../branch/[id]';
+import { Spacing, Typography, UI, getElevation } from '@/src/constants/theme';
 // import { Spacing, Themes, Typography, UI, getElevation } from './theme';
 
 const { width } = Dimensions.get('window');

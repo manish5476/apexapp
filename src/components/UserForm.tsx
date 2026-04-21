@@ -377,6 +377,7 @@ function MasterSelectField({ label, control, name, endpoint, error, placeholder 
   const theme = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [modalVisible, setModalVisible] = useState(false);
+  const { options, loading, searchTerm, onSearch, onEndReached } = useMasterDropdown({ endpoint });
 
   return (
     <View style={styles.field}>
@@ -385,9 +386,6 @@ function MasterSelectField({ label, control, name, endpoint, error, placeholder 
         control={control}
         name={name}
         render={({ field: { onChange, value } }) => {
-          // Initialize hook inside the render to sync value
-          const { options, loading, searchTerm, onSearch, onEndReached } = useMasterDropdown({ endpoint, initialValue: value });
-
           const selectedOption = options.find(o => o.value === value);
 
           return (

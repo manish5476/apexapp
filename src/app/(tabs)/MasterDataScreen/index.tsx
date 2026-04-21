@@ -1,4 +1,4 @@
-import { Themes } from '@/src/constants/theme';
+import { Spacing, Themes, Typography, UI, getElevation } from '@/src/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -19,7 +19,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Spacing, Typography, UI, getElevation } from '../branch/[id]';
 
 // Adjust this path to your actual theme file
 // import { Spacing, Themes, Typography, UI, getElevation } from './theme';
@@ -137,6 +136,7 @@ const MasterCard = React.memo(({
     </TouchableOpacity>
   );
 });
+MasterCard.displayName = 'MasterCard';
 
 // ==========================================
 // MAIN SCREEN

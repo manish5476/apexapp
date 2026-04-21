@@ -144,6 +144,7 @@ const InvoiceCard = React.memo(({ item, theme, styles }: { item: Invoice; theme:
     </TouchableOpacity>
   );
 });
+InvoiceCard.displayName = 'InvoiceCard';
 
 // ==========================================
 // MAIN SCREEN

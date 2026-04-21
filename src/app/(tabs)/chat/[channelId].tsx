@@ -139,6 +139,7 @@ const MessageBubble = React.memo(({
     </View>
   );
 });
+MessageBubble.displayName = 'MessageBubble';
 
 // ─── Typing Indicator ─────────────────────────────────────────────────────────
 

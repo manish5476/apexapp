@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Adjust these imports to your actual paths
-import { PurchaseService } from '@/src/api/PurchaseService';
+import { purchaseService } from '@/src/features/purchase/services/purchase.service';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { getElevation, Spacing, Typography, UI } from '@/src/constants/theme';
@@ -66,7 +66,7 @@ const getPaymentStatusTheme = (status: string) => {
 // ==========================================
 // MEMOIZED PURCHASE CARD
 // ==========================================
-const PurchaseCard = React.memo(({ item, theme, styles }: { item: PurchaseOrder, theme: any, styles: any }) => {
+const PurchaseCard = React.memo(({ item, theme, styles }: { item: any, theme: any, styles: any }) => {
   const orderTheme = getOrderStatusTheme(item.status);
   const paymentTheme = getPaymentStatusTheme(item.paymentStatus);
   const itemCount = item.items?.length || 0;
@@ -75,7 +75,7 @@ const PurchaseCard = React.memo(({ item, theme, styles }: { item: PurchaseOrder,
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.6}
-      onPress={() => router.push(`/purchase/${item._id}` as any)}
+      onPress={() => router.push(`/(tabs)/purchase/${item._id}` as any)}
     >
       {/* Header */}
       <View style={styles.cardHeader}>
@@ -105,15 +105,45 @@ const PurchaseCard = React.memo(({ item, theme, styles }: { item: PurchaseOrder,
             <ThemedText style={styles.supplierName} numberOfLines={1}>
               {item.supplierId?.companyName || 'Unknown Supplier'}
             </ThemedText>
+            {item.supplierId?.contactPerson && (
+              <ThemedText style={styles.contactPerson} numberOfLines={1}>
+                <Ionicons name="person-outline" size={10} color={theme.textTertiary} /> {item.supplierId.contactPerson}
+              </ThemedText>
+            )}
             <View style={styles.metaInfoRow}>
               <Ionicons name="cube-outline" size={12} color={theme.textTertiary} />
               <ThemedText style={styles.metaInfoText}>{itemCount} Items</ThemedText>
               <ThemedText style={styles.metaInfoDot}>•</ThemedText>
+              <Ionicons name="calendar-outline" size={12} color={theme.textTertiary} />
               <ThemedText style={styles.metaInfoText}>
                 {item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString('en-IN') : 'N/A'}
               </ThemedText>
+              {item.paymentMethod && (
+                <>
+                  <ThemedText style={styles.metaInfoDot}>•</ThemedText>
+                  <ThemedText style={[styles.metaInfoText, { textTransform: 'uppercase', fontSize: 10 }]}>
+                    {item.paymentMethod}
+                  </ThemedText>
+                </>
+              )}
             </View>
           </View>
+        </View>
+        
+        {/* Financial Breakdown (Mini) */}
+        <View style={styles.financialMiniRow}>
+           <View style={styles.miniCol}>
+             <ThemedText style={styles.miniLabel}>Sub Total</ThemedText>
+             <ThemedText style={styles.miniValue}>{formatCurrency(item.subTotal || 0)}</ThemedText>
+           </View>
+           <View style={styles.miniCol}>
+             <ThemedText style={styles.miniLabel}>Tax</ThemedText>
+             <ThemedText style={styles.miniValue}>{formatCurrency(item.totalTax || 0)}</ThemedText>
+           </View>
+           <View style={styles.miniColRight}>
+             <ThemedText style={styles.miniLabel}>Paid</ThemedText>
+             <ThemedText style={[styles.miniValue, { color: '#10b981' }]}>{formatCurrency(item.paidAmount || 0)}</ThemedText>
+           </View>
         </View>
       </View>
 
@@ -129,8 +159,8 @@ const PurchaseCard = React.memo(({ item, theme, styles }: { item: PurchaseOrder,
             <ThemedText style={[styles.balanceTotal, item.balanceAmount > 0 && { color: theme.error }]}>
               {formatCurrency(item.balanceAmount)}
             </ThemedText>
-            <View style={styles.paymentStatusBadge}>
-              <Ionicons name={paymentTheme.icon} size={14} color={paymentTheme.color} />
+            <View style={[styles.paymentStatusBadge, { borderColor: paymentTheme.color }]}>
+              <Ionicons name={paymentTheme.icon} size={12} color={paymentTheme.color} />
               <ThemedText style={[styles.paymentStatusText, { color: paymentTheme.color }]}>
                 {item.paymentStatus}
               </ThemedText>
@@ -141,6 +171,7 @@ const PurchaseCard = React.memo(({ item, theme, styles }: { item: PurchaseOrder,
     </TouchableOpacity>
   );
 });
+PurchaseCard.displayName = 'PurchaseCard';
 
 // ==========================================
 // MAIN SCREEN
@@ -165,7 +196,6 @@ export default function PurchaseListScreen() {
     supplierId: ''
   });
 
-  // --- MOCK DATA FETCHING (Replace with actual PurchaseService) ---
   const fetchPurchases = useCallback(async (pageNum: number, isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
     else if (pageNum === 1) setIsLoading(true);
@@ -173,21 +203,48 @@ export default function PurchaseListScreen() {
 
     try {
       const filters = {
-        invoiceNumber: searchQuery,
-        ...activeFilters,
+        invoiceNumber: searchQuery || undefined,
+        status: activeFilters.status || undefined,
+        paymentStatus: activeFilters.paymentStatus || undefined,
+        supplierId: activeFilters.supplierId || undefined,
         page: pageNum,
-        limit: 10
+        limit: 15
       };
 
-      const res = await PurchaseService.getAllPurchases(filters);
-      const data = res.data?.data || res.data;
-      const fetchedItems = Array.isArray(data) ? data : (data.docs || []);
+      const res = await purchaseService.list(filters);
+      const responseBody = res.data;
+      
+      let fetchedItems = [];
+      let hasNext = false;
+
+      // Robust parsing based on the Angular app's response structure
+      if (responseBody.data && Array.isArray(responseBody.data.data)) {
+        fetchedItems = responseBody.data.data;
+      } else if (Array.isArray(responseBody.data)) {
+        fetchedItems = responseBody.data;
+      } else if (Array.isArray(responseBody)) {
+        fetchedItems = responseBody;
+      }
+
+      // Pagination parsing
+      if (responseBody.pagination) {
+        hasNext = !!responseBody.pagination.hasNextPage || (pageNum * 15 < responseBody.pagination.totalResults);
+      } else if (responseBody.data?.pagination) {
+        hasNext = !!responseBody.data.pagination.hasNextPage;
+      }
 
       setPurchases(prev => (isRefresh || pageNum === 1 ? fetchedItems : [...prev, ...fetchedItems]));
-      setHasNextPage(data.hasNextPage || false);
+      setHasNextPage(hasNext);
       setPage(pageNum);
-    } catch (err) {
-      Alert.alert('Error', 'Failed to load purchase orders.');
+    } catch (err: any) {
+      console.error('Fetch purchases error:', err);
+      // Stop the infinite loop!
+      setHasNextPage(false);
+      
+      // Only alert on manual refresh or initial load to prevent spam
+      if (pageNum === 1 || isRefresh) {
+        Alert.alert('Error', err?.response?.data?.message || 'Failed to load purchase orders.');
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -227,7 +284,7 @@ export default function PurchaseListScreen() {
               <ThemedText style={styles.pageTitle}>Purchase Register</ThemedText>
               <ThemedText style={styles.pageSubtitle}>Manage orders & supplier intake</ThemedText>
             </View>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/purchase/-1/edit' as any)}>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/purchase/-1/edit' as any)}>
               <Ionicons name="add" size={20} color={theme.bgPrimary} />
               <ThemedText style={styles.primaryBtnText}>New</ThemedText>
             </TouchableOpacity>
@@ -380,9 +437,16 @@ const createStyles = (theme: any) => StyleSheet.create({
   avatar: { width: 44, height: 44, borderRadius: 8, backgroundColor: theme.bgSecondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.borderSecondary },
   avatarText: { fontFamily: theme.fonts.heading, fontSize: 18, fontWeight: 'bold', color: theme.textSecondary },
   supplierName: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: theme.textPrimary },
-  metaInfoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  contactPerson: { fontFamily: theme.fonts.body, fontSize: 12, color: theme.textSecondary, marginTop: 2 },
+  metaInfoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   metaInfoText: { fontFamily: theme.fonts.body, fontSize: 12, color: theme.textTertiary, marginLeft: 4 },
   metaInfoDot: { fontSize: 10, color: theme.textTertiary, marginHorizontal: 6 },
+
+  financialMiniRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: theme.bgSecondary, borderStyle: 'dashed' },
+  miniCol: { flex: 1 },
+  miniColRight: { flex: 1, alignItems: 'flex-end' },
+  miniLabel: { fontFamily: theme.fonts.body, fontSize: 10, color: theme.textTertiary, textTransform: 'uppercase', marginBottom: 2 },
+  miniValue: { fontFamily: theme.fonts.heading, fontSize: 13, fontWeight: '600', color: theme.textSecondary },
 
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, backgroundColor: theme.bgSecondary, borderTopWidth: 1, borderTopColor: theme.borderSecondary },
   financialLabel: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: 'bold', color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },

@@ -1,4 +1,4 @@
-import { PaymentService } from '@/src/api/paymentService';
+import { paymentService } from '@/src/features/payment/services/payment.service';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
@@ -74,7 +74,7 @@ export default function PaymentListScreen() {
         status: filters.status || undefined,
       };
 
-      const res = await PaymentService.getAllPayments(params) as any;
+      const res = await paymentService.list(params) as any;
       const newData = res.data?.data || res.data || [];
       
       setPayments(isRefresh || pageNum === 1 ? newData : [...payments, ...newData]);
@@ -244,7 +244,7 @@ export default function PaymentListScreen() {
               <TouchableOpacity style={styles.iconBtn} onPress={() => setShowFilters(true)}>
                 <Ionicons name="filter" size={20} color={Object.values(filters).some(v => v) ? theme.accentPrimary : theme.textPrimary} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/payments/create' as any)}>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/payments/create' as any)}>
                 <Ionicons name="add" size={20} color={theme.bgSecondary} />
                 <ThemedText style={styles.primaryBtnText}>Record</ThemedText>
               </TouchableOpacity>

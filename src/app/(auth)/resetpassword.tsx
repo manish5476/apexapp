@@ -203,7 +203,7 @@ export default function ResetPasswordScreen() {
             </TouchableOpacity>
 
             {/* Back to Login Link */}
-            <TouchableOpacity style={styles.backLink} onPress={() => router.push('/auth/login' as any)}>
+            <TouchableOpacity style={styles.backLink} onPress={() => router.push('/(auth)/login' as any)}>
               <Ionicons name="arrow-back" size={16} color={theme.textSecondary} />
               <Text style={styles.backLinkText}>Back to Login</Text>
             </TouchableOpacity>

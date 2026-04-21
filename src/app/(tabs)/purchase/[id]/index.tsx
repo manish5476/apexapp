@@ -6,8 +6,10 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -49,6 +51,7 @@ const getPaymentTheme = (status: string) => {
 export default function PurchaseDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Data State
   const [purchase, setPurchase] = useState<any>(null);
@@ -75,18 +78,29 @@ export default function PurchaseDetailsScreen() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const res = await PurchaseService.getPurchaseById(id);
-      const data = res.data?.data || res.data;
+      const [purchaseRes, paymentsRes] = await Promise.all([
+        PurchaseService.getPurchaseById(id),
+        PurchaseService.getPaymentHistory(id)
+      ]);
+
+      const data = purchaseRes.data?.data || purchaseRes.data;
+      const paymentsData = paymentsRes.data?.data?.payments || paymentsRes.data?.payments || paymentsRes.data || [];
       
       setPurchase(data);
       setItems(data.items || []);
-      setPayments(data.payments || []);
+      setPayments(paymentsData);
     } catch (err) {
       Alert.alert('Error', 'Failed to load details.');
       router.back();
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    loadData();
   };
 
   useEffect(() => {
@@ -173,6 +187,21 @@ export default function PurchaseDetailsScreen() {
     ]);
   };
 
+  const handleDeleteAttachment = (index: number) => {
+    Alert.alert('Confirm', 'Delete this attachment?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try {
+          await PurchaseService.deleteAttachment(purchase._id, index);
+          Alert.alert('Success', 'Attachment removed.');
+          loadData();
+        } catch (err) {
+          Alert.alert('Error', 'Failed to delete attachment.');
+        }
+      } }
+    ]);
+  };
+
   if (isLoading || !purchase) {
     return (
       <View style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -202,7 +231,11 @@ export default function PurchaseDetailsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={DARK_BLUE_ACCENT} />}
+      >
 
         {/* TOP STATUS ROW */}
         <View style={styles.statusRow}>
@@ -345,11 +378,17 @@ export default function PurchaseDetailsScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Ionicons name="document-text" size={24} color={DARK_BLUE_ACCENT} />
                       <View style={{ marginLeft: Spacing.md, flex: 1 }}>
-                        <Text style={styles.itemTitle} numberOfLines={1}>{file.name}</Text>
-                        <Text style={styles.itemSub}>{file.format.toUpperCase()}</Text>
+                        <Text style={styles.itemTitle} numberOfLines={1}>{file.name || `Attachment ${i + 1}`}</Text>
+                        <Text style={styles.itemSub}>{file.format?.toUpperCase() || 'FILE'}</Text>
                       </View>
-                      <TouchableOpacity><Ionicons name="eye" size={20} color={DARK_BLUE_ACCENT} style={{ padding: 8 }} /></TouchableOpacity>
-                      <TouchableOpacity><Ionicons name="trash" size={20} color={theme.error} style={{ padding: 8 }} /></TouchableOpacity>
+                      {file.url && (
+                        <TouchableOpacity onPress={() => Linking.openURL(file.url)}>
+                          <Ionicons name="eye" size={20} color={DARK_BLUE_ACCENT} style={{ padding: 8 }} />
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity onPress={() => handleDeleteAttachment(i)}>
+                        <Ionicons name="trash" size={20} color={theme.error} style={{ padding: 8 }} />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 ))
@@ -401,12 +440,12 @@ export default function PurchaseDetailsScreen() {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); router.push(`/purchase/${purchase._id}/edit` as any); }}>
+            <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); router.push(`/(tabs)/purchase/${purchase._id}/edit` as any); }}>
               <View style={[styles.actionIconBox, { backgroundColor: `${DARK_BLUE_ACCENT}15` }]}><Ionicons name="pencil" size={20} color={DARK_BLUE_ACCENT} /></View>
               <View><Text style={styles.actionItemTitle}>Edit Invoice</Text></View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); router.push(`/purchase/return/${purchase._id}` as any); }}>
+            <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); router.push(`/(tabs)/purchase/return/${purchase._id}` as any); }}>
               <View style={[styles.actionIconBox, { backgroundColor: `${theme.info}15` }]}><Ionicons name="arrow-undo-outline" size={20} color={theme.info} /></View>
               <View><Text style={styles.actionItemTitle}>Return / Debit Note</Text></View>
             </TouchableOpacity>

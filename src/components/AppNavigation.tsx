@@ -107,11 +107,16 @@ interface AppTabBarProps {
 }
 
 export const AppTabBar: React.FC<AppTabBarProps> = ({ tabs, activeKey, onPress }) => {
+  const tabScales = useRef<Record<string, Animated.Value>>({});
+
   return (
     <View style={tabStyles.container}>
       {tabs.map(tab => {
         const isActive = tab.key === activeKey;
-        const scale = useRef(new Animated.Value(1)).current;
+        if (!tabScales.current[tab.key]) {
+          tabScales.current[tab.key] = new Animated.Value(1);
+        }
+        const scale = tabScales.current[tab.key];
 
         const handlePress = () => {
           Animated.sequence([

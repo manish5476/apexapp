@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,66 +11,63 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Adjust path to your design system
 import { MasterDropdownService } from '@/src/api/masterDropdownService';
 import { PurchaseService } from '@/src/api/PurchaseService';
-import { Spacing, Themes, Typography, UI } from '@/src/constants/theme';
-import { useEffect } from 'react';
+import { ThemedText } from '@/src/components/themed-text';
+import { ThemedView } from '@/src/components/themed-view';
+import { getElevation, Spacing, Typography, UI } from '@/src/constants/theme';
+import { useAppTheme } from '@/src/hooks/use-app-theme';
 
 // ==========================================
-// THEME CONFIGURATION
+// REUSABLE NATIVE SELECT FIELD (PREMIUM)
 // ==========================================
-const theme = Themes.light;
-const DARK_BLUE_ACCENT = '#1d4ed8';
-const BORDER_COLOR = theme.borderSecondary;
-const BORDER_WIDTH = UI.borderWidth.base;
-
-// --- OPTIONS STATE ---
-// (Will be populated via API)
-
-// ==========================================
-// REUSABLE NATIVE SELECT FIELD
-// ==========================================
-const SelectField = ({ label, value, options, onSelect, placeholder }: any) => {
+const SelectField = ({ label, value, options, onSelect, placeholder, theme }: any) => {
   const [visible, setVisible] = useState(false);
   const selectedLabel = options.find((o: any) => o.value === value)?.label || placeholder;
 
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
-      <TouchableOpacity style={styles.selectTrigger} onPress={() => setVisible(true)}>
-        <Text style={[styles.selectTriggerText, !value && { color: theme.textLabel }]}>{selectedLabel}</Text>
-        <Ionicons name="chevron-down" size={20} color={DARK_BLUE_ACCENT} />
+      <ThemedText style={styles.label}>{label}</ThemedText>
+      <TouchableOpacity 
+        style={[styles.selectTrigger, { backgroundColor: theme.bgSecondary, borderColor: theme.borderSecondary }]} 
+        onPress={() => setVisible(true)}
+      >
+        <ThemedText style={[styles.selectTriggerText, !value && { color: theme.textTertiary }]}>{selectedLabel}</ThemedText>
+        <Ionicons name="chevron-down" size={20} color={theme.textSecondary} />
       </TouchableOpacity>
 
-      <Modal visible={visible} animationType="slide" transparent>
+      <Modal visible={visible} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select {label.replace('*', '')}</Text>
-              <TouchableOpacity onPress={() => setVisible(false)}>
+          <View style={[styles.modalContent, { backgroundColor: theme.bgPrimary }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.borderSecondary }]}>
+              <ThemedText style={styles.modalTitle}>Select {label.replace('*', '').trim()}</ThemedText>
+              <TouchableOpacity onPress={() => setVisible(false)} style={{ padding: Spacing.xs }}>
                 <Ionicons name="close" size={24} color={theme.textPrimary} />
               </TouchableOpacity>
             </View>
             <FlatList
               data={options}
               keyExtractor={(item) => item.value}
+              contentContainerStyle={{ padding: Spacing.xl }}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.modalOption}
+                  style={[
+                    styles.modalOption, 
+                    { borderBottomColor: theme.borderSecondary },
+                    value === item.value && { backgroundColor: `${theme.accentPrimary}10`, borderColor: theme.accentPrimary }
+                  ]}
                   onPress={() => { onSelect(item.value); setVisible(false); }}
                 >
-                  <Text style={[styles.modalOptionText, value === item.value && styles.modalOptionTextActive]}>
+                  <ThemedText style={[styles.modalOptionText, value === item.value && { color: theme.accentPrimary, fontWeight: 'bold' }]}>
                     {item.label}
-                  </Text>
-                  {value === item.value && <Ionicons name="checkmark-circle" size={24} color={DARK_BLUE_ACCENT} />}
+                  </ThemedText>
+                  {value === item.value && <Ionicons name="checkmark-circle" size={24} color={theme.accentPrimary} />}
                 </TouchableOpacity>
               )}
             />
@@ -86,7 +83,8 @@ const SelectField = ({ label, value, options, onSelect, placeholder }: any) => {
 // ==========================================
 export default function PurchaseFormScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const isEditMode = !!id;
+  const isEditMode = !!id && id !== '-1';
+  const theme = useAppTheme();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,14 +106,14 @@ export default function PurchaseFormScreen() {
     supplierId: '',
     branchId: '',
     invoiceNumber: '',
-    purchaseDate: new Date().toISOString().split('T')[0], // Simple YYYY-MM-DD mock
+    purchaseDate: new Date().toISOString().split('T')[0],
     status: 'draft'
   });
 
   const [items, setItems] = useState<any[]>([]);
 
   const [paymentDetails, setPaymentDetails] = useState({
-    paidAmount: '0',
+    paidAmount: '',
     paymentMethod: 'bank',
     notes: ''
   });
@@ -169,7 +167,7 @@ export default function PurchaseFormScreen() {
       })));
 
       setPaymentDetails({
-        paidAmount: (data.paidAmount || 0).toString(),
+        paidAmount: (data.paidAmount || '').toString(),
         paymentMethod: data.paymentMethod || 'bank',
         notes: data.notes || ''
       });
@@ -181,7 +179,7 @@ export default function PurchaseFormScreen() {
     }
   };
 
-  // --- CALCULATIONS (Matches Angular `calculateTotals`) ---
+  // --- CALCULATIONS ---
   const totals = useMemo(() => {
     let subTotal = 0;
     let totalTax = 0;
@@ -210,14 +208,14 @@ export default function PurchaseFormScreen() {
 
   // --- ITEM MUTATIONS ---
   const addItem = () => {
-    setItems([...items, {
+    setItems([{
       id: Math.random().toString(),
       productId: '',
       quantity: '1',
-      purchasePrice: '0',
+      purchasePrice: '',
       taxRate: '0',
       discount: '0'
-    }]);
+    }, ...items]);
   };
 
   const removeItem = (id: string) => {
@@ -228,12 +226,8 @@ export default function PurchaseFormScreen() {
     setItems(items.map(item => {
       if (item.id === id) {
         const updated = { ...item, [field]: value };
-        // Auto-fill price/tax if product is selected
         if (field === 'productId') {
           const product = products.find(p => p.value === value);
-          // Note: In real app, we might need a separate API to get full product details 
-          // or have them in the dropdown data if it includes metadata.
-          // For now, if metadata is missing, we leave fields as is.
           if (product?.price) {
             updated.purchasePrice = product.price.toString();
             updated.taxRate = product.tax?.toString() || '0';
@@ -287,7 +281,6 @@ export default function PurchaseFormScreen() {
     try {
       const formData = new FormData();
       
-      // Basic Info
       formData.append('supplierId', invoiceDetails.supplierId);
       formData.append('branchId', invoiceDetails.branchId);
       formData.append('invoiceNumber', invoiceDetails.invoiceNumber);
@@ -295,28 +288,25 @@ export default function PurchaseFormScreen() {
       formData.append('status', invoiceDetails.status);
       formData.append('notes', paymentDetails.notes);
       
-      // Items
       const processedItems = items.map(it => ({
         productId: it.productId,
-        quantity: parseFloat(it.quantity),
-        purchasePrice: parseFloat(it.purchasePrice),
-        taxRate: parseFloat(it.taxRate),
-        discount: parseFloat(it.discount)
+        quantity: parseFloat(it.quantity) || 1,
+        purchasePrice: parseFloat(it.purchasePrice) || 0,
+        taxRate: parseFloat(it.taxRate) || 0,
+        discount: parseFloat(it.discount) || 0
       }));
       formData.append('items', JSON.stringify(processedItems));
       
-      // Payment (if any)
       if (parseFloat(paymentDetails.paidAmount) > 0) {
         formData.append('paymentMethod', paymentDetails.paymentMethod);
         formData.append('paidAmount', paymentDetails.paidAmount);
       }
 
-      // Attachments
       attachments.forEach((file: any) => {
         formData.append('attachments', {
           uri: file.uri,
           name: file.name || `file-${Date.now()}`,
-          type: file.type || 'application/octet-stream'
+          type: file.mimeType || file.type || 'application/octet-stream'
         } as any);
       });
 
@@ -335,260 +325,288 @@ export default function PurchaseFormScreen() {
     }
   };
 
+  const inputStyle = [styles.input, { backgroundColor: theme.bgSecondary, borderColor: theme.borderSecondary, color: theme.textPrimary }];
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <ThemedView style={styles.safeArea}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
-        {/* HEADER */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={DARK_BLUE_ACCENT} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>{isEditMode ? 'Edit Purchase' : 'New Purchase Entry'}</Text>
-            <Text style={styles.headerSubtitle}>Manage procurement</Text>
-          </View>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-
-          {/* STATUS TOGGLE */}
-          <View style={styles.statusSection}>
-            <SelectField
-              label="Order Status"
-              value={invoiceDetails.status}
-              options={statuses}
-              onSelect={(val: string) => setInvoiceDetails({ ...invoiceDetails, status: val })}
-            />
+          {/* PREMIUM HEADER */}
+          <View style={[styles.header, { backgroundColor: theme.bgPrimary, borderBottomColor: theme.borderSecondary }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={24} color={theme.textPrimary} />
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <ThemedText style={styles.headerTitle}>{isEditMode ? 'Edit Purchase Order' : 'New Purchase Order'}</ThemedText>
+              <ThemedText style={styles.headerSubtitle}>Manage procurement & inventory</ThemedText>
+            </View>
+            <TouchableOpacity style={[styles.headerSaveBtn, { backgroundColor: `${theme.accentPrimary}15` }]} onPress={onSubmit} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator size="small" color={theme.accentPrimary} /> : <ThemedText style={[styles.headerSaveText, { color: theme.accentPrimary }]}>Save</ThemedText>}
+            </TouchableOpacity>
           </View>
 
-          {/* INVOICE DETAILS */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Invoice Details</Text>
-            <SelectField label="Supplier *" value={invoiceDetails.supplierId} options={suppliers} placeholder="Select Supplier" onSelect={(v: string) => setInvoiceDetails({ ...invoiceDetails, supplierId: v })} />
-            <SelectField label="Branch *" value={invoiceDetails.branchId} options={branches} placeholder="Receiving Branch" onSelect={(v: string) => setInvoiceDetails({ ...invoiceDetails, branchId: v })} />
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Invoice No. <Text style={styles.required}>*</Text></Text>
-              <TextInput style={styles.input} value={invoiceDetails.invoiceNumber} onChangeText={(t) => setInvoiceDetails({ ...invoiceDetails, invoiceNumber: t })} placeholder="INV-001" />
+            {/* MAIN DETAILS SECTION */}
+            <View style={[styles.section, { backgroundColor: theme.bgPrimary, borderColor: theme.borderSecondary, ...getElevation(1, theme) }]}>
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons name="document-text" size={20} color={theme.accentPrimary} />
+                <ThemedText style={styles.sectionTitle}>Invoice Details</ThemedText>
+              </View>
+
+              <SelectField label="Supplier *" value={invoiceDetails.supplierId} options={suppliers} placeholder="Select Supplier" onSelect={(v: string) => setInvoiceDetails({ ...invoiceDetails, supplierId: v })} theme={theme} />
+              <SelectField label="Branch *" value={invoiceDetails.branchId} options={branches} placeholder="Receiving Branch" onSelect={(v: string) => setInvoiceDetails({ ...invoiceDetails, branchId: v })} theme={theme} />
+              
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.md }]}>
+                  <ThemedText style={styles.label}>Invoice No. <ThemedText style={styles.required}>*</ThemedText></ThemedText>
+                  <TextInput style={inputStyle} value={invoiceDetails.invoiceNumber} onChangeText={(t) => setInvoiceDetails({ ...invoiceDetails, invoiceNumber: t })} placeholder="INV-001" placeholderTextColor={theme.textTertiary} />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <ThemedText style={styles.label}>Date <ThemedText style={styles.required}>*</ThemedText></ThemedText>
+                  <TextInput style={inputStyle} value={invoiceDetails.purchaseDate} onChangeText={(t) => setInvoiceDetails({ ...invoiceDetails, purchaseDate: t })} placeholder="YYYY-MM-DD" placeholderTextColor={theme.textTertiary} />
+                </View>
+              </View>
+
+              <SelectField label="Order Status" value={invoiceDetails.status} options={statuses} onSelect={(val: string) => setInvoiceDetails({ ...invoiceDetails, status: val })} theme={theme} />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Purchase Date <Text style={styles.required}>*</Text></Text>
-              <TextInput style={styles.input} value={invoiceDetails.purchaseDate} onChangeText={(t) => setInvoiceDetails({ ...invoiceDetails, purchaseDate: t })} placeholder="YYYY-MM-DD" />
-            </View>
-          </View>
+            {/* PURCHASE ITEMS SECTION */}
+            <View style={[styles.section, { backgroundColor: theme.bgPrimary, borderColor: theme.borderSecondary, ...getElevation(1, theme) }]}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="cube" size={20} color={theme.accentPrimary} />
+                  <ThemedText style={[styles.sectionTitle, { marginLeft: 8 }]}>Purchase Items</ThemedText>
+                </View>
+                <TouchableOpacity style={[styles.addBtn, { backgroundColor: theme.accentPrimary }]} onPress={addItem}>
+                  <Ionicons name="add" size={16} color={theme.bgPrimary} />
+                  <ThemedText style={styles.addBtnText}>Add Item</ThemedText>
+                </TouchableOpacity>
+              </View>
 
-          {/* ITEMS SECTION */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Purchase Items</Text>
-              <TouchableOpacity style={styles.addBtn} onPress={addItem}>
-                <Ionicons name="add" size={16} color={DARK_BLUE_ACCENT} />
-                <Text style={styles.addBtnText}>Add Item</Text>
+              {items.length === 0 ? (
+                <View style={[styles.emptyState, { borderColor: theme.borderSecondary, backgroundColor: theme.bgSecondary }]}>
+                  <View style={[styles.emptyIconBox, { backgroundColor: `${theme.accentPrimary}15` }]}>
+                    <Ionicons name="cart-outline" size={32} color={theme.accentPrimary} />
+                  </View>
+                  <ThemedText style={styles.emptyStateTitle}>No items added</ThemedText>
+                  <ThemedText style={styles.emptyStateText}>Click the button above to add the first item to this order.</ThemedText>
+                </View>
+              ) : (
+                items.map((item, index) => (
+                  <View key={item.id} style={[styles.itemCard, { backgroundColor: theme.bgSecondary, borderColor: theme.borderSecondary }]}>
+                    <View style={styles.itemCardHeader}>
+                      <ThemedText style={styles.itemCardTitle}>Item {items.length - index}</ThemedText>
+                      <TouchableOpacity onPress={() => removeItem(item.id)} style={{ padding: Spacing.xs }}>
+                        <Ionicons name="trash-outline" size={20} color={theme.error} />
+                      </TouchableOpacity>
+                    </View>
+
+                    <SelectField label="Product" value={item.productId} options={products} placeholder="Select Product" onSelect={(v: string) => updateItem(item.id, 'productId', v)} theme={theme} />
+
+                    <View style={styles.row}>
+                      <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.md }]}>
+                        <ThemedText style={styles.label}>Qty</ThemedText>
+                        <TextInput style={inputStyle} value={item.quantity} onChangeText={(v) => updateItem(item.id, 'quantity', v)} keyboardType="numeric" placeholder="1" placeholderTextColor={theme.textTertiary} />
+                      </View>
+                      <View style={[styles.inputGroup, { flex: 1 }]}>
+                        <ThemedText style={styles.label}>Unit Cost (₹)</ThemedText>
+                        <TextInput style={inputStyle} value={item.purchasePrice} onChangeText={(v) => updateItem(item.id, 'purchasePrice', v)} keyboardType="numeric" placeholder="0.00" placeholderTextColor={theme.textTertiary} />
+                      </View>
+                    </View>
+
+                    <View style={styles.row}>
+                      <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.md }]}>
+                        <ThemedText style={styles.label}>Tax (%)</ThemedText>
+                        <TextInput style={inputStyle} value={item.taxRate} onChangeText={(v) => updateItem(item.id, 'taxRate', v)} keyboardType="numeric" placeholder="0" placeholderTextColor={theme.textTertiary} />
+                      </View>
+                      <View style={[styles.inputGroup, { flex: 1 }]}>
+                        <ThemedText style={styles.label}>Discount (₹)</ThemedText>
+                        <TextInput style={inputStyle} value={item.discount} onChangeText={(v) => updateItem(item.id, 'discount', v)} keyboardType="numeric" placeholder="0.00" placeholderTextColor={theme.textTertiary} />
+                      </View>
+                    </View>
+
+                    <View style={[styles.itemTotalRow, { borderTopColor: theme.borderSecondary, backgroundColor: `${theme.accentPrimary}0A`, marginHorizontal: -Spacing.lg, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderBottomLeftRadius: UI.borderRadius.lg, borderBottomRightRadius: UI.borderRadius.lg }]}>
+                      <ThemedText style={styles.itemTotalLabel}>Row Total:</ThemedText>
+                      <ThemedText style={[styles.itemTotalValue, { color: theme.textPrimary }]}>₹{getRowTotal(item).toFixed(2)}</ThemedText>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* ATTACHMENTS & NOTES SECTION */}
+            <View style={[styles.section, { backgroundColor: theme.bgPrimary, borderColor: theme.borderSecondary, ...getElevation(1, theme) }]}>
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons name="document-attach" size={20} color={theme.accentPrimary} />
+                <ThemedText style={[styles.sectionTitle, { marginLeft: 8 }]}>Attachments & Notes</ThemedText>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.label}>Internal Notes</ThemedText>
+                <TextInput style={[inputStyle, { height: 80, textAlignVertical: 'top' }]} multiline value={paymentDetails.notes} onChangeText={(t) => setPaymentDetails({ ...paymentDetails, notes: t })} placeholder="Shipping details, remarks..." placeholderTextColor={theme.textTertiary} />
+              </View>
+
+              <TouchableOpacity style={[styles.uploadBtn, { borderColor: theme.accentPrimary, backgroundColor: `${theme.accentPrimary}05` }]} onPress={handleFilePick}>
+                <Ionicons name="cloud-upload-outline" size={24} color={theme.accentPrimary} />
+                <ThemedText style={[styles.uploadBtnText, { color: theme.accentPrimary }]}>Upload Bills/Invoice</ThemedText>
+              </TouchableOpacity>
+
+              {attachments.length > 0 && (
+                <View style={styles.attachmentsList}>
+                  {attachments.map((file, i) => (
+                    <View key={i} style={[styles.attachmentItem, { backgroundColor: theme.bgSecondary, borderColor: theme.borderSecondary }]}>
+                      <Ionicons name="document-text-outline" size={20} color={theme.textSecondary} />
+                      <ThemedText style={styles.attachmentName} numberOfLines={1}>{file.name}</ThemedText>
+                      <TouchableOpacity onPress={() => removeFile(file.uri)}>
+                        <Ionicons name="close-circle" size={20} color={theme.error} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {/* PAYMENT RECORD SECTION */}
+            <View style={[styles.section, { backgroundColor: theme.bgPrimary, borderColor: theme.borderSecondary, marginBottom: 120, ...getElevation(1, theme) }]}>
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons name="wallet" size={20} color={theme.accentPrimary} />
+                <ThemedText style={[styles.sectionTitle, { marginLeft: 8 }]}>Advance Payment</ThemedText>
+              </View>
+
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.md }]}>
+                  <ThemedText style={styles.label}>Amount Paid (₹)</ThemedText>
+                  <TextInput style={inputStyle} value={paymentDetails.paidAmount} onChangeText={(t) => setPaymentDetails({ ...paymentDetails, paidAmount: t })} keyboardType="numeric" placeholder="0.00" placeholderTextColor={theme.textTertiary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <SelectField label="Payment Method" value={paymentDetails.paymentMethod} options={paymentMethods} onSelect={(v: string) => setPaymentDetails({ ...paymentDetails, paymentMethod: v })} theme={theme} />
+                </View>
+              </View>
+            </View>
+
+          </ScrollView>
+
+          {/* STICKY BOTTOM FOOTER FOR TOTALS AND SAVE */}
+          <View style={[styles.stickyFooter, { backgroundColor: theme.bgPrimary, borderTopColor: theme.borderSecondary, ...getElevation(4, theme) }]}>
+            
+            {/* Quick Summary Row */}
+            <View style={styles.totalsSummaryRow}>
+              <View>
+                <ThemedText style={styles.summaryLabel}>Sub Total</ThemedText>
+                <ThemedText style={styles.summaryValue}>₹{totals.subTotal.toFixed(2)}</ThemedText>
+              </View>
+              <View>
+                <ThemedText style={styles.summaryLabel}>Tax</ThemedText>
+                <ThemedText style={styles.summaryValue}>+ ₹{totals.totalTax.toFixed(2)}</ThemedText>
+              </View>
+              <View>
+                <ThemedText style={styles.summaryLabel}>Discount</ThemedText>
+                <ThemedText style={styles.summaryValue}>- ₹{totals.totalDiscount.toFixed(2)}</ThemedText>
+              </View>
+            </View>
+
+            {/* Grand Total Row */}
+            <View style={[styles.grandTotalRow, { borderTopColor: theme.borderSecondary }]}>
+              <View>
+                <ThemedText style={styles.grandTotalLabel}>Grand Total</ThemedText>
+                <ThemedText style={[styles.grandTotalValue, { color: theme.accentPrimary }]}>₹{totals.grandTotal.toFixed(2)}</ThemedText>
+                {totals.balance > 0 && (
+                  <ThemedText style={[styles.balanceValue, { color: theme.error }]}>Balance: ₹{totals.balance.toFixed(2)}</ThemedText>
+                )}
+              </View>
+              
+              <TouchableOpacity style={[styles.submitBtn, { backgroundColor: theme.accentPrimary }]} onPress={onSubmit} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <ActivityIndicator color={theme.bgPrimary} />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={20} color={theme.bgPrimary} />
+                    <ThemedText style={[styles.submitBtnText, { color: theme.bgPrimary }]}>{isEditMode ? 'Update' : 'Confirm'}</ThemedText>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
-
-            {items.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="cart-outline" size={48} color={theme.textTertiary} />
-                <Text style={styles.emptyStateText}>No items added yet.</Text>
-              </View>
-            ) : (
-              items.map((item, index) => (
-                <View key={item.id} style={styles.itemCard}>
-                  <View style={styles.itemCardHeader}>
-                    <Text style={styles.itemCardTitle}>Item {index + 1}</Text>
-                    <TouchableOpacity onPress={() => removeItem(item.id)}>
-                      <Ionicons name="trash-outline" size={20} color={theme.error} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <SelectField label="Product" value={item.productId} options={products} placeholder="Select Product" onSelect={(v: string) => updateItem(item.id, 'productId', v)} />
-
-                  <View style={styles.row}>
-                    <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.md }]}>
-                      <Text style={styles.label}>Qty</Text>
-                      <TextInput style={styles.input} value={item.quantity} onChangeText={(v) => updateItem(item.id, 'quantity', v)} keyboardType="numeric" />
-                    </View>
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={styles.label}>Cost (₹)</Text>
-                      <TextInput style={styles.input} value={item.purchasePrice} onChangeText={(v) => updateItem(item.id, 'purchasePrice', v)} keyboardType="numeric" />
-                    </View>
-                  </View>
-
-                  <View style={styles.row}>
-                    <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.md }]}>
-                      <Text style={styles.label}>Tax (%)</Text>
-                      <TextInput style={styles.input} value={item.taxRate} onChangeText={(v) => updateItem(item.id, 'taxRate', v)} keyboardType="numeric" />
-                    </View>
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={styles.label}>Disc. (₹)</Text>
-                      <TextInput style={styles.input} value={item.discount} onChangeText={(v) => updateItem(item.id, 'discount', v)} keyboardType="numeric" />
-                    </View>
-                  </View>
-
-                  <View style={styles.itemTotalRow}>
-                    <Text style={styles.itemTotalLabel}>Row Total:</Text>
-                    <Text style={styles.itemTotalValue}>₹{getRowTotal(item).toFixed(2)}</Text>
-                  </View>
-                </View>
-              ))
-            )}
           </View>
 
-          {/* ATTACHMENTS & NOTES */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Attachments & Notes</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Notes</Text>
-              <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }]} multiline value={paymentDetails.notes} onChangeText={(t) => setPaymentDetails({ ...paymentDetails, notes: t })} placeholder="Shipping details, remarks..." />
-            </View>
-
-            <TouchableOpacity style={styles.uploadBtn} onPress={handleFilePick}>
-              <Ionicons name="cloud-upload-outline" size={24} color={DARK_BLUE_ACCENT} />
-              <Text style={styles.uploadBtnText}>Upload Bills/Invoice</Text>
-            </TouchableOpacity>
-
-            {attachments.length > 0 && (
-              <View style={styles.attachmentsList}>
-                {attachments.map((file, i) => (
-                  <View key={i} style={styles.attachmentItem}>
-                    <Ionicons name="document-text-outline" size={20} color={theme.textSecondary} />
-                    <Text style={styles.attachmentName} numberOfLines={1}>{file.name}</Text>
-                    <TouchableOpacity onPress={() => removeFile(file.uri)}>
-                      <Ionicons name="close-circle" size={20} color={theme.error} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-
-          {/* PAYMENT & TOTALS */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Payment & Totals</Text>
-
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.md }]}>
-                <Text style={styles.label}>Amount Paid</Text>
-                <TextInput style={styles.input} value={paymentDetails.paidAmount} onChangeText={(t) => setPaymentDetails({ ...paymentDetails, paidAmount: t })} keyboardType="numeric" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <SelectField label="Method" value={paymentDetails.paymentMethod} options={paymentMethods} onSelect={(v: string) => setPaymentDetails({ ...paymentDetails, paymentMethod: v })} />
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.totalsContainer}>
-              <View style={styles.totalsRow}><Text style={styles.totalsLabel}>Sub Total</Text><Text style={styles.totalsValue}>₹{totals.subTotal.toFixed(2)}</Text></View>
-              <View style={styles.totalsRow}><Text style={styles.totalsLabel}>Total Tax</Text><Text style={styles.totalsValue}>+ ₹{totals.totalTax.toFixed(2)}</Text></View>
-              <View style={styles.totalsRow}><Text style={styles.totalsLabel}>Total Discount</Text><Text style={styles.totalsValue}>- ₹{totals.totalDiscount.toFixed(2)}</Text></View>
-
-              <View style={[styles.totalsRow, styles.grandTotalRow]}>
-                <Text style={styles.grandTotalLabel}>Grand Total</Text>
-                <Text style={styles.grandTotalValue}>₹{totals.grandTotal.toFixed(2)}</Text>
-              </View>
-
-              <View style={styles.totalsRow}>
-                <Text style={[styles.balanceLabel, totals.balance <= 0 ? { color: theme.success } : { color: theme.error }]}>Balance Due</Text>
-                <Text style={[styles.balanceValue, totals.balance <= 0 ? { color: theme.success } : { color: theme.error }]}>₹{totals.balance.toFixed(2)}</Text>
-              </View>
-            </View>
-          </View>
-
-        </ScrollView>
-
-        {/* FOOTER */}
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.submitBtn} onPress={onSubmit} disabled={isSubmitting}>
-            {isSubmitting ? (
-              <ActivityIndicator color={theme.bgPrimary} />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle" size={20} color={theme.bgPrimary} />
-                <Text style={styles.submitBtnText}>{isEditMode ? 'Update Purchase' : 'Create Purchase'}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
+// ==========================================
+// STYLES
+// ==========================================
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: theme.bgSecondary },
-  scrollContent: { padding: Spacing.xl, paddingBottom: Spacing['4xl'] },
+  safeArea: { flex: 1 },
+  scrollContent: { padding: Spacing.xl },
   row: { flexDirection: 'row' },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', padding: Spacing.xl, backgroundColor: theme.bgPrimary, borderBottomWidth: BORDER_WIDTH, borderBottomColor: BORDER_COLOR },
-  backBtn: { marginRight: Spacing.lg },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderBottomWidth: 1 },
+  backBtn: { marginRight: Spacing.md, padding: Spacing.xs },
   headerCenter: { flex: 1 },
-  headerTitle: { fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  headerSubtitle: { fontSize: Typography.size.sm, color: theme.textSecondary, marginTop: 2 },
-  required: { color: theme.error },
+  headerTitle: { fontSize: Typography.size.lg, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold' },
+  headerSubtitle: { fontSize: Typography.size.xs, marginTop: 2, opacity: 0.7 },
+  headerSaveBtn: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: UI.borderRadius.pill },
+  headerSaveText: { fontWeight: 'bold', fontSize: Typography.size.sm },
+  required: { color: 'red' },
 
   // Sections
-  section: { backgroundColor: theme.bgPrimary, padding: Spacing.xl, borderRadius: UI.borderRadius.lg, borderWidth: BORDER_WIDTH, borderColor: BORDER_COLOR, marginBottom: Spacing.lg },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
-  sectionTitle: { fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary, marginBottom: Spacing.md },
-  statusSection: { marginBottom: Spacing.lg },
+  section: { padding: Spacing.xl, borderRadius: UI.borderRadius.xl, borderWidth: 1, marginBottom: Spacing.xl },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg },
+  sectionTitle: { fontSize: Typography.size.md, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold', marginLeft: 8 },
 
   // Inputs
   inputGroup: { marginBottom: Spacing.lg },
-  label: { fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, color: theme.textSecondary, marginBottom: Spacing.xs },
-  input: { backgroundColor: theme.bgPrimary, borderWidth: BORDER_WIDTH, borderColor: BORDER_COLOR, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: DARK_BLUE_ACCENT },
+  label: { fontSize: Typography.size.sm, fontWeight: '600', marginBottom: Spacing.xs },
+  input: { borderWidth: 1, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontSize: Typography.size.md, fontFamily: Typography.fontFamily.body },
 
   // Native Select Replacements
-  selectTrigger: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.bgPrimary, borderWidth: BORDER_WIDTH, borderColor: BORDER_COLOR, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  selectTriggerText: { fontSize: Typography.size.md, color: DARK_BLUE_ACCENT },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: theme.bgPrimary, borderTopLeftRadius: UI.borderRadius.xl, borderTopRightRadius: UI.borderRadius.xl, maxHeight: '60%', padding: Spacing.xl },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
-  modalTitle: { fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  modalOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: theme.bgSecondary },
-  modalOptionText: { fontSize: Typography.size.md, color: theme.textPrimary },
-  modalOptionTextActive: { fontWeight: Typography.weight.bold, color: DARK_BLUE_ACCENT },
+  selectTrigger: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
+  selectTriggerText: { fontSize: Typography.size.md, fontFamily: Typography.fontFamily.body },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: Spacing.xl },
+  modalContent: { borderRadius: UI.borderRadius.xl, maxHeight: '80%', overflow: 'hidden' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.xl, borderBottomWidth: 1 },
+  modalTitle: { fontSize: Typography.size.lg, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold' },
+  modalOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg, borderBottomWidth: 1 },
+  modalOptionText: { fontSize: Typography.size.md, fontFamily: Typography.fontFamily.body },
 
   // Items
-  addBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: BORDER_WIDTH, borderColor: DARK_BLUE_ACCENT, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: UI.borderRadius.pill },
-  addBtnText: { color: DARK_BLUE_ACCENT, fontWeight: Typography.weight.bold, fontSize: Typography.size.xs, marginLeft: 4 },
-  emptyState: { alignItems: 'center', padding: Spacing['2xl'], borderWidth: BORDER_WIDTH, borderColor: BORDER_COLOR, borderStyle: 'dashed', borderRadius: UI.borderRadius.md },
-  emptyStateText: { marginTop: Spacing.md, color: theme.textTertiary, fontSize: Typography.size.sm },
+  addBtn: { flexDirection: 'row', alignItems: 'center', marginLeft: 'auto', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: UI.borderRadius.pill },
+  addBtnText: { color: '#fff', fontWeight: 'bold', fontSize: Typography.size.xs, marginLeft: 4 },
+  emptyState: { alignItems: 'center', padding: Spacing['2xl'], borderWidth: 1, borderStyle: 'dashed', borderRadius: UI.borderRadius.lg },
+  emptyIconBox: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md },
+  emptyStateTitle: { fontFamily: Typography.fontFamily.heading, fontWeight: 'bold', fontSize: Typography.size.md, marginBottom: 4 },
+  emptyStateText: { textAlign: 'center', opacity: 0.7, fontSize: Typography.size.sm, lineHeight: 20 },
 
-  itemCard: { backgroundColor: theme.bgSecondary, padding: Spacing.lg, borderRadius: UI.borderRadius.md, borderWidth: BORDER_WIDTH, borderColor: BORDER_COLOR, marginBottom: Spacing.lg },
+  itemCard: { padding: Spacing.lg, borderRadius: UI.borderRadius.lg, borderWidth: 1, marginBottom: Spacing.lg },
   itemCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
-  itemCardTitle: { fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  itemTotalRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: BORDER_COLOR },
-  itemTotalLabel: { fontSize: Typography.size.sm, color: theme.textSecondary, marginRight: Spacing.sm },
-  itemTotalValue: { fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: DARK_BLUE_ACCENT },
+  itemCardTitle: { fontSize: Typography.size.sm, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
+  itemTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.sm, borderTopWidth: 1 },
+  itemTotalLabel: { fontSize: Typography.size.sm, fontWeight: 'bold', opacity: 0.7 },
+  itemTotalValue: { fontSize: Typography.size.lg, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold' },
 
   // Attachments
-  uploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.lg, borderWidth: BORDER_WIDTH, borderColor: DARK_BLUE_ACCENT, borderStyle: 'dashed', borderRadius: UI.borderRadius.md },
-  uploadBtnText: { marginLeft: Spacing.sm, color: DARK_BLUE_ACCENT, fontWeight: Typography.weight.bold },
+  uploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.lg, borderWidth: 1, borderStyle: 'dashed', borderRadius: UI.borderRadius.md },
+  uploadBtnText: { marginLeft: Spacing.sm, fontWeight: 'bold' },
   attachmentsList: { marginTop: Spacing.md },
-  attachmentItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.bgSecondary, padding: Spacing.md, borderRadius: UI.borderRadius.sm, marginBottom: Spacing.sm, borderWidth: 1, borderColor: BORDER_COLOR },
-  attachmentName: { flex: 1, marginHorizontal: Spacing.sm, fontSize: Typography.size.xs, color: theme.textSecondary },
+  attachmentItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderRadius: UI.borderRadius.sm, marginBottom: Spacing.sm, borderWidth: 1 },
+  attachmentName: { flex: 1, marginHorizontal: Spacing.sm, fontSize: Typography.size.xs },
 
-  // Totals
-  divider: { height: BORDER_WIDTH, backgroundColor: BORDER_COLOR, marginVertical: Spacing.lg },
-  totalsContainer: { gap: Spacing.sm },
-  totalsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalsLabel: { color: theme.textSecondary, fontSize: Typography.size.sm },
-  totalsValue: { color: theme.textPrimary, fontWeight: Typography.weight.semibold, fontSize: Typography.size.sm },
-  grandTotalRow: { marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: BORDER_WIDTH, borderTopColor: BORDER_COLOR },
-  grandTotalLabel: { color: theme.textPrimary, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold },
-  grandTotalValue: { color: DARK_BLUE_ACCENT, fontSize: Typography.size.xl, fontWeight: Typography.weight.bold },
-  balanceLabel: { fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, marginTop: Spacing.xs },
-  balanceValue: { fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, marginTop: Spacing.xs },
-
-  // Footer
-  footer: { padding: Spacing.xl, backgroundColor: theme.bgPrimary, borderTopWidth: BORDER_WIDTH, borderTopColor: BORDER_COLOR },
-  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: DARK_BLUE_ACCENT, paddingVertical: Spacing.lg, borderRadius: UI.borderRadius.md, borderWidth: BORDER_WIDTH, borderColor: DARK_BLUE_ACCENT, gap: Spacing.sm },
-  submitBtnText: { color: theme.bgPrimary, fontWeight: Typography.weight.bold, fontSize: Typography.size.md },
+  // Sticky Footer Totals
+  stickyFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Platform.OS === 'ios' ? 34 : Spacing.xl, borderTopWidth: 1 },
+  totalsSummaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.md },
+  summaryLabel: { fontSize: Typography.size.xs, opacity: 0.7, marginBottom: 2 },
+  summaryValue: { fontSize: Typography.size.sm, fontWeight: 'bold' },
+  grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: Spacing.md, borderTopWidth: 1 },
+  grandTotalLabel: { fontSize: Typography.size.sm, textTransform: 'uppercase', fontWeight: 'bold', opacity: 0.7 },
+  grandTotalValue: { fontSize: Typography.size['2xl'], fontFamily: Typography.fontFamily.heading, fontWeight: 'bold' },
+  balanceValue: { fontSize: Typography.size.xs, fontWeight: 'bold', marginTop: 2 },
+  
+  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing['2xl'], paddingVertical: Spacing.md, borderRadius: UI.borderRadius.pill, gap: Spacing.sm },
+  submitBtnText: { fontWeight: 'bold', fontSize: Typography.size.md },
 });

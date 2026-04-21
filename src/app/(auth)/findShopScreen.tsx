@@ -151,7 +151,7 @@ export default function FindShopScreen() {
               </View>
               <Text style={styles.title}>Find Your Shop</Text>
               <Text style={styles.subtitle}>
-                Forgot your Shop ID? Enter your registered email address and we'll send it securely to your inbox.
+                Forgot your Shop ID? Enter your registered email address and we will send it securely to your inbox.
               </Text>
             </View>
 

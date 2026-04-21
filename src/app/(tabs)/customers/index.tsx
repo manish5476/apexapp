@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CustomerService } from '../../../api/customerService';
+import { customerService } from '@/src/features/customer/services/customer.service';
 import { ThemedText } from '../../../components/themed-text';
 import { ThemedView } from '../../../components/themed-view';
 
@@ -253,6 +253,7 @@ const CustomerCard = React.memo(
     );
   }
 );
+CustomerCard.displayName = 'CustomerCard';
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
@@ -275,7 +276,7 @@ export default function CustomerListScreen() {
     setIsLoading(true);
 
     try {
-      const res = (await CustomerService.getAllCustomerData({
+      const res = (await customerService.list({
         q: searchText || undefined,
         page: targetPage,
         limit: pageSize,
@@ -323,7 +324,7 @@ export default function CustomerListScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await CustomerService.deleteCustomer(customer._id);
+              await customerService.remove(customer._id);
               handleRefresh();
             } catch {
               Alert.alert('Action Failed', 'Permission denied or network error.');
@@ -362,7 +363,7 @@ export default function CustomerListScreen() {
           </View>
           <TouchableOpacity
             style={styles.addBtn}
-            onPress={() => router.push('/customers/create' as any)}
+            onPress={() => router.push('/(tabs)/customers/create' as any)}
             activeOpacity={0.85}
           >
             <Ionicons name="add" size={22} color={currentTheme.bgSecondary} />

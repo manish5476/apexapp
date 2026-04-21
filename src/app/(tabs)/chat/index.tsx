@@ -115,6 +115,7 @@ const ChannelRow = React.memo(({
     </Animated.View>
   );
 });
+ChannelRow.displayName = 'ChannelRow';
 
 // ─── Connection Banner ────────────────────────────────────────────────────────
 

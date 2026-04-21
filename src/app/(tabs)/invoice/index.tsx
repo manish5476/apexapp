@@ -213,7 +213,7 @@ export default function InvoiceListScreen() {
               <TouchableOpacity style={styles.iconBtn} onPress={handleExport} disabled={isExporting}>
                 {isExporting ? <ActivityIndicator size="small" color={theme.textPrimary} /> : <Ionicons name="download-outline" size={24} color={theme.textPrimary} />}
               </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/invoice/create' as any)}>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/invoice/create' as any)}>
                 <Ionicons name="add" size={20} color={theme.bgSecondary} />
                 <ThemedText style={styles.primaryBtnText}>New</ThemedText>
               </TouchableOpacity>
@@ -269,7 +269,7 @@ export default function InvoiceListScreen() {
                 </View>
                 <ThemedText style={styles.emptyTitle}>No invoices found</ThemedText>
                 <ThemedText style={styles.emptyDesc}>Create a new invoice or adjust your filters.</ThemedText>
-                <TouchableOpacity style={[styles.primaryBtn, { marginTop: Spacing.xl }]} onPress={() => router.push('/invoice/create' as any)}>
+                <TouchableOpacity style={[styles.primaryBtn, { marginTop: Spacing.xl }]} onPress={() => router.push('/(tabs)/invoice/create' as any)}>
                   <ThemedText style={styles.primaryBtnText}>Create Invoice</ThemedText>
                 </TouchableOpacity>
               </View>

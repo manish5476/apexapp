@@ -7,7 +7,7 @@ import { CustomerService } from '../../../api/customerService';
 import { CustomerForm } from '../../../components/CustomerForm';
 import { ThemedText } from '../../../components/themed-text';
 import { ThemedView } from '../../../components/themed-view';
-import { CustomerFormData } from '../../../constants/customer.schema';
+import { CustomerFormData } from '../../../components/CustomerForm';
 
 // --- IMPORT YOUR TOKENS HERE ---
 
