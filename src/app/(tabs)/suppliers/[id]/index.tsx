@@ -94,8 +94,11 @@ export default function SupplierDetailsScreen() {
             };
 
             const res = await TransactionService.getSupplierTransactions(id as string, queryParams) as any;
-            const newData = res.results || res.data?.results || [];
-            const total = res.total || res.data?.total || 0;
+            
+            // Handle nested structure: res.data.data
+            const rawData = res.data;
+            const newData = Array.isArray(rawData?.data) ? rawData.data : (Array.isArray(res.results) ? res.results : []);
+            const total = res.total ?? rawData?.total ?? 0;
 
             if (isReset || page === 1) {
                 setTransactions(newData);

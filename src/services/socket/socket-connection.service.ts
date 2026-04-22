@@ -66,27 +66,28 @@ class SocketConnectionService extends EventEmitter {
     this._setupCoreListeners();
   }
 
-  emit(eventName: string, payload?: any) {
+  send(eventName: string, payload?: any): boolean {
     if (this.socket?.connected) {
       this.socket.emit(eventName, payload);
+      return true;
     } else if (this.outboundQueue.length < 100) {
       this.outboundQueue.push({ event: eventName, payload });
+      return true;
     }
+    return false;
   }
 
-  /** Register a one-time or persisted socket event listener.
-   *  The callback is automatically wrapped so it also fires as an EventEmitter event. */
-  on(eventName: string, callback: (data: any) => void): this {
+  listen(eventName: string, callback: (data: any) => void): this {
     this.socket?.on(eventName, (data: any) => {
       callback(data);
-      super.emit(eventName, data); // also broadcast via EventEmitter
+      super.emit(eventName, data); // broadcast via EventEmitter (local)
     });
     return this;
   }
 
   ping() { this.socket?.emit('ping'); }
 
-  updateTheme(themeId: string) { this.emit('updateTheme', { themeId }); }
+  updateTheme(themeId: string) { this.send('updateTheme', { themeId }); }
 
   get isConnected() { return this.socket?.connected ?? false; }
 
@@ -112,20 +113,20 @@ class SocketConnectionService extends EventEmitter {
     const store = useSocketStore.getState();
 
     this.socket.on('connect', () => {
-      console.log('✅ Socket connected:', this.socket?.id);
+      // console.log('✅ Socket connected:', this.socket?.id);
       this.isRefreshingToken = false;
       store.setStatus('connected');
       this._flushQueue();
       this.socket?.emit('joinOrg', { organizationId: this.orgId });
       this.socket?.emit('subscribeNotifications');
       this.socket?.emit('getInitialData');
-      this._startHeartbeat();
+      // this._startHeartbeat();
       super.emit('connect');
     });
 
     this.socket.on('disconnect', (reason: string) => {
-      console.warn('⚠️ Socket disconnected:', reason);
-      this._stopHeartbeat();
+      // console.warn('⚠️ Socket disconnected:', reason);
+      // this._stopHeartbeat();
       store.setStatus('disconnected');
       // If the server force-disconnected us, reconnect manually
       if (reason === 'io server disconnect') {
@@ -157,7 +158,7 @@ class SocketConnectionService extends EventEmitter {
     });
 
     this.socket.on('reconnect_attempt', (attempt: number) => {
-      console.log(`🔄 Reconnect attempt #${attempt}`);
+      // console.log(`🔄 Reconnect attempt #${attempt}`);
       store.setStatus('reconnecting');
     });
 
@@ -198,18 +199,8 @@ class SocketConnectionService extends EventEmitter {
   // ── Heartbeat ─────────────────────────────────────────────────────────────
 
   private _startHeartbeat() {
-    this._stopHeartbeat();
-    this.heartbeatInterval = setInterval(() => {
-      if (!this.socket?.connected) return;
-      const now = Date.now();
-      if (this.lastPongTime > 0 && now - this.lastPongTime > 35_000) {
-        console.warn('💔 Heartbeat timeout — forcing reconnect');
-        this.socket.disconnect();
-        this.socket.connect();
-        return;
-      }
-      this.socket.emit('ping');
-    }, 25_000);
+    // Socket.io handles heartbeats natively via pingInterval/pingTimeout.
+    // Manual heartbeat removed to reduce noise.
   }
 
   private _stopHeartbeat() {
