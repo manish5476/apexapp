@@ -35,7 +35,7 @@ export const PaymentService = {
 
   downloadReceipt: (paymentId: string) => {
     return apiClient.get(`${PaymentService.endpoint}/${paymentId}/receipt/download`, {
-      responseType: 'blob' as any
+      responseType: 'arraybuffer'
     });
   },
 

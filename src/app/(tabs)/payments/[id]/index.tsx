@@ -3,6 +3,8 @@ import { Badge } from '@/src/components/Badge'; // Adjust path if needed
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
+import { getAuthToken } from '@/src/core/api/auth-token';
+import { env } from '@/src/core/config/env';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
 // 1. Add these imports at the top
@@ -68,53 +70,36 @@ export default function PaymentDetailsScreen() {
     try {
       Alert.alert('Downloading', 'Preparing receipt...');
 
-      // 1. Get the blob from your API
-      const response = await PaymentService.downloadReceipt(payment._id);
+      // 1. Get auth token and setup paths
+      const token = await getAuthToken();
+      const fileName = `Receipt_${payment.referenceNumber || payment._id.slice(-6)}.pdf`;
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      const downloadUrl = `${env.apiUrl}/v1/payments/${payment._id}/receipt/download`;
 
-      // Assuming Axios, the blob is usually in response.data
-      const blob = response.data || response;
-
-      // 2. Convert Blob to Base64
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-
-      reader.onloadend = async () => {
-        try {
-          // Extract the base64 string from the data URL
-          const base64data = (reader.result as string).split(',')[1];
-
-          // 3. Create a clean file name using the reference number
-          const fileName = `Receipt_${payment.referenceNumber || payment._id.slice(-6)}.pdf`;
-          const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-
-          // 4. Write the file to the device's file system
-          await FileSystem.writeAsStringAsync(fileUri, base64data, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-
-          // 5. Trigger the native Share/Save menu (iOS Share Sheet / Android Intent)
-          if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(fileUri, {
-              mimeType: 'application/pdf',
-              dialogTitle: 'Download Receipt',
-              UTI: 'com.adobe.pdf' // iOS specific
-            });
-          } else {
-            Alert.alert('Success', 'File downloaded, but sharing is not supported on this device.');
-          }
-        } catch (fileError) {
-          console.error('File System Error:', fileError);
-          Alert.alert('Error', 'Failed to save the file to your device.');
+      // 2. Download directly to file system
+      const result = await FileSystem.downloadAsync(downloadUrl, fileUri, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      };
+      });
 
-      reader.onerror = () => {
-        Alert.alert('Error', 'Failed to read the downloaded file.');
-      };
+      if (result.status !== 200) {
+        throw new Error('Failed to download receipt from server');
+      }
 
-    } catch (error) {
-      console.error('API Error:', error);
-      Alert.alert('Download Failed', 'Could not fetch the receipt from the server.');
+      // 3. Trigger native sharing/saving
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(result.uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Download Receipt',
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        Alert.alert('Success', 'Receipt downloaded successfully.');
+      }
+    } catch (error: any) {
+      console.error('Download Error:', error);
+      Alert.alert('Download Failed', error.message || 'Could not fetch or save the receipt.');
     }
   };
 
@@ -234,7 +219,7 @@ export default function PaymentDetailsScreen() {
                 {payment.invoiceId && (
                   <>
                     <View style={styles.divider} />
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.invoiceRow}
                       onPress={() => payment.invoiceId?._id && router.push(`/invoice/${payment.invoiceId._id}` as any)}
                     >
@@ -260,7 +245,7 @@ export default function PaymentDetailsScreen() {
 
           {/* CUSTOMER DETAILS */}
           <ThemedText style={styles.sectionLabel}>{isInflow ? 'RECEIVED FROM' : 'PAID TO'}</ThemedText>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.card}
             onPress={() => payment.customerId?._id && router.push(`/customers/${payment.customerId._id}` as any)}
             activeOpacity={0.7}
