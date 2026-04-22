@@ -102,6 +102,13 @@ export default function DrawerLayout() {
           drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} />
         }}
       />
+      <Drawer.Screen
+        name="organization/index"
+        options={{
+          title: 'Organization',
+          drawerIcon: ({ color }) => <Ionicons name="settings-outline" size={20} color={color} />
+        }}
+      />
 
       {/* Hide detail screens from the drawer menu */}
       {/* Supplier Sub-Routes */}

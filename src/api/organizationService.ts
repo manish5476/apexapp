@@ -38,5 +38,26 @@ export const OrganizationService = {
 
   rejectMember: (data: { userId: string }) => {
     return apiClient.post('/v1/organization/reject-member', data);
+  },
+
+  inviteUser: (data: { name: string; email: string; password?: string; role: string; branchId: string }) => {
+    return apiClient.post('/v1/neworganization/invite', data);
+  },
+
+  // ── Ownership ─────────────────────────────────────────────────────────
+  initiateOwnershipTransfer: (data: { newOwnerId: string }) => {
+    return apiClient.post('/v1/ownership/initiate', data);
+  },
+
+  finalizeOwnershipTransfer: (data: { token: string }) => {
+    return apiClient.post('/v1/ownership/finalize', data);
+  },
+
+  cancelOwnershipTransfer: () => {
+    return apiClient.post('/v1/ownership/cancel', {});
+  },
+
+  forceTransferOwnership: (data: { newOwnerId: string }) => {
+    return apiClient.post('/v1/ownership/force', data);
   }
 };
