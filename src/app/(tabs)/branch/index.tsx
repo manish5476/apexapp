@@ -68,7 +68,7 @@ export default function BranchListScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View>

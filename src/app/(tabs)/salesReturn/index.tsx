@@ -1,5 +1,5 @@
-import { salesReturnService } from '@/src/features/sales-return/services/sales-return.service';
 import { ThemedText } from '@/src/components/themed-text';
+import { salesReturnService } from '@/src/features/sales-return/services/sales-return.service';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -35,6 +35,7 @@ interface SalesReturn {
   items: any[];
   reason: string;
   totalAmount: number;
+  totalRefundAmount?: number;
   status: 'pending' | 'approved' | 'rejected';
   approvedBy?: { name: string };
   rejectedBy?: { name: string };
@@ -68,10 +69,10 @@ const ReturnCard = React.memo(({ item, onAction, theme, styles }: { item: SalesR
   const avatar = { bg: theme.bgSecondary, text: theme.textSecondary };
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.6} onPress={() => router.push(`/sales-returns/${item._id}` as any)}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.6} onPress={() => router.push(`/salesReturn/${item._id}` as any)}>
       <View style={styles.cardHeader}>
         <View>
-          <ThemedText style={styles.invoiceText}>Return #{item.returnNumber}</ThemedText>
+          <ThemedText style={styles.invoiceText}>{item.returnNumber}</ThemedText>
           <ThemedText style={styles.branchText}>📅 {formatDate(item.returnDate)}</ThemedText>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
@@ -93,7 +94,18 @@ const ReturnCard = React.memo(({ item, onAction, theme, styles }: { item: SalesR
           </View>
         </View>
         <View style={styles.reasonBox}>
-          <ThemedText style={styles.reasonLabel}>Ref Invoice: {invNumber}</ThemedText>
+          <TouchableOpacity 
+            onPress={() => {
+              const invoiceId = (item.invoiceId as any)?._id || item.invoiceId;
+              if (invoiceId && typeof invoiceId === 'string') {
+                router.push(`/(tabs)/invoice/${invoiceId}` as any);
+              }
+            }}
+          >
+            <ThemedText style={[styles.reasonLabel, { color: DARK_BLUE_ACCENT, textDecorationLine: 'underline' }]}>
+              Ref Invoice: {invNumber}
+            </ThemedText>
+          </TouchableOpacity>
           <ThemedText style={styles.reasonText} numberOfLines={2}>{item.reason || 'No reason provided'}</ThemedText>
         </View>
       </View>
@@ -101,7 +113,7 @@ const ReturnCard = React.memo(({ item, onAction, theme, styles }: { item: SalesR
       <View style={styles.cardFooter}>
         <View style={{ flex: 1 }}>
           <ThemedText style={styles.financialLabel}>Refund Amount</ThemedText>
-          <ThemedText style={styles.grandTotal}>{formatCurrency(item.totalAmount)}</ThemedText>
+          <ThemedText style={styles.grandTotal}>{formatCurrency(item.totalRefundAmount ?? item.totalAmount)}</ThemedText>
         </View>
         {item.status === 'pending' ? (
           <View style={styles.actionGroup}>
@@ -148,10 +160,20 @@ export default function SalesReturnListScreen() {
 
     try {
       const res = await salesReturnService.list({ page: pageNum, limit: 20, search: searchQuery, status: activeFilters.status });
-      const resData = res.data?.data || res.data;
-      const fetchedItems = Array.isArray(resData) ? resData : (resData.docs || []);
+      const rawBody = res.data;
+      const resData = rawBody?.data || rawBody;
+
+      // Handle your specific JSON structure: data.returns
+      const fetchedItems = resData?.returns || (Array.isArray(resData) ? resData : (resData.docs || []));
+
       setData(prev => (isRefresh || pageNum === 1 ? fetchedItems : [...prev, ...fetchedItems]));
-      setHasNextPage(pageNum < (resData.pagination?.totalPages || 1));
+
+      // Use top-level 'total' and 'results' for pagination if available
+      const totalItems = rawBody?.total ?? resData?.total ?? 0;
+      const itemsPerPage = 20;
+      const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+      setHasNextPage(pageNum < totalPages);
       setPage(pageNum);
     } catch (err) {
       Alert.alert('Error', 'Failed to load sales returns.');
@@ -343,215 +365,3 @@ const createStyles = (theme: any) => StyleSheet.create({
   modalApplyBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.bgPrimary },
 });
 
-
-// import { SalesReturnService } from '@/src/api/SalesReturnService';
-// import { ThemedText } from '@/src/components/themed-text';
-// import { useAppTheme } from '@/src/hooks/use-app-theme';
-// import { Ionicons } from '@expo/vector-icons';
-// import { router } from 'expo-router';
-// import React, { useCallback, useEffect, useMemo, useState } from 'react';
-// import {
-//   Alert,
-//   FlatList,
-//   RefreshControl,
-//   SafeAreaView,
-//   StyleSheet,
-//   TouchableOpacity,
-//   View
-// } from 'react-native';
-// import { Spacing, Typography, UI } from '../branch/[id]';
-
-// const DARK_BLUE_ACCENT = '#1d4ed8';
-
-// // --- TYPES ---
-// interface ReturnRecord {
-//   _id: string;
-//   returnNumber: string;
-//   returnDate: string;
-//   createdAt: string;
-//   invoiceId?: { _id: string; invoiceNumber: string };
-//   purchaseId?: { _id: string; invoiceNumber: string };
-//   customerId?: { name: string; phone: string };
-//   items: any[];
-//   reason: string;
-//   totalAmount: number;
-//   totalRefundAmount?: number;
-//   status: 'pending' | 'approved' | 'rejected' | 'active' | 'completed' | 'cancelled';
-// }
-
-// // --- UTILS ---
-// const formatCurrency = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
-// const formatDate = (dateStr: string) => dateStr ? new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-
-// const getInitials = (name: string) => {
-//   if (!name) return 'C';
-//   const parts = name.split(' ');
-//   return parts.length > 1 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : name.substring(0, 2).toUpperCase();
-// };
-
-// const getStatusConfig = (status: string, theme: any) => {
-//   const s = status?.toLowerCase() || 'pending';
-//   if (s === 'approved') return { bg: `${theme.success}15`, text: theme.success, border: `${theme.success}40`, icon: 'checkmark-circle' as const };
-//   if (s === 'rejected') return { bg: `${theme.error}15`, text: theme.error, border: `${theme.error}40`, icon: 'close-circle' as const };
-//   return { bg: `${theme.warning}15`, text: theme.warning, border: `${theme.warning}40`, icon: 'time' as const };
-// };
-
-// // ==========================================
-// // MEMOIZED RETURN CARD
-// // ==========================================
-// const ReturnCard = React.memo(({ item, onAction, theme, styles }: { item: ReturnRecord; onAction: (i: ReturnRecord, type: 'approve' | 'reject') => void, theme: any, styles: any }) => {
-//   const invNumber = item.purchaseId?.invoiceNumber || item.invoiceId?.invoiceNumber || '—';
-//   const customerName = item.customerId?.name || 'Walk-in Customer';
-//   const statusConfig = getStatusConfig(item.status, theme);
-//   const avatar = { bg: theme.bgSecondary, text: theme.textSecondary };
-
-//   return (
-//     <TouchableOpacity style={styles.card} activeOpacity={0.6} onPress={() => router.push(`/sales-returns/${item._id}` as any)}>
-//       <View style={styles.cardHeader}>
-//         <View>
-//           <ThemedText style={styles.invoiceText}>Return #{invNumber}</ThemedText>
-//           <ThemedText style={styles.branchText}>📅 {formatDate(item.createdAt)}</ThemedText>
-//         </View>
-//         <View style={{ alignItems: 'flex-end' }}>
-//           <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg, borderColor: statusConfig.border }]}>
-//             <Ionicons name={statusConfig.icon} size={10} color={statusConfig.text} style={{ marginRight: 4 }} />
-//             <ThemedText style={[styles.statusText, { color: statusConfig.text }]}>{item.status}</ThemedText>
-//           </View>
-//         </View>
-//       </View>
-
-//       <View style={styles.cardBody}>
-//         <View style={styles.customerRow}>
-//           <View style={[styles.avatarBox, { backgroundColor: avatar.bg }]}>
-//             <ThemedText style={[styles.avatarText, { color: avatar.text }]}>{getInitials(customerName)}</ThemedText>
-//           </View>
-//           <View style={{ flex: 1, marginLeft: 12 }}>
-//             <ThemedText style={styles.customerName} numberOfLines={1}>{customerName}</ThemedText>
-//             <ThemedText style={styles.customerContact}>{item.customerId?.phone || 'No Phone'}</ThemedText>
-//           </View>
-//         </View>
-//         <View style={styles.reasonBox}>
-//           <ThemedText style={styles.reasonLabel}>Reason for Return</ThemedText>
-//           <ThemedText style={styles.reasonText} numberOfLines={2}>{item.reason || 'No reason provided'}</ThemedText>
-//         </View>
-//       </View>
-
-//       <View style={styles.cardFooter}>
-//         <View style={{ flex: 1 }}>
-//           <ThemedText style={styles.financialLabel}>Refund Amount</ThemedText>
-//           <ThemedText style={styles.grandTotal}>{formatCurrency(item.totalAmount)}</ThemedText>
-//         </View>
-//         {item.status === 'pending' ? (
-//           <View style={styles.actionGroup}>
-//             <TouchableOpacity style={styles.actionBtnReject} onPress={() => onAction(item, 'reject')}>
-//               <ThemedText style={styles.actionBtnTextReject}>Reject</ThemedText>
-//             </TouchableOpacity>
-//             <TouchableOpacity style={styles.actionBtnApprove} onPress={() => onAction(item, 'approve')}>
-//               <ThemedText style={styles.actionBtnTextApprove}>Approve</ThemedText>
-//             </TouchableOpacity>
-//           </View>
-//         ) : null}
-//       </View>
-//     </TouchableOpacity>
-//   );
-// });
-
-// // ==========================================
-// // MAIN SCREEN
-// // ==========================================
-// export default function SalesReturnListScreen() {
-//   const theme = useAppTheme();
-//   const styles = useMemo(() => createStyles(theme), [theme]);
-//   const [data, setData] = useState<ReturnRecord[]>([]);
-//   const [page, setPage] = useState(1);
-//   const [hasNextPage, setHasNextPage] = useState(true);
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [isFetchingMore, setIsFetchingMore] = useState(false);
-//   const [isRefreshing, setIsRefreshing] = useState(false);
-//   const [showFilters, setShowFilters] = useState(false);
-//   const [searchQuery, setSearchQuery] = useState('');
-//   const [activeFilters, setActiveFilters] = useState({ status: '' });
-//   const [actionModal, setActionModal] = useState<{ visible: boolean; type: 'approve' | 'reject' | null; item: ReturnRecord | null }>({ visible: false, type: null, item: null });
-//   const [actionReason, setActionReason] = useState('');
-
-//   const fetchReturns = useCallback(async (pageNum: number, isRefresh = false) => {
-//     if (isRefresh) setIsRefreshing(true);
-//     else if (pageNum === 1) setIsLoading(true);
-//     else setIsFetchingMore(true);
-//     try {
-//       const res = await SalesReturnService.getAllReturns({ page: pageNum, limit: 20, search: searchQuery, status: activeFilters.status });
-//       const resData = res.data?.data || res.data;
-//       const fetchedItems = Array.isArray(resData) ? resData : (resData.docs || []);
-//       setData(prev => (isRefresh || pageNum === 1 ? fetchedItems : [...prev, ...fetchedItems]));
-//       setHasNextPage(pageNum < (resData.pagination?.totalPages || 1));
-//       setPage(pageNum);
-//     } catch (err) {
-//       Alert.alert('Error', 'Failed to load sales returns.');
-//     } finally {
-//       setIsLoading(false);
-//       setIsRefreshing(false);
-//       setIsFetchingMore(false);
-//     }
-//   }, [searchQuery, activeFilters]);
-
-//   useEffect(() => { fetchReturns(1, true); }, [activeFilters]);
-
-//   const handleAction = async () => {
-//     try {
-//       if (actionModal.type === 'approve') await SalesReturnService.approveReturn(actionModal.item!._id);
-//       else await SalesReturnService.rejectReturn(actionModal.item!._id, actionReason);
-//       setActionModal({ visible: false, type: null, item: null });
-//       fetchReturns(1, true);
-//     } catch (error) { Alert.alert('Error', 'Failed to process action.'); }
-//   };
-
-//   return (
-//     <SafeAreaView style={styles.safeArea}>
-//       <View style={styles.header}>
-//         <View style={styles.headerTop}>
-//           <View style={{ flex: 1 }}>
-//             <ThemedText style={styles.pageTitle}>Sales Returns</ThemedText>
-//             <ThemedText style={styles.pageSubtitle}>Review & process credit notes</ThemedText>
-//           </View>
-//           <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/salesReturn/CreateSalesReturnScreen' as any)}>
-//             <Ionicons name="add" size={20} color={theme.bgPrimary} />
-//             <ThemedText style={styles.primaryBtnText}>Issue Return</ThemedText>
-//           </TouchableOpacity>
-//         </View>
-//       </View>
-
-//       <FlatList
-//         data={data}
-//         keyExtractor={(item) => item._id}
-//         renderItem={({ item }) => <ReturnCard item={item} onAction={(i, type) => setActionModal({ visible: true, type, item: i })} theme={theme} styles={styles} />}
-//         contentContainerStyle={styles.listContent}
-//         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => fetchReturns(1, true)} />}
-//         onEndReached={() => { if (hasNextPage && !isFetchingMore) fetchReturns(page + 1); }}
-//         ListEmptyComponent={
-//           <View style={styles.emptyState}>
-//             <View style={styles.emptyIconBox}>
-//               <Ionicons name="receipt-outline" size={48} color={theme.textTertiary} />
-//             </View>
-//             <ThemedText style={styles.emptyTitle}>No Pending Returns</ThemedText>
-//             <ThemedText style={styles.emptyDesc}>All credit notes have been processed.</ThemedText>
-//           </View>
-//         }
-//       />
-//     </SafeAreaView>
-//   );
-// }
-
-// const createStyles = (theme: any) => StyleSheet.create({
-//   safeArea: { flex: 1, backgroundColor: theme.bgSecondary },
-//   chipActive: { backgroundColor: DARK_BLUE_ACCENT, borderColor: DARK_BLUE_ACCENT },
-//   chipText: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, color: theme.textSecondary, textTransform: 'capitalize' },
-//   chipTextActive: { color: theme.bgPrimary },
-//   modalFooterActions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.lg },
-//   modalClearBtn: { flex: 1, padding: Spacing.xl, borderRadius: UI.borderRadius.md, alignItems: 'center', backgroundColor: theme.bgSecondary, borderWidth: 1, borderColor: theme.borderSecondary },
-//   modalClearBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-//   modalApplyBtn: { flex: 2, backgroundColor: DARK_BLUE_ACCENT, padding: Spacing.xl, borderRadius: UI.borderRadius.md, alignItems: 'center', borderWidth: 1, borderColor: DARK_BLUE_ACCENT },
-//   modalApplyBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.bgPrimary },
-//   inputGroup: { marginBottom: Spacing.lg },
-//   label: { fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, color: theme.textSecondary, marginBottom: Spacing.xs },
-//   approveWarning: { fontSize: Typography.size.sm, color: theme.success, backgroundColor: `${theme.success}10`, padding: Spacing.md, borderRadius: UI.borderRadius.md, marginBottom: Spacing.xl }
-// });

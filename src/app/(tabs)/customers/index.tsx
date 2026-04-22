@@ -351,7 +351,7 @@ export default function CustomerListScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
         {/* Header */}
         <View style={styles.header}>

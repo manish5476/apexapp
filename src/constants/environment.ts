@@ -11,8 +11,8 @@
 // src/constants/environment.ts
 export const environment = {
   production: false,
-  apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://10.168.158.164:5000/api',
-  socketUrl: process.env.EXPO_PUBLIC_SOCKET_URL || 'http://10.168.158.164:5000',
+  apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://10.168.158.148:5000/api',
+  socketUrl: process.env.EXPO_PUBLIC_SOCKET_URL || 'http://10.168.158.148:5000',
   // apiUrl: process.env.EXPO_PUBLIC_API_URL || 'https://apex-1ed5.onrender.com/api',
   // socketUrl: process.env.EXPO_PUBLIC_SOCKET_URL || 'https://apex-1ed5.onrender.com',
 };

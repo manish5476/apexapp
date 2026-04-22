@@ -200,7 +200,7 @@ export default function InvoiceListScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         
         {/* HEADER */}
         <View style={styles.header}>
@@ -210,6 +210,9 @@ export default function InvoiceListScreen() {
               <ThemedText style={styles.pageSubtitle}>Manage billing & track payments</ThemedText>
             </View>
             <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/(tabs)/invoice/analytics' as any)}>
+                <Ionicons name="bar-chart-outline" size={24} color={theme.textPrimary} />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn} onPress={handleExport} disabled={isExporting}>
                 {isExporting ? <ActivityIndicator size="small" color={theme.textPrimary} /> : <Ionicons name="download-outline" size={24} color={theme.textPrimary} />}
               </TouchableOpacity>

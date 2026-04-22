@@ -208,7 +208,7 @@ export default function EmiDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}

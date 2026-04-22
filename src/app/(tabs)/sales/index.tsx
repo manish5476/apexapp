@@ -246,7 +246,7 @@ export default function SalesListScreen() {
   const activeFilterCount = Object.values(activeFilters).filter(Boolean).length;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
       {/* HEADER */}
       <View style={styles.header}>

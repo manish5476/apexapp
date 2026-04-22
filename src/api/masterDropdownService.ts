@@ -1,5 +1,52 @@
 import apiClient from './client';
+export interface UniversalDropdownApiItem<TData = unknown, TMeta = unknown> {
+  label: string;
+  value: string;
+  data: TData;
+  meta?: TMeta;
+}
 
+export interface UniversalDropdownApiResponse<TData = unknown, TMeta = unknown> {
+  status: string;
+  results: number;
+  total: number;
+  page: number;
+  totalPages: number;
+  hasMore: boolean;
+  data: Array<UniversalDropdownApiItem<TData, TMeta>>;
+}
+
+export interface DropdownOption<TData = unknown, TMeta = unknown> {
+  label: string;
+  value: string;
+  data: TData;
+  meta?: TMeta;
+}
+
+export interface DropdownFetchResult<TData = unknown, TMeta = unknown> {
+  data: Array<DropdownOption<TData, TMeta>>;
+  hasMore: boolean;
+  total: number;
+  page: number;
+}
+
+export function adaptUniversalDropdownResponse<TData = unknown, TMeta = unknown>(
+  response: UniversalDropdownApiResponse<TData, TMeta>
+): DropdownFetchResult<TData, TMeta> {
+  return {
+    data: Array.isArray(response?.data)
+      ? response.data.map((item) => ({
+          label: item.label,
+          value: item.value,
+          data: item.data,
+          meta: item.meta
+        }))
+      : [],
+    hasMore: Boolean(response?.hasMore),
+    total: Number(response?.total ?? 0),
+    page: Number(response?.page ?? 1)
+  };
+}
 export interface DropdownOption {
   label: string;
   value: string;
@@ -67,15 +114,16 @@ export const MasterDropdownService = {
     try {
       const response = await apiClient.get<DropdownResponse>(`/v1/dropdowns/${endpoint}`, { params });
 
-      // Handle the case where the interceptor already unwrapped the response
-      const responseData = (response as any).data || response;
+      // The interceptor already unwraps the Axios response, so 'response' is the JSON body.
+      const resBody: any = response;
+      const dataArray = Array.isArray(resBody) ? resBody : (Array.isArray(resBody.data) ? resBody.data : []);
 
       const result: DropdownResponse = {
-        status: responseData.status || 'success',
-        results: responseData.results || 0,
-        total: responseData.total || responseData.results || 0,
-        hasMore: responseData.hasMore ?? (responseData.data?.length === limit),
-        data: responseData.data || [],
+        status: resBody.status || 'success',
+        results: resBody.results || dataArray.length,
+        total: resBody.total || resBody.results || dataArray.length,
+        hasMore: resBody.hasMore ?? (dataArray.length === limit),
+        data: dataArray,
       };
 
       // ✅ Cache the successful result

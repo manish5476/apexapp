@@ -288,7 +288,7 @@ export default function ProductDetailsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.navigate('/(tabs)/product' as any)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>

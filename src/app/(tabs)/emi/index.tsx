@@ -249,7 +249,7 @@ export default function EmiListScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
         {/* HEADER */}
         <View style={styles.header}>

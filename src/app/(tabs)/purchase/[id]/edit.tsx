@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MasterDropdownService } from '@/src/api/masterDropdownService';
+import { AppDatePicker } from '@/src/components/AppDatePicker';
 import { PurchaseService } from '@/src/api/PurchaseService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
@@ -34,8 +35,8 @@ const SelectField = ({ label, value, options, onSelect, placeholder, theme }: an
   return (
     <View style={styles.inputGroup}>
       <ThemedText style={styles.label}>{label}</ThemedText>
-      <TouchableOpacity 
-        style={[styles.selectTrigger, { backgroundColor: theme.bgSecondary, borderColor: theme.borderSecondary }]} 
+      <TouchableOpacity
+        style={[styles.selectTrigger, { backgroundColor: theme.bgSecondary, borderColor: theme.borderSecondary }]}
         onPress={() => setVisible(true)}
       >
         <ThemedText style={[styles.selectTriggerText, !value && { color: theme.textTertiary }]}>{selectedLabel}</ThemedText>
@@ -58,7 +59,7 @@ const SelectField = ({ label, value, options, onSelect, placeholder, theme }: an
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[
-                    styles.modalOption, 
+                    styles.modalOption,
                     { borderBottomColor: theme.borderSecondary },
                     value === item.value && { backgroundColor: `${theme.accentPrimary}10`, borderColor: theme.accentPrimary }
                   ]}
@@ -135,9 +136,9 @@ export default function PurchaseFormScreen() {
         MasterDropdownService.getDropdownData('branches'),
         MasterDropdownService.getDropdownData('products')
       ]);
-      setSuppliers(sData);
-      setBranches(bData);
-      setProducts(pData);
+      setSuppliers(sData.data);
+      setBranches(bData.data);
+      setProducts(pData.data);
     } catch (err) {
       console.error('Failed to load master data', err);
     }
@@ -171,7 +172,7 @@ export default function PurchaseFormScreen() {
         paymentMethod: data.paymentMethod || 'bank',
         notes: data.notes || ''
       });
-      
+
     } catch (err) {
       Alert.alert('Error', 'Failed to load purchase for editing.');
     } finally {
@@ -280,14 +281,14 @@ export default function PurchaseFormScreen() {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      
+
       formData.append('supplierId', invoiceDetails.supplierId);
       formData.append('branchId', invoiceDetails.branchId);
       formData.append('invoiceNumber', invoiceDetails.invoiceNumber);
       formData.append('purchaseDate', invoiceDetails.purchaseDate);
       formData.append('status', invoiceDetails.status);
       formData.append('notes', paymentDetails.notes);
-      
+
       const processedItems = items.map(it => ({
         productId: it.productId,
         quantity: parseFloat(it.quantity) || 1,
@@ -296,7 +297,7 @@ export default function PurchaseFormScreen() {
         discount: parseFloat(it.discount) || 0
       }));
       formData.append('items', JSON.stringify(processedItems));
-      
+
       if (parseFloat(paymentDetails.paidAmount) > 0) {
         formData.append('paymentMethod', paymentDetails.paymentMethod);
         formData.append('paidAmount', paymentDetails.paidAmount);
@@ -357,7 +358,7 @@ export default function PurchaseFormScreen() {
 
               <SelectField label="Supplier *" value={invoiceDetails.supplierId} options={suppliers} placeholder="Select Supplier" onSelect={(v: string) => setInvoiceDetails({ ...invoiceDetails, supplierId: v })} theme={theme} />
               <SelectField label="Branch *" value={invoiceDetails.branchId} options={branches} placeholder="Receiving Branch" onSelect={(v: string) => setInvoiceDetails({ ...invoiceDetails, branchId: v })} theme={theme} />
-              
+
               <View style={styles.row}>
                 <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.md }]}>
                   <ThemedText style={styles.label}>Invoice No. <ThemedText style={styles.required}>*</ThemedText></ThemedText>
@@ -365,8 +366,12 @@ export default function PurchaseFormScreen() {
                 </View>
 
                 <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <ThemedText style={styles.label}>Date <ThemedText style={styles.required}>*</ThemedText></ThemedText>
-                  <TextInput style={inputStyle} value={invoiceDetails.purchaseDate} onChangeText={(t) => setInvoiceDetails({ ...invoiceDetails, purchaseDate: t })} placeholder="YYYY-MM-DD" placeholderTextColor={theme.textTertiary} />
+                  <AppDatePicker
+                    label="Date *"
+                    value={invoiceDetails.purchaseDate ? new Date(invoiceDetails.purchaseDate) : new Date()}
+                    onChange={(date) => setInvoiceDetails({ ...invoiceDetails, purchaseDate: date.toISOString().slice(0, 10) })}
+                    containerStyle={styles.inputGroup}
+                  />
                 </View>
               </View>
 
@@ -490,8 +495,8 @@ export default function PurchaseFormScreen() {
           </ScrollView>
 
           {/* STICKY BOTTOM FOOTER FOR TOTALS AND SAVE */}
-          <View style={[styles.stickyFooter, { backgroundColor: theme.bgPrimary, borderTopColor: theme.borderSecondary, ...getElevation(4, theme) }]}>
-            
+          <View style={[styles.stickyFooter, { backgroundColor: theme.bgPrimary, borderTopColor: theme.borderSecondary, ...getElevation(1, theme) }]}>
+
             {/* Quick Summary Row */}
             <View style={styles.totalsSummaryRow}>
               <View>
@@ -517,7 +522,7 @@ export default function PurchaseFormScreen() {
                   <ThemedText style={[styles.balanceValue, { color: theme.error }]}>Balance: ₹{totals.balance.toFixed(2)}</ThemedText>
                 )}
               </View>
-              
+
               <TouchableOpacity style={[styles.submitBtn, { backgroundColor: theme.accentPrimary }]} onPress={onSubmit} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <ActivityIndicator color={theme.bgPrimary} />
@@ -549,7 +554,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderBottomWidth: 1 },
   backBtn: { marginRight: Spacing.md, padding: Spacing.xs },
   headerCenter: { flex: 1 },
-  headerTitle: { fontSize: Typography.size.lg, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold' },
+  headerTitle: { fontSize: Typography.size.lg, fontWeight: 'bold' },
   headerSubtitle: { fontSize: Typography.size.xs, marginTop: 2, opacity: 0.7 },
   headerSaveBtn: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: UI.borderRadius.pill },
   headerSaveText: { fontWeight: 'bold', fontSize: Typography.size.sm },
@@ -558,37 +563,37 @@ const styles = StyleSheet.create({
   // Sections
   section: { padding: Spacing.xl, borderRadius: UI.borderRadius.xl, borderWidth: 1, marginBottom: Spacing.xl },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg },
-  sectionTitle: { fontSize: Typography.size.md, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold', marginLeft: 8 },
+  sectionTitle: { fontSize: Typography.size.md, fontWeight: 'bold', marginLeft: 8 },
 
   // Inputs
   inputGroup: { marginBottom: Spacing.lg },
   label: { fontSize: Typography.size.sm, fontWeight: '600', marginBottom: Spacing.xs },
-  input: { borderWidth: 1, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontSize: Typography.size.md, fontFamily: Typography.fontFamily.body },
+  input: { borderWidth: 1, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontSize: Typography.size.md },
 
   // Native Select Replacements
   selectTrigger: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  selectTriggerText: { fontSize: Typography.size.md, fontFamily: Typography.fontFamily.body },
+  selectTriggerText: { fontSize: Typography.size.md },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: Spacing.xl },
   modalContent: { borderRadius: UI.borderRadius.xl, maxHeight: '80%', overflow: 'hidden' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.xl, borderBottomWidth: 1 },
-  modalTitle: { fontSize: Typography.size.lg, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold' },
+  modalTitle: { fontSize: Typography.size.lg, fontWeight: 'bold' },
   modalOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg, borderBottomWidth: 1 },
-  modalOptionText: { fontSize: Typography.size.md, fontFamily: Typography.fontFamily.body },
+  modalOptionText: { fontSize: Typography.size.md },
 
   // Items
   addBtn: { flexDirection: 'row', alignItems: 'center', marginLeft: 'auto', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: UI.borderRadius.pill },
   addBtnText: { color: '#fff', fontWeight: 'bold', fontSize: Typography.size.xs, marginLeft: 4 },
   emptyState: { alignItems: 'center', padding: Spacing['2xl'], borderWidth: 1, borderStyle: 'dashed', borderRadius: UI.borderRadius.lg },
   emptyIconBox: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md },
-  emptyStateTitle: { fontFamily: Typography.fontFamily.heading, fontWeight: 'bold', fontSize: Typography.size.md, marginBottom: 4 },
+  emptyStateTitle: { fontWeight: 'bold', fontSize: Typography.size.md, marginBottom: 4 },
   emptyStateText: { textAlign: 'center', opacity: 0.7, fontSize: Typography.size.sm, lineHeight: 20 },
 
   itemCard: { padding: Spacing.lg, borderRadius: UI.borderRadius.lg, borderWidth: 1, marginBottom: Spacing.lg },
   itemCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
-  itemCardTitle: { fontSize: Typography.size.sm, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
+  itemCardTitle: { fontSize: Typography.size.sm, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
   itemTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.sm, borderTopWidth: 1 },
   itemTotalLabel: { fontSize: Typography.size.sm, fontWeight: 'bold', opacity: 0.7 },
-  itemTotalValue: { fontSize: Typography.size.lg, fontFamily: Typography.fontFamily.heading, fontWeight: 'bold' },
+  itemTotalValue: { fontSize: Typography.size.lg, fontWeight: 'bold' },
 
   // Attachments
   uploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.lg, borderWidth: 1, borderStyle: 'dashed', borderRadius: UI.borderRadius.md },
@@ -604,9 +609,9 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: Typography.size.sm, fontWeight: 'bold' },
   grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: Spacing.md, borderTopWidth: 1 },
   grandTotalLabel: { fontSize: Typography.size.sm, textTransform: 'uppercase', fontWeight: 'bold', opacity: 0.7 },
-  grandTotalValue: { fontSize: Typography.size['2xl'], fontFamily: Typography.fontFamily.heading, fontWeight: 'bold' },
+  grandTotalValue: { fontSize: Typography.size['2xl'], fontWeight: 'bold' },
   balanceValue: { fontSize: Typography.size.xs, fontWeight: 'bold', marginTop: 2 },
-  
+
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing['2xl'], paddingVertical: Spacing.md, borderRadius: UI.borderRadius.pill, gap: Spacing.sm },
   submitBtnText: { fontWeight: 'bold', fontSize: Typography.size.md },
 });

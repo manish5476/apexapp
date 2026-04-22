@@ -75,7 +75,7 @@ export default function UserListScreen() {
 
   return (
     <ThemedView style={{ flex: 1 }}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom', 'left', 'right']}>
         {/* Header */}
         <View style={styles.header}>
           <View>

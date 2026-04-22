@@ -76,6 +76,8 @@ export default function InvoiceDetailsScreen() {
   // --- FETCH DATA ---
   const loadData = async () => {
     setIsLoading(true);
+    setExistingEmiId(null);
+    setPayments([]);
     try {
       // Fetch Invoice
       const invRes = await InvoiceService.getInvoiceById(id as string) as any;
@@ -118,12 +120,8 @@ export default function InvoiceDetailsScreen() {
       setShowPaymentModal(false);
       paymentForm.reset();
 
-      const newPaymentId = res.data?.data?._id || res.data?._id;
-      if (newPaymentId) {
-        router.push(`/payments/${newPaymentId}` as any);
-      } else {
-        loadData(); // Fallback to refresh if ID not found
-      }
+      await loadData();
+      Alert.alert('Success', 'Payment recorded successfully.');
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Failed to process payment.');
     } finally {
@@ -226,7 +224,7 @@ export default function InvoiceDetailsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
         {/* HEADER */}
         <View style={styles.header}>
@@ -408,13 +406,13 @@ export default function InvoiceDetailsScreen() {
           {/* QUICK ACTIONS GRID */}
           <View style={styles.actionGrid}>
             {existingEmiId ? (
-              <TouchableOpacity style={styles.actionBtn} onPress={() => router.push(`/emis/${existingEmiId}` as any)}>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => router.push(`/(tabs)/emi/${existingEmiId}` as any)}>
                 <View style={[styles.actionIcon, { backgroundColor: `${theme.accentPrimary}15` }]}><Ionicons name="pie-chart" size={20} color={theme.accentPrimary} /></View>
                 <ThemedText style={styles.actionText}>View EMI Plan</ThemedText>
               </TouchableOpacity>
             ) : (
               invoice.status !== 'cancelled' && !isPaid && (
-                <TouchableOpacity style={styles.actionBtn} onPress={() => router.push({ pathname: '/emis/create', params: { invoiceId: invoice._id } } as any)}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => router.push({ pathname: '/(tabs)/emi/create', params: { invoiceId: invoice._id } } as any)}>
                   <View style={[styles.actionIcon, { backgroundColor: `${theme.accentPrimary}15` }]}><Ionicons name="calculator" size={20} color={theme.accentPrimary} /></View>
                   <ThemedText style={styles.actionText}>Convert to EMI</ThemedText>
                 </TouchableOpacity>
