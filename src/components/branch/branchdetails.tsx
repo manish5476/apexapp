@@ -1,6 +1,8 @@
 import { BranchService } from '@/src/api/BranchService';
+import { PermissionGate } from '@/src/components/permission/PermissionGate';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
+import { PERMISSIONS } from '@/src/constants/permissions';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,7 +47,8 @@ export default function BranchDetailsScreen() {
   if (!branch) return null;
 
   return (
-    <ThemedView style={styles.container}>
+    <PermissionGate permissions={[PERMISSIONS.BRANCH.READ]}>
+      <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
@@ -78,7 +81,8 @@ export default function BranchDetailsScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-    </ThemedView>
+      </ThemedView>
+    </PermissionGate>
   );
 }
 

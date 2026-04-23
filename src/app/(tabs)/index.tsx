@@ -1,4 +1,5 @@
 import { getElevation, Spacing, ThemeColors, Typography, UI } from '@/src/constants/theme';
+import { useNotifications } from '@/src/hooks/use-notifications';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -11,6 +12,7 @@ import { useAuthStore } from '../../store/auth.store';
 
 export default function HomeScreen() {
   const { user, organization, session } = useAuthStore();
+  const { unreadCount } = useNotifications();
   const currentTheme = useAppTheme();
   const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
 
@@ -47,9 +49,13 @@ export default function HomeScreen() {
               <ThemedText style={styles.welcomeText}>{greeting}</ThemedText>
               <ThemedText style={styles.nameText}>{firstName}</ThemedText>
             </View>
-            <TouchableOpacity style={styles.notificationBtn} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.notificationBtn}
+              activeOpacity={0.7}
+              onPress={() => router.push('/(tabs)/notifications' as any)}
+            >
               <Ionicons name="notifications-outline" size={Typography.size['3xl']} color={currentTheme.textPrimary} />
-              <View style={styles.notificationBadge} />
+              {unreadCount > 0 ? <View style={styles.notificationBadge} /> : null}
             </TouchableOpacity>
           </View>
 

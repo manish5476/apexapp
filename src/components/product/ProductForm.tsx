@@ -6,8 +6,9 @@ import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { useMasterDropdown } from '@/src/hooks/use-master-dropdown';
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Controller, SubmitHandler, useFieldArray, useForm } from 'react-hook-form';
 import {
     ActivityIndicator,
@@ -65,8 +66,11 @@ export default function ProductFormScreen() {
 
   const [isLoading, setIsLoading] = useState(editMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSkuScanner, setShowSkuScanner] = useState(false);
+  const [skuScanned, setSkuScanned] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<ProductFormData>({
+  const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm<ProductFormData>({
     resolver: zodResolver(schema) as any,
     defaultValues: {
       isActive: true,
@@ -85,13 +89,7 @@ export default function ProductFormScreen() {
   });
 
   // --- FETCH DATA ---
-  useEffect(() => {
-    if (editMode) {
-      loadProduct();
-    }
-  }, [id]);
-
-  const loadProduct = async () => {
+  const loadProduct = useCallback(async () => {
     try {
       const res = await ProductService.getProductById(id as string) as any;
       const data = res.data?.data || res.data || res;
@@ -112,7 +110,13 @@ export default function ProductFormScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id, reset]);
+
+  useEffect(() => {
+    if (editMode) {
+      loadProduct();
+    }
+  }, [editMode, loadProduct]);
 
   // --- SUBMIT ---
   const onSubmit: SubmitHandler<ProductFormData> = async (data) => {
@@ -183,7 +187,44 @@ export default function ProductFormScreen() {
             {renderSection('Basic Information', 'cube', (
               <View style={styles.fieldGrid}>
                 <FormField label="Product Name *" control={control} name="name" error={errors.name} placeholder="Ex: Wireless Mouse" />
-                <FormField label="SKU / Barcode" control={control} name="sku" error={errors.sku} placeholder="Leave blank to auto-generate" autoCapitalize="characters" />
+                <View style={styles.field}>
+                  <ThemedText style={styles.label}>SKU / Barcode</ThemedText>
+                  <Controller
+                    control={control}
+                    name="sku"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <View style={styles.scanInputRow}>
+                        <TextInput
+                          style={[styles.input, styles.scanInput, errors.sku && styles.inputError]}
+                          onBlur={onBlur}
+                          onChangeText={onChange}
+                          value={value !== undefined && value !== null ? String(value) : ''}
+                          placeholder="Leave blank to auto-generate"
+                          placeholderTextColor={theme.textLabel}
+                          autoCapitalize="characters"
+                        />
+                        <TouchableOpacity
+                          style={styles.scanBtn}
+                          onPress={async () => {
+                            if (!cameraPermission?.granted) {
+                              const permission = await requestCameraPermission();
+                              if (!permission.granted) {
+                                Alert.alert('Permission Required', 'Camera permission is needed to scan SKU.');
+                                return;
+                              }
+                            }
+                            setSkuScanned(false);
+                            setShowSkuScanner(true);
+                          }}
+                        >
+                          <Ionicons name="scan-outline" size={20} color={theme.accentPrimary} />
+                          <ThemedText style={styles.scanBtnText}>Scan</ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  />
+                  {errors.sku && <ThemedText style={styles.errorText}>{errors.sku.message}</ThemedText>}
+                </View>
                 <FormField label="Description" control={control} name="description" multiLine placeholder="Detailed product description..." />
                 <FormField label="Tags" control={control} name="tags" placeholder="Comma separated (e.g., electronics, wireless)" />
                 <SwitchField label="Product is Active" control={control} name="isActive" />
@@ -275,6 +316,45 @@ export default function ProductFormScreen() {
 
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      <Modal visible={showSkuScanner} animationType="slide" onRequestClose={() => setShowSkuScanner(false)}>
+        <ThemedView style={styles.scannerModalContainer}>
+          <SafeAreaView style={styles.safeArea} edges={['top']}>
+            <View style={styles.scannerHeader}>
+              <ThemedText style={styles.modalTitle}>Scan SKU / Barcode</ThemedText>
+              <TouchableOpacity onPress={() => setShowSkuScanner(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close-circle" size={28} color={theme.textTertiary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.scannerCameraBox}>
+              {cameraPermission?.granted ? (
+                <CameraView
+                  style={StyleSheet.absoluteFillObject}
+                  barcodeScannerSettings={{ barcodeTypes: ['code128', 'ean13', 'ean8', 'upc_a', 'upc_e', 'qr'] }}
+                  onBarcodeScanned={
+                    skuScanned
+                      ? undefined
+                      : ({ data }) => {
+                        setSkuScanned(true);
+                        setValue('sku', data, { shouldDirty: true, shouldValidate: true });
+                        setShowSkuScanner(false);
+                        setTimeout(() => setSkuScanned(false), 700);
+                      }
+                  }
+                />
+              ) : (
+                <View style={styles.center}>
+                  <ThemedText style={styles.emptyText}>Camera permission not granted.</ThemedText>
+                </View>
+              )}
+              <View style={styles.scannerOverlay}>
+                <View style={styles.scannerFrame} />
+                <ThemedText style={styles.scannerHint}>Align barcode inside the frame</ThemedText>
+              </View>
+            </View>
+          </SafeAreaView>
+        </ThemedView>
+      </Modal>
     </ThemedView>
   );
 }
@@ -424,6 +504,21 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.bgSecondary, paddingHorizontal: Spacing.xl, height: 52, borderRadius: UI.borderRadius.md, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
   switchLabelText: { fontFamily: theme.fonts.body, fontSize: Typography.size.md, fontWeight: Typography.weight.semibold, color: theme.textPrimary },
   dropdownSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  scanInputRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  scanInput: { flex: 1 },
+  scanBtn: {
+    height: 52,
+    paddingHorizontal: Spacing.md,
+    borderRadius: UI.borderRadius.md,
+    borderWidth: UI.borderWidth.thin,
+    borderColor: theme.accentPrimary,
+    backgroundColor: `${theme.accentPrimary}10`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  scanBtnText: { color: theme.accentPrimary, fontFamily: theme.fonts.body, fontWeight: Typography.weight.bold },
 
   inventoryHint: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, color: theme.textTertiary, marginBottom: Spacing.lg },
   inventoryCard: { backgroundColor: theme.bgSecondary, borderRadius: UI.borderRadius.lg, padding: Spacing.lg, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary, marginBottom: Spacing.md },
@@ -444,5 +539,42 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   modalSearch: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.bgPrimary, margin: Spacing['2xl'], paddingHorizontal: Spacing.xl, height: 52, borderRadius: UI.borderRadius.md, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
   modalSearchInput: { flex: 1, marginLeft: Spacing.md, fontSize: Typography.size.md, fontFamily: theme.fonts.body, color: theme.textPrimary },
   modalItem: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing['2xl'], borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
+  scannerModalContainer: { flex: 1, backgroundColor: theme.bgPrimary },
+  scannerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing['2xl'],
+    paddingVertical: Spacing.lg,
+    borderBottomWidth: UI.borderWidth.thin,
+    borderBottomColor: theme.borderPrimary,
+  },
+  scannerCameraBox: {
+    flex: 1,
+    margin: Spacing['2xl'],
+    borderRadius: UI.borderRadius.xl,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  scannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  scannerFrame: {
+    width: 260,
+    height: 140,
+    borderRadius: UI.borderRadius.md,
+    borderWidth: 2,
+    borderColor: '#fff',
+    backgroundColor: 'transparent',
+  },
+  scannerHint: {
+    marginTop: Spacing.md,
+    color: '#fff',
+    fontFamily: theme.fonts.body,
+    fontSize: Typography.size.sm,
+  },
   emptyText: { textAlign: 'center', marginTop: Spacing['4xl'], color: theme.textTertiary, fontFamily: theme.fonts.body }
 });

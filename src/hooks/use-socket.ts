@@ -3,6 +3,7 @@ import { AppState, AppStateStatus } from 'react-native';
 import { socketService } from '../services/socket/socket-connection.service';
 import { useAuthStore } from '../store/auth.store';
 import { destroyChatListeners, initChatListeners } from '../store/chat.store';
+import { usePermissionStore } from '../store/permission.store';
 import { useSocketStore } from '../store/socket.store';
 
 export function useSocket() {
@@ -26,9 +27,14 @@ export function useSocket() {
         socketService.connect(token, orgId, userId);
       }
     };
+    const handlePermissionsUpdated = () => {
+      usePermissionStore.getState().loadPermissions(true).catch(() => {});
+    };
+    socketService.on('permissions:updated', handlePermissionsUpdated);
     const sub = AppState.addEventListener('change', handleAppState);
 
     return () => {
+      socketService.off('permissions:updated', handlePermissionsUpdated);
       sub.remove();
       destroyChatListeners();
       socketService.disconnect();

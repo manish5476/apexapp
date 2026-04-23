@@ -1,4 +1,6 @@
 import { BranchService } from '@/src/api/BranchService';
+import { PermissionGate } from '@/src/components/permission/PermissionGate';
+import { PERMISSIONS } from '@/src/constants/permissions';
 import { Spacing, ThemeColors, Typography, UI } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,7 +97,8 @@ export default function BranchFormScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <PermissionGate permissions={[PERMISSIONS.BRANCH.MANAGE]}>
+      <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.safeArea}>
           <View style={styles.header}>
@@ -129,7 +132,8 @@ export default function BranchFormScreen() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </ThemedView>
+      </ThemedView>
+    </PermissionGate>
   );
 }
 

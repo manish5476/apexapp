@@ -1,5 +1,9 @@
 import { CustomDrawerContent } from '@/src/components/navigation/custom-drawer-content';
+import { NotificationBell } from '@/src/components/navigation/notification-bell';
+import { PERMISSIONS } from '@/src/constants/permissions';
 import { Themes } from '@/src/constants/theme';
+import { useNotifications } from '@/src/hooks/use-notifications';
+import { usePermissions } from '@/src/hooks/use-permissions';
 import { useSocket } from '@/src/hooks/use-socket';
 import { Ionicons } from '@expo/vector-icons';
 import { Drawer } from 'expo-router/drawer';
@@ -10,6 +14,13 @@ const DARK_BLUE_ACCENT = '#1d4ed8';
 
 export default function DrawerLayout() {
   useSocket();
+  useNotifications();
+  const { hasPermission } = usePermissions();
+  const canReadBranch = hasPermission(PERMISSIONS.BRANCH.READ);
+  const canReadAccounts = hasPermission(PERMISSIONS.ACCOUNT.READ);
+  const canReadHrms = hasPermission(PERMISSIONS.DEPARTMENT.READ) || hasPermission(PERMISSIONS.DESIGNATION.READ);
+  const canReadNotes = hasPermission(PERMISSIONS.NOTE.READ);
+  const canReadNotifications = hasPermission(PERMISSIONS.NOTIFICATION.READ);
 
   return (
     <Drawer
@@ -23,6 +34,8 @@ export default function DrawerLayout() {
         drawerInactiveTintColor: theme.textSecondary,
         drawerLabelStyle: { marginLeft: 0, fontWeight: '600' },
         drawerItemStyle: { borderRadius: 8, marginVertical: 4, paddingHorizontal: 4 },
+        headerRight: () => (canReadNotifications ? <NotificationBell /> : null),
+        headerRightContainerStyle: { paddingRight: 14 },
       }}
     >
       <Drawer.Screen
@@ -95,6 +108,15 @@ export default function DrawerLayout() {
           drawerIcon: ({ color }) => <Ionicons name="book-outline" size={20} color={color} />
         }}
       />
+      {canReadAccounts ? (
+        <Drawer.Screen
+          name="accounts/index"
+          options={{
+            title: 'Accounts',
+            drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} />
+          }}
+        />
+      ) : null}
       <Drawer.Screen
         name="suppliers/index"
         options={{
@@ -109,6 +131,42 @@ export default function DrawerLayout() {
           drawerIcon: ({ color }) => <Ionicons name="settings-outline" size={20} color={color} />
         }}
       />
+      {canReadBranch ? (
+        <Drawer.Screen
+          name="branch/index"
+          options={{
+            title: 'Branches',
+            drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} />
+          }}
+        />
+      ) : null}
+      {canReadHrms ? (
+        <Drawer.Screen
+          name="hrms/index"
+          options={{
+            title: 'HRMS',
+            drawerIcon: ({ color }) => <Ionicons name="people-circle-outline" size={20} color={color} />
+          }}
+        />
+      ) : null}
+      {canReadNotes ? (
+        <Drawer.Screen
+          name="notes/index"
+          options={{
+            title: 'Notes',
+            drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} />
+          }}
+        />
+      ) : null}
+      {canReadNotifications ? (
+        <Drawer.Screen
+          name="notifications/index"
+          options={{
+            title: 'Notifications',
+            drawerIcon: ({ color }) => <Ionicons name="notifications-outline" size={20} color={color} />
+          }}
+        />
+      ) : null}
 
       {/* Hide detail screens from the drawer menu */}
       {/* Supplier Sub-Routes */}
@@ -183,10 +241,11 @@ export default function DrawerLayout() {
       <Drawer.Screen name="users/create" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="users/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="users/[id]/edit" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="branch/index" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="branch/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="branch/create" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="branch/[id]/edit" options={{ drawerItemStyle: { display: 'none' } }} />
+      <Drawer.Screen name="notes/create" options={{ drawerItemStyle: { display: 'none' } }} />
+      <Drawer.Screen name="notes/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="assets/index" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="rolemanagement/index" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="emi/create" options={{ drawerItemStyle: { display: 'none' }, title: 'New EMI Plan' }} />

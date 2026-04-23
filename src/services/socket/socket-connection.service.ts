@@ -178,6 +178,7 @@ class SocketConnectionService extends EventEmitter {
     // ── App-level events forwarded to EventEmitter ────────────────────────────
 
     this.socket.on('themeChanged', (d: any) => super.emit('themeChanged', d));
+    this.socket.on('newNotification', (d: any) => super.emit('newNotification', d));
     this.socket.on('permissions:updated', (d: any) => super.emit('permissions:updated', d));
     this.socket.on('newAnnouncement', (d: any) => { if (d?.data) super.emit('newAnnouncement', d.data); });
     this.socket.on('forceLogout', (d: any) => { super.emit('forceLogout', d); this.disconnect(); });

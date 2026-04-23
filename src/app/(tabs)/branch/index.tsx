@@ -10,14 +10,18 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BranchService } from '@/src/api/BranchService';
+import { PermissionGate } from '@/src/components/permission/PermissionGate';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
+import { PERMISSIONS } from '@/src/constants/permissions';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
+import { usePermissions } from '@/src/hooks/use-permissions';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function BranchListScreen() {
   const theme = useAppTheme();
+  const { hasPermission } = usePermissions();
   const styles = useMemo(() => createStyles(theme), [theme]);
   
   const [branches, setBranches] = useState<any[]>([]);
@@ -67,7 +71,8 @@ export default function BranchListScreen() {
   );
 
   return (
-    <ThemedView style={styles.container}>
+    <PermissionGate permissions={[PERMISSIONS.BRANCH.READ]}>
+      <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         <View style={styles.header}>
           <View style={styles.headerRow}>
@@ -75,9 +80,11 @@ export default function BranchListScreen() {
               <ThemedText style={styles.headerTitle}>Branches</ThemedText>
               <ThemedText style={styles.headerSubtitle}>Manage warehouse & shop locations</ThemedText>
             </View>
-            <TouchableOpacity style={styles.newButton} onPress={() => router.push('/(tabs)/branch/create' as any)}>
-              <Ionicons name="add" size={18} color={theme.bgPrimary} />
-            </TouchableOpacity>
+            {hasPermission(PERMISSIONS.BRANCH.MANAGE) ? (
+              <TouchableOpacity style={styles.newButton} onPress={() => router.push('/(tabs)/branch/create' as any)}>
+                <Ionicons name="add" size={18} color={theme.bgPrimary} />
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
 
@@ -107,7 +114,8 @@ export default function BranchListScreen() {
           />
         )}
       </SafeAreaView>
-    </ThemedView>
+      </ThemedView>
+    </PermissionGate>
   );
 }
 
