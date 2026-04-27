@@ -118,7 +118,7 @@ const CustomerCard = React.memo(
           activeOpacity={1}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
-          onPress={() => router.push(`/customers/${item._id}` as any)}
+          onPress={() => router.push(`/(tabs)/customers/${item._id}` as any)}
           style={styles.card}
         >
           <View style={styles.cardGlow} />
@@ -292,7 +292,7 @@ const CustomerCard = React.memo(
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: `${theme.accentPrimary}12` }]}
-                onPress={() => router.push(`/customers/${item._id}/edit` as any)}
+                onPress={() => router.push(`/(tabs)/customers/${item._id}/edit` as any)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Ionicons name="create-outline" size={16} color={theme.accentPrimary} />

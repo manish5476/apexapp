@@ -138,6 +138,14 @@ export default function CustomerDetailsScreen() {
     feed: { page: 1, hasMore: true },
   });
 
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace('/(tabs)/customers/index' as any);
+  };
+
   const fetchProfile = async () => {
     try {
       setLoadingProfile(true);
@@ -471,7 +479,7 @@ export default function CustomerDetailsScreen() {
       const isDebit = item.debit > 0;
       const invId = item.invoiceId?._id || item.invoiceId;
       const payId = item.paymentId?._id || item.paymentId;
-      const targetRoute = invId ? `/invoice/${invId}` : payId ? `/payments/${payId}` : null;
+      const targetRoute = invId ? `/(tabs)/invoice/${invId}` : payId ? `/(tabs)/payments/${payId}` : null;
       
       return (
         <TouchableOpacity 
@@ -519,7 +527,7 @@ export default function CustomerDetailsScreen() {
       return (
         <TouchableOpacity
           style={styles.listItem}
-          onPress={() => router.push(`/invoice/${item._id}` as any)}
+          onPress={() => router.push(`/(tabs)/invoice/${item._id}` as any)}
           activeOpacity={0.7}
         >
           <View style={styles.listRow}>
@@ -547,7 +555,7 @@ export default function CustomerDetailsScreen() {
       return (
         <TouchableOpacity
           style={styles.listItem}
-          onPress={() => router.push(`/payments/${item._id}` as any)}
+          onPress={() => router.push(`/(tabs)/payments/${item._id}` as any)}
           activeOpacity={0.7}
         >
           <View style={styles.listRow}>
@@ -619,7 +627,7 @@ export default function CustomerDetailsScreen() {
         <View style={styles.topNav}>
           <TouchableOpacity
             style={styles.navBtn}
-            onPress={() => router.back()}
+            onPress={goBack}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="arrow-back" size={20} color={currentTheme.textPrimary} />
@@ -632,7 +640,7 @@ export default function CustomerDetailsScreen() {
           <View style={styles.navActions}>
             <TouchableOpacity
               style={styles.navBtn}
-              onPress={() => router.push(`/customers/${customerId}/edit` as any)}
+              onPress={() => router.push(`/(tabs)/customers/${customerId}/edit` as any)}
             >
               <Ionicons name="create-outline" size={20} color={currentTheme.textPrimary} />
             </TouchableOpacity>
@@ -680,7 +688,7 @@ export default function CustomerDetailsScreen() {
         {/* FAB - New Invoice */}
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: currentTheme.accentPrimary }]}
-          onPress={() => router.push({ pathname: '/invoices/create' as any, params: { customerId } })}
+          onPress={() => router.push({ pathname: '/(tabs)/invoice/create' as any, params: { customerId } })}
           activeOpacity={0.85}
         >
           <Ionicons name="add" size={26} color={currentTheme.bgSecondary} />

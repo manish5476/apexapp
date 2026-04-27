@@ -35,6 +35,7 @@ class SocketConnectionService extends EventEmitter {
 
   // Token refresh guard
   private isRefreshingToken = false;
+  private lastConnectErrorAt = 0;
 
   // Heartbeat
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -49,7 +50,8 @@ class SocketConnectionService extends EventEmitter {
     if (this.socket?.connected) return;
 
     const opts: Partial<ManagerOptions & SocketOptions> = {
-      transports: ['websocket', 'polling'],
+      // Prefer polling first in React Native to reduce websocket handshake failures on constrained networks.
+      transports: ['polling', 'websocket'],
       auth: { token },
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -136,7 +138,11 @@ class SocketConnectionService extends EventEmitter {
     });
 
     this.socket.on('connect_error', async (error: any) => {
-      console.error('❌ Connection error:', error.message, error.data?.code);
+      const now = Date.now();
+      if (now - this.lastConnectErrorAt > 15_000) {
+        console.warn('Socket connection issue:', error?.message || 'unknown');
+        this.lastConnectErrorAt = now;
+      }
       store.setStatus('reconnecting');
 
       if (error.data?.code === 'TOKEN_EXPIRED' && !this.isRefreshingToken) {
@@ -148,7 +154,7 @@ class SocketConnectionService extends EventEmitter {
             this.socket.connect();
           }
         } catch (err) {
-          console.error('Token refresh failed, disconnecting', err);
+          console.warn('Token refresh failed, disconnecting socket');
           this.disconnect();
         } finally {
           this.isRefreshingToken = false;
@@ -163,7 +169,7 @@ class SocketConnectionService extends EventEmitter {
     });
 
     this.socket.on('reconnect_failed', () => {
-      console.error('💀 All reconnect attempts exhausted');
+      console.warn('Socket reconnect attempts exhausted');
       store.setStatus('disconnected');
     });
 

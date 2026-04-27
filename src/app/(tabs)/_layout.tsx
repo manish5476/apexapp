@@ -108,15 +108,14 @@ export default function DrawerLayout() {
           drawerIcon: ({ color }) => <Ionicons name="book-outline" size={20} color={color} />
         }}
       />
-      {canReadAccounts ? (
-        <Drawer.Screen
-          name="accounts/index"
-          options={{
-            title: 'Accounts',
-            drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} />
-          }}
-        />
-      ) : null}
+      <Drawer.Screen
+        name="accounts/index"
+        options={{
+          title: 'Accounts',
+          drawerItemStyle: canReadAccounts ? undefined : { display: 'none' },
+          drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} />
+        }}
+      />
       <Drawer.Screen
         name="suppliers/index"
         options={{
@@ -131,42 +130,38 @@ export default function DrawerLayout() {
           drawerIcon: ({ color }) => <Ionicons name="settings-outline" size={20} color={color} />
         }}
       />
-      {canReadBranch ? (
-        <Drawer.Screen
-          name="branch/index"
-          options={{
-            title: 'Branches',
-            drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} />
-          }}
-        />
-      ) : null}
-      {canReadHrms ? (
-        <Drawer.Screen
-          name="hrms/index"
-          options={{
-            title: 'HRMS',
-            drawerIcon: ({ color }) => <Ionicons name="people-circle-outline" size={20} color={color} />
-          }}
-        />
-      ) : null}
-      {canReadNotes ? (
-        <Drawer.Screen
-          name="notes/index"
-          options={{
-            title: 'Notes',
-            drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} />
-          }}
-        />
-      ) : null}
-      {canReadNotifications ? (
-        <Drawer.Screen
-          name="notifications/index"
-          options={{
-            title: 'Notifications',
-            drawerIcon: ({ color }) => <Ionicons name="notifications-outline" size={20} color={color} />
-          }}
-        />
-      ) : null}
+      <Drawer.Screen
+        name="branch/index"
+        options={{
+          title: 'Branches',
+          drawerItemStyle: canReadBranch ? undefined : { display: 'none' },
+          drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} />
+        }}
+      />
+      <Drawer.Screen
+        name="hrms/index"
+        options={{
+          title: 'HRMS',
+          drawerItemStyle: canReadHrms ? undefined : { display: 'none' },
+          drawerIcon: ({ color }) => <Ionicons name="people-circle-outline" size={20} color={color} />
+        }}
+      />
+      <Drawer.Screen
+        name="notes/index"
+        options={{
+          title: 'Notes',
+          drawerItemStyle: canReadNotes ? undefined : { display: 'none' },
+          drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} />
+        }}
+      />
+      <Drawer.Screen
+        name="notifications/index"
+        options={{
+          title: 'Notifications',
+          drawerItemStyle: canReadNotifications ? undefined : { display: 'none' },
+          drawerIcon: ({ color }) => <Ionicons name="notifications-outline" size={20} color={color} />
+        }}
+      />
 
       {/* Hide detail screens from the drawer menu */}
       {/* Supplier Sub-Routes */}
@@ -233,6 +228,35 @@ export default function DrawerLayout() {
           drawerIcon: ({ color }) => <Ionicons name="stats-chart-outline" size={20} color={color} />
         }}
       />
+      <Drawer.Screen
+        name="analytics/index"
+        options={{
+          title: 'Analytics Hub',
+          drawerIcon: ({ color }) => <Ionicons name="analytics-outline" size={20} color={color} />
+        }}
+      />
+      <Drawer.Screen name="analytics/executive" options={{ drawerItemStyle: { display: 'none' }, title: 'Executive Dashboard' }} />
+      <Drawer.Screen name="analytics/live-monitor" options={{ drawerItemStyle: { display: 'none' }, title: 'Live Monitor' }} />
+      <Drawer.Screen name="analytics/audit-logs" options={{ drawerItemStyle: { display: 'none' }, title: 'Audit Logs' }} />
+      <Drawer.Screen name="analytics/branch-compare" options={{ drawerItemStyle: { display: 'none' }, title: 'Branch Comparison' }} />
+      <Drawer.Screen name="analytics/finance-main" options={{ drawerItemStyle: { display: 'none' }, title: 'Financial Dashboard' }} />
+      <Drawer.Screen name="analytics/cash-flow" options={{ drawerItemStyle: { display: 'none' }, title: 'Cash Flow' }} />
+      <Drawer.Screen name="analytics/emi-analytics" options={{ drawerItemStyle: { display: 'none' }, title: 'EMI Analytics' }} />
+      <Drawer.Screen name="analytics/customer-360" options={{ drawerItemStyle: { display: 'none' }, title: 'Customer 360' }} />
+      <Drawer.Screen name="analytics/customer-segmentation" options={{ drawerItemStyle: { display: 'none' }, title: 'Customer Segmentation' }} />
+      <Drawer.Screen name="analytics/customer-ltv-analysis" options={{ drawerItemStyle: { display: 'none' }, title: 'Customer LTV' }} />
+      <Drawer.Screen name="analytics/product-stats" options={{ drawerItemStyle: { display: 'none' }, title: 'Product Performance' }} />
+      <Drawer.Screen name="analytics/dead-stock" options={{ drawerItemStyle: { display: 'none' }, title: 'Dead Stock' }} />
+      <Drawer.Screen name="analytics/predictive" options={{ drawerItemStyle: { display: 'none' }, title: 'Predictive Analytics' }} />
+      <Drawer.Screen name="analytics/sales-forecast" options={{ drawerItemStyle: { display: 'none' }, title: 'Sales Forecast' }} />
+      <Drawer.Screen name="analytics/operational" options={{ drawerItemStyle: { display: 'none' }, title: 'Operational Metrics' }} />
+      <Drawer.Screen name="analytics/peak-hours" options={{ drawerItemStyle: { display: 'none' }, title: 'Peak Hours' }} />
+      <Drawer.Screen name="analytics/staff-performance" options={{ drawerItemStyle: { display: 'none' }, title: 'Staff Performance' }} />
+      <Drawer.Screen name="analytics/compliance" options={{ drawerItemStyle: { display: 'none' }, title: 'Compliance Dashboard' }} />
+      <Drawer.Screen name="analytics/data-health" options={{ drawerItemStyle: { display: 'none' }, title: 'Data Health' }} />
+      <Drawer.Screen name="analytics/export-hub" options={{ drawerItemStyle: { display: 'none' }, title: 'Export Hub' }} />
+      <Drawer.Screen name="analytics/time-analytics" options={{ drawerItemStyle: { display: 'none' }, title: 'Time Analytics' }} />
+      <Drawer.Screen name="analytics/settings/ownership" options={{ drawerItemStyle: { display: 'none' }, title: 'Accept Ownership' }} />
       <Drawer.Screen name="invoice/create" options={{ drawerItemStyle: { display: 'none' }, title: 'Create Invoice' }} />
       <Drawer.Screen name="invoice/[id]/index" options={{ drawerItemStyle: { display: 'none' }, title: 'Invoice Details' }} />
       <Drawer.Screen name="chat/index" options={{ drawerItemStyle: { display: 'none' } }} />
