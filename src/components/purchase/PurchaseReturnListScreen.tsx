@@ -10,11 +10,11 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DARK_BLUE_ACCENT = '#1d4ed8';
 const BORDER_WIDTH = UI.borderWidth.base;

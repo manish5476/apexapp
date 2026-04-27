@@ -163,15 +163,14 @@ export default function DrawerLayout() {
         }}
       />
 
-      {/* Hide detail screens from the drawer menu */}
-      {/* Supplier Sub-Routes */}
+
       <Drawer.Screen name="suppliers/create" options={{ drawerItemStyle: { display: 'none' }, title: 'New Supplier' }} />
       <Drawer.Screen name="suppliers/[id]/index" options={{ drawerItemStyle: { display: 'none' }, title: 'Supplier Details' }} />
       <Drawer.Screen name="suppliers/[id]/edit" options={{ drawerItemStyle: { display: 'none' }, title: 'Edit Supplier' }} />
       <Drawer.Screen name="suppliers/[id]/kyc" options={{ drawerItemStyle: { display: 'none' }, title: 'KYC Documents' }} />
       <Drawer.Screen name="suppliers/[id]/ledger" options={{ drawerItemStyle: { display: 'none' }, title: 'Supplier Ledger' }} />
       <Drawer.Screen name="suppliers/[id]/dashboard" options={{ drawerItemStyle: { display: 'none' }, title: 'Supplier Dashboard' }} />
-      {/* Product Sub-Routes */}
+
       <Drawer.Screen name="product/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="product/[id]/edit" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="product/[id]/history" options={{ drawerItemStyle: { display: 'none' } }} />

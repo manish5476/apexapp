@@ -11,13 +11,13 @@ import {
   Keyboard,
   Modal,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing } from '@/src/constants/theme';
 
 const DARK_BLUE_ACCENT = '#1d4ed8';
