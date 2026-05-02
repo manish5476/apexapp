@@ -1,8 +1,8 @@
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { Spacing, Typography } from '@/src/constants/theme';
-import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { ADMIN_ANALYTICS_BY_SLUG } from '@/src/features/analytics/admin-analytics-config';
+import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -179,7 +179,7 @@ export default function AdminAnalyticsScreen({ slug }: Props) {
             <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>{config.subtitle}</ThemedText>
             {lastUpdatedAt ? <ThemedText style={[styles.updatedText, { color: theme.textTertiary }]}>Updated {lastUpdatedAt}</ThemedText> : null}
           </View>
-          <Pressable onPress={executeFetch} style={[styles.refreshBtn, { borderColor: theme.borderPrimary, backgroundColor: theme.bgPrimary }]}> 
+          <Pressable onPress={executeFetch} style={[styles.refreshBtn, { borderColor: theme.borderPrimary, backgroundColor: theme.bgPrimary }]}>
             <Ionicons name="refresh" size={16} color={theme.accentPrimary} />
           </Pressable>
         </View>

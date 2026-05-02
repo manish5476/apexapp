@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MasterDropdownService } from '@/src/api/masterDropdownService';
 import { AppDatePicker } from '@/src/components/AppDatePicker';
 import { PurchaseService } from '@/src/api/PurchaseService';
+import { SupplierService } from '@/src/api/supplierService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { getElevation, Spacing, Typography, UI } from '@/src/constants/theme';
@@ -30,7 +31,8 @@ import { useAppTheme } from '@/src/hooks/use-app-theme';
 // ==========================================
 const SelectField = ({ label, value, options, onSelect, placeholder, theme }: any) => {
   const [visible, setVisible] = useState(false);
-  const selectedLabel = options.find((o: any) => o.value === value)?.label || placeholder;
+  const normalizedOptions = useMemo(() => normalizeDropdownOptions(options), [options]);
+  const selectedLabel = normalizedOptions.find((o: any) => o.value === value)?.label || placeholder;
 
   return (
     <View style={styles.inputGroup}>
@@ -53,7 +55,7 @@ const SelectField = ({ label, value, options, onSelect, placeholder, theme }: an
               </TouchableOpacity>
             </View>
             <FlatList
-              data={options}
+              data={normalizedOptions}
               keyExtractor={(item) => item.value}
               contentContainerStyle={{ padding: Spacing.xl }}
               renderItem={({ item }) => (
@@ -77,6 +79,39 @@ const SelectField = ({ label, value, options, onSelect, placeholder, theme }: an
       </Modal>
     </View>
   );
+};
+
+const getOptionValue = (item: any): string => {
+  const value = item?.value ?? item?._id ?? item?.id;
+  return value ? String(value) : '';
+};
+
+const getOptionLabel = (item: any): string => {
+  if (item?.label) return String(item.label);
+  if (item?.companyName) {
+    return item.contactPerson ? `${item.companyName} (${item.contactPerson})` : String(item.companyName);
+  }
+  if (item?.name && item?.sku) return `${item.name} (${item.sku})`;
+  if (item?.name && item?.branchCode) return `${item.name} [${item.branchCode}]`;
+  return String(item?.name ?? item?.title ?? item?.invoiceNumber ?? item?._id ?? item?.id ?? 'Unknown');
+};
+
+const normalizeDropdownOptions = (items: any[] = []) =>
+  items
+    .map((item) => ({
+      label: getOptionLabel(item),
+      value: getOptionValue(item),
+      data: item?.data ?? item,
+      meta: item?.meta,
+    }))
+    .filter((item) => item.value);
+
+const extractListPayload = (response: any): any[] => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data?.data)) return response.data.data;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.results)) return response.results;
+  return [];
 };
 
 // ==========================================
@@ -136,9 +171,15 @@ export default function PurchaseFormScreen() {
         MasterDropdownService.getDropdownData('branches'),
         MasterDropdownService.getDropdownData('products')
       ]);
-      setSuppliers(sData.data);
-      setBranches(bData.data);
-      setProducts(pData.data);
+      let supplierOptions = normalizeDropdownOptions(sData.data);
+      if (supplierOptions.length === 0) {
+        const supplierList = await SupplierService.getAllSuppliers({ limit: 200 }) as any;
+        supplierOptions = normalizeDropdownOptions(extractListPayload(supplierList));
+      }
+
+      setSuppliers(supplierOptions);
+      setBranches(normalizeDropdownOptions(bData.data));
+      setProducts(normalizeDropdownOptions(pData.data));
     } catch (err) {
       console.error('Failed to load master data', err);
     }

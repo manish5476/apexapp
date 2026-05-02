@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as z from 'zod';
 import { OrganizationService } from '../../api/organizationService';
 import { useAuthStore } from '../../store/auth.store';
+import { useAppTheme } from '@/src/hooks/use-app-theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,9 +86,19 @@ function Orb({ style, delay }: { style: any; delay: number }) {
 }
 
 export default function CreateOrganizationScreen() {
-  const theme = Themes.dark;
+  const theme = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { setAuth } = useAuthStore();
+
+  const getPasswordStrengthColor = (score: number) => {
+    switch (score) {
+      case 1: return theme.error;
+      case 2: return theme.warning;
+      case 3: return theme.info;
+      case 4: return theme.success;
+      default: return 'transparent';
+    }
+  };
 
   const [activeStep, setActiveStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -158,12 +169,12 @@ export default function CreateOrganizationScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#060610', '#0d0d1a', '#080814']} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={[theme.bgPrimary, theme.bgSecondary, theme.bgTernary]} style={StyleSheet.absoluteFillObject} />
 
       {/* Orbs */}
-      <Orb delay={0} style={styles.orb1} />
-      <Orb delay={1200} style={styles.orb2} />
-      <Orb delay={2400} style={styles.orb3} />
+      <Orb delay={0} style={[styles.orb1, { backgroundColor: `${theme.accentPrimary}15` }]} />
+      <Orb delay={1200} style={[styles.orb2, { backgroundColor: `${theme.success}10` }]} />
+      <Orb delay={2400} style={[styles.orb3, { backgroundColor: `${theme.warning}10` }]} />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" bounces={false}>
@@ -173,11 +184,11 @@ export default function CreateOrganizationScreen() {
             <SafeAreaView edges={['top']}>
               <View style={styles.topBar}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-                  <Ionicons name="arrow-back" size={18} color="rgba(255,255,255,0.6)" />
+                  <Ionicons name="arrow-back" size={18} color={theme.textSecondary} />
                 </TouchableOpacity>
                 <View style={styles.brandPill}>
-                  <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.brandPillGrad}>
-                    <Ionicons name="layers" size={12} color="#fff" />
+                  <LinearGradient colors={[theme.accentSecondary, theme.accentPrimary]} style={styles.brandPillGrad}>
+                    <Ionicons name="layers" size={12} color={theme.bgPrimary} />
                   </LinearGradient>
                   <Text style={styles.brandText}>APEX</Text>
                 </View>
@@ -187,7 +198,7 @@ export default function CreateOrganizationScreen() {
               <View style={styles.heroWrap}>
                 <Text style={styles.heroEyebrow}>ENTERPRISE SETUP</Text>
                 <Text style={styles.heroTitle}>Build your{'\n'}digital{' '}
-                  <Text style={{ color: '#818cf8', fontStyle: 'italic' }}>HQ.</Text>
+                  <Text style={{ color: theme.accentPrimary, fontStyle: 'italic' }}>HQ.</Text>
                 </Text>
               </View>
 
@@ -201,12 +212,12 @@ export default function CreateOrganizationScreen() {
                       <View style={styles.stepItem}>
                         <View style={[
                           styles.stepCircle,
-                          isActive && styles.stepCircleActive,
-                          isDone && styles.stepCircleDone,
+                          isActive && { borderColor: theme.accentPrimary, backgroundColor: theme.accentPrimary },
+                          isDone && { borderColor: theme.success, backgroundColor: theme.success },
                         ]}>
                           {isDone
-                            ? <Ionicons name="checkmark" size={14} color="#fff" />
-                            : <Text style={[styles.stepNum, isActive && { color: '#fff' }]}>{i + 1}</Text>
+                            ? <Ionicons name="checkmark" size={14} color={theme.bgPrimary} />
+                            : <Text style={[styles.stepNum, isActive && { color: theme.bgPrimary }]}>{i + 1}</Text>
                           }
                         </View>
                         <View>
@@ -215,7 +226,7 @@ export default function CreateOrganizationScreen() {
                         </View>
                       </View>
                       {i < STEPS.length - 1 && (
-                        <View style={[styles.stepLine, isDone && styles.stepLineDone]} />
+                        <View style={[styles.stepLine, isDone && { backgroundColor: theme.success }]} />
                       )}
                     </React.Fragment>
                   );
@@ -229,13 +240,13 @@ export default function CreateOrganizationScreen() {
               {/* Step 1: Profile */}
               {activeStep === 0 && (
                 <View>
-                  <StepHeader icon="business-outline" title="Organization Profile" desc="Basic identification for your company." accentColor="#6366f1" />
+                  <StepHeader icon="business-outline" title="Organization Profile" desc="Basic identification for your company." accentColor={theme.accentPrimary} theme={theme} />
 
-                  <OrgField label="LEGAL ENTITY NAME" icon="briefcase-outline" error={errors.organizationName?.message}>
+                  <OrgField label="LEGAL ENTITY NAME" icon="briefcase-outline" error={errors.organizationName?.message} theme={theme}>
                     <Controller control={control} name="organizationName"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput style={styles.input} placeholder="e.g. Apex Global Ltd."
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           onChangeText={onChange}
                           onBlur={(e) => { onBlur(); generateShopId(value); }}
                           value={value}
@@ -244,11 +255,11 @@ export default function CreateOrganizationScreen() {
                     />
                   </OrgField>
 
-                  <OrgField label="WORKSPACE ID" icon="at-outline" error={errors.uniqueShopId?.message} hint="Auto-generated from name, can be changed">
+                  <OrgField label="WORKSPACE ID" icon="at-outline" error={errors.uniqueShopId?.message} hint="Auto-generated from name, can be changed" theme={theme}>
                     <Controller control={control} name="uniqueShopId"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput style={styles.input} placeholder="APEX-HQ"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           autoCapitalize="characters"
                           onChangeText={onChange} onBlur={onBlur} value={value}
                         />
@@ -256,11 +267,11 @@ export default function CreateOrganizationScreen() {
                     />
                   </OrgField>
 
-                  <OrgField label="TAX ID / GST (OPTIONAL)" icon="document-text-outline" error={errors.gstNumber?.message}>
+                  <OrgField label="TAX ID / GST (OPTIONAL)" icon="document-text-outline" error={errors.gstNumber?.message} theme={theme}>
                     <Controller control={control} name="gstNumber"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput style={styles.input} placeholder="27AAPFU0939F1ZV"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           autoCapitalize="characters"
                           onChangeText={onChange} onBlur={onBlur} value={value}
                         />
@@ -270,11 +281,11 @@ export default function CreateOrganizationScreen() {
 
                   <View style={styles.twoCol}>
                     <View style={{ flex: 1 }}>
-                      <OrgField label="CONTACT EMAIL" icon="mail-outline" error={errors.primaryEmail?.message}>
+                      <OrgField label="CONTACT EMAIL" icon="mail-outline" error={errors.primaryEmail?.message} theme={theme}>
                         <Controller control={control} name="primaryEmail"
                           render={({ field: { onChange, onBlur, value } }) => (
                             <TextInput style={styles.input} placeholder="contact@apex.com"
-                              placeholderTextColor="rgba(255,255,255,0.2)"
+                              placeholderTextColor={theme.textTertiary}
                               keyboardType="email-address" autoCapitalize="none"
                               onChangeText={onChange} onBlur={onBlur} value={value}
                             />
@@ -283,11 +294,11 @@ export default function CreateOrganizationScreen() {
                       </OrgField>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <OrgField label="PHONE" icon="call-outline" error={errors.primaryPhone?.message}>
+                      <OrgField label="PHONE" icon="call-outline" error={errors.primaryPhone?.message} theme={theme}>
                         <Controller control={control} name="primaryPhone"
                           render={({ field: { onChange, onBlur, value } }) => (
                             <TextInput style={styles.input} placeholder="+91 9876543210"
-                              placeholderTextColor="rgba(255,255,255,0.2)"
+                              placeholderTextColor={theme.textTertiary}
                               keyboardType="phone-pad"
                               onChangeText={onChange} onBlur={onBlur} value={value}
                             />
@@ -298,9 +309,9 @@ export default function CreateOrganizationScreen() {
                   </View>
 
                   <TouchableOpacity style={styles.nextBtn} onPress={handleNext} activeOpacity={0.85}>
-                    <LinearGradient colors={['#6366f1', '#4f46e5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGrad}>
-                      <Text style={styles.btnText}>Continue</Text>
-                      <Ionicons name="arrow-forward" size={18} color="#fff" />
+                    <LinearGradient colors={[theme.accentSecondary, theme.accentPrimary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGrad}>
+                      <Text style={[styles.btnText, { color: theme.bgPrimary }]}>Continue</Text>
+                      <Ionicons name="arrow-forward" size={18} color={theme.bgPrimary} />
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -309,24 +320,24 @@ export default function CreateOrganizationScreen() {
               {/* Step 2: Location */}
               {activeStep === 1 && (
                 <View>
-                  <StepHeader icon="location-outline" title="Headquarters Location" desc="The physical base of your operation." accentColor="#34d399" />
+                  <StepHeader icon="location-outline" title="Headquarters Location" desc="The physical base of your operation." accentColor={theme.success} theme={theme} />
 
-                  <OrgField label="BRANCH DESIGNATION" icon="flag-outline" error={errors.mainBranchName?.message}>
+                  <OrgField label="BRANCH DESIGNATION" icon="flag-outline" error={errors.mainBranchName?.message} theme={theme}>
                     <Controller control={control} name="mainBranchName"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput style={styles.input} placeholder="Head Office"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           onChangeText={onChange} onBlur={onBlur} value={value}
                         />
                       )}
                     />
                   </OrgField>
 
-                  <OrgField label="STREET ADDRESS" icon="navigate-outline" error={(errors.mainBranchAddress as any)?.street?.message}>
+                  <OrgField label="STREET ADDRESS" icon="navigate-outline" error={(errors.mainBranchAddress as any)?.street?.message} theme={theme}>
                     <Controller control={control} name="mainBranchAddress.street"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput style={styles.input} placeholder="123 MG Road"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           onChangeText={onChange} onBlur={onBlur} value={value}
                         />
                       )}
@@ -335,11 +346,11 @@ export default function CreateOrganizationScreen() {
 
                   <View style={styles.twoCol}>
                     <View style={{ flex: 1 }}>
-                      <OrgField label="CITY" icon="business-outline" error={(errors.mainBranchAddress as any)?.city?.message}>
+                      <OrgField label="CITY" icon="business-outline" error={(errors.mainBranchAddress as any)?.city?.message} theme={theme}>
                         <Controller control={control} name="mainBranchAddress.city"
                           render={({ field: { onChange, onBlur, value } }) => (
                             <TextInput style={styles.input} placeholder="Mumbai"
-                              placeholderTextColor="rgba(255,255,255,0.2)"
+                              placeholderTextColor={theme.textTertiary}
                               onChangeText={onChange} onBlur={onBlur} value={value}
                             />
                           )}
@@ -347,11 +358,11 @@ export default function CreateOrganizationScreen() {
                       </OrgField>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <OrgField label="ZIP CODE" icon="pin-outline" error={(errors.mainBranchAddress as any)?.zipCode?.message}>
+                      <OrgField label="ZIP CODE" icon="pin-outline" error={(errors.mainBranchAddress as any)?.zipCode?.message} theme={theme}>
                         <Controller control={control} name="mainBranchAddress.zipCode"
                           render={({ field: { onChange, onBlur, value } }) => (
                             <TextInput style={styles.input} placeholder="400001"
-                              placeholderTextColor="rgba(255,255,255,0.2)"
+                              placeholderTextColor={theme.textTertiary}
                               keyboardType="numeric"
                               onChangeText={onChange} onBlur={onBlur} value={value}
                             />
@@ -361,11 +372,11 @@ export default function CreateOrganizationScreen() {
                     </View>
                   </View>
 
-                  <OrgField label="STATE / PROVINCE" icon="map-outline" error={(errors.mainBranchAddress as any)?.state?.message}>
+                  <OrgField label="STATE / PROVINCE" icon="map-outline" error={(errors.mainBranchAddress as any)?.state?.message} theme={theme}>
                     <Controller control={control} name="mainBranchAddress.state"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput style={styles.input} placeholder="Maharashtra"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           onChangeText={onChange} onBlur={onBlur} value={value}
                         />
                       )}
@@ -374,13 +385,13 @@ export default function CreateOrganizationScreen() {
 
                   <View style={styles.btnRow}>
                     <TouchableOpacity style={styles.backBtnForm} onPress={handlePrev} activeOpacity={0.8}>
-                      <Ionicons name="arrow-back" size={18} color="rgba(255,255,255,0.6)" />
-                      <Text style={styles.backBtnText}>Back</Text>
+                      <Ionicons name="arrow-back" size={18} color={theme.textSecondary} />
+                      <Text style={[styles.backBtnText, { color: theme.textSecondary }]}>Back</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.nextBtn, { flex: 1 }]} onPress={handleNext} activeOpacity={0.85}>
-                      <LinearGradient colors={['#34d399', '#059669']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGrad}>
-                        <Text style={styles.btnText}>Continue</Text>
-                        <Ionicons name="arrow-forward" size={18} color="#fff" />
+                      <LinearGradient colors={[`${theme.success}80`, theme.success]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGrad}>
+                        <Text style={[styles.btnText, { color: theme.bgPrimary }]}>Continue</Text>
+                        <Ionicons name="arrow-forward" size={18} color={theme.bgPrimary} />
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
@@ -390,24 +401,24 @@ export default function CreateOrganizationScreen() {
               {/* Step 3: Security */}
               {activeStep === 2 && (
                 <View>
-                  <StepHeader icon="shield-checkmark-outline" title="Super Admin Credentials" desc="The master account for your organization." accentColor="#f59e0b" />
+                  <StepHeader icon="shield-checkmark-outline" title="Super Admin Credentials" desc="The master account for your organization." accentColor={theme.warning} theme={theme} />
 
-                  <OrgField label="ADMIN FULL NAME" icon="person-outline" error={errors.ownerName?.message}>
+                  <OrgField label="ADMIN FULL NAME" icon="person-outline" error={errors.ownerName?.message} theme={theme}>
                     <Controller control={control} name="ownerName"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput style={styles.input} placeholder="John Doe"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           onChangeText={onChange} onBlur={onBlur} value={value}
                         />
                       )}
                     />
                   </OrgField>
 
-                  <OrgField label="LOGIN EMAIL" icon="mail-outline" error={errors.ownerEmail?.message}>
+                  <OrgField label="LOGIN EMAIL" icon="mail-outline" error={errors.ownerEmail?.message} theme={theme}>
                     <Controller control={control} name="ownerEmail"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput style={styles.input} placeholder="admin@apex.com"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           keyboardType="email-address" autoCapitalize="none"
                           onChangeText={onChange} onBlur={onBlur} value={value}
                         />
@@ -415,17 +426,17 @@ export default function CreateOrganizationScreen() {
                     />
                   </OrgField>
 
-                  <OrgField label="ACCESS PASSWORD" icon="lock-closed-outline" error={errors.ownerPassword?.message}
+                  <OrgField label="ACCESS PASSWORD" icon="lock-closed-outline" error={errors.ownerPassword?.message} theme={theme}
                     action={
                       <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={16} color="rgba(255,255,255,0.35)" />
+                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={16} color={theme.textTertiary} />
                       </TouchableOpacity>
                     }
                   >
                     <Controller control={control} name="ownerPassword"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput style={styles.input} placeholder="Min. 8 characters"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           secureTextEntry={!showPassword}
                           onChangeText={onChange} onBlur={onBlur} value={value}
                         />
@@ -440,11 +451,11 @@ export default function CreateOrganizationScreen() {
                         {[1, 2, 3, 4].map(i => (
                           <View key={i} style={[
                             styles.strengthSeg,
-                            { backgroundColor: i <= strengthScore ? STRENGTH_COLORS[strengthScore] : 'rgba(255,255,255,0.07)' }
+                            { backgroundColor: i <= strengthScore ? getPasswordStrengthColor(strengthScore) : theme.borderSecondary }
                           ]} />
                         ))}
                       </View>
-                      <Text style={[styles.strengthLabel, { color: STRENGTH_COLORS[strengthScore] || 'transparent' }]}>
+                      <Text style={[styles.strengthLabel, { color: getPasswordStrengthColor(strengthScore) }]}>
                         {STRENGTH_LABELS[strengthScore]}
                       </Text>
                     </View>
@@ -452,26 +463,26 @@ export default function CreateOrganizationScreen() {
 
                   {/* Security notice */}
                   <View style={styles.securityNote}>
-                    <Ionicons name="information-circle-outline" size={16} color="rgba(245,158,11,0.7)" />
-                    <Text style={styles.securityNoteText}>
+                    <Ionicons name="information-circle-outline" size={16} color={theme.warning} />
+                    <Text style={[styles.securityNoteText, { color: theme.textSecondary }]}>
                       Store these credentials securely. This account has full administrative access.
                     </Text>
                   </View>
 
                   <View style={styles.btnRow}>
                     <TouchableOpacity style={styles.backBtnForm} onPress={handlePrev} disabled={isLoading} activeOpacity={0.8}>
-                      <Ionicons name="arrow-back" size={18} color="rgba(255,255,255,0.6)" />
-                      <Text style={styles.backBtnText}>Back</Text>
+                      <Ionicons name="arrow-back" size={18} color={theme.textSecondary} />
+                      <Text style={[styles.backBtnText, { color: theme.textSecondary }]}>Back</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.nextBtn, { flex: 1 }, isLoading && { opacity: 0.7 }]}
                       onPress={handleSubmit(onSubmit)} disabled={isLoading} activeOpacity={0.85}>
-                      <LinearGradient colors={['#f59e0b', '#d97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGrad}>
+                      <LinearGradient colors={[`${theme.warning}80`, theme.warning]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGrad}>
                         {isLoading ? (
-                          <ActivityIndicator color="#fff" />
+                          <ActivityIndicator color={theme.bgPrimary} />
                         ) : (
                           <>
-                            <Text style={styles.btnText}>Complete Setup</Text>
-                            <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                            <Text style={[styles.btnText, { color: theme.bgPrimary }]}>Complete Setup</Text>
+                            <Ionicons name="checkmark-circle" size={18} color={theme.bgPrimary} />
                           </>
                         )}
                       </LinearGradient>
@@ -489,15 +500,15 @@ export default function CreateOrganizationScreen() {
 }
 
 // ── StepHeader sub-component ──────────────────────────────
-function StepHeader({ icon, title, desc, accentColor }: { icon: string; title: string; desc: string; accentColor: string }) {
+function StepHeader({ icon, title, desc, accentColor, theme }: { icon: string; title: string; desc: string; accentColor: string; theme: ThemeColors }) {
   return (
     <View style={headerStyles.wrap}>
       <View style={[headerStyles.badge, { backgroundColor: `${accentColor}18`, borderColor: `${accentColor}30` }]}>
         <Ionicons name={icon as any} size={22} color={accentColor} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={headerStyles.title}>{title}</Text>
-        <Text style={headerStyles.desc}>{desc}</Text>
+        <Text style={[headerStyles.title, { color: theme.textPrimary }]}>{title}</Text>
+        <Text style={[headerStyles.desc, { color: theme.textSecondary }]}>{desc}</Text>
       </View>
     </View>
   );
@@ -530,23 +541,23 @@ const headerStyles = StyleSheet.create({
 });
 
 // ── OrgField sub-component ───────────────────────────────
-function OrgField({ label, icon, error, children, action, hint }: {
+function OrgField({ label, icon, error, children, action, hint, theme }: {
   label: string; icon: string; error?: string;
-  children: React.ReactNode; action?: React.ReactNode; hint?: string;
+  children: React.ReactNode; action?: React.ReactNode; hint?: string; theme: ThemeColors;
 }) {
   return (
     <View style={orgFieldStyles.wrap}>
-      <Text style={orgFieldStyles.label}>{label}</Text>
-      <View style={[orgFieldStyles.inputWrap, error && orgFieldStyles.inputWrapErr]}>
-        <Ionicons name={icon as any} size={15} color="rgba(255,255,255,0.28)" style={{ marginRight: Spacing.sm }} />
+      <Text style={[orgFieldStyles.label, { color: theme.textSecondary }]}>{label}</Text>
+      <View style={[orgFieldStyles.inputWrap, error ? { borderColor: theme.error } : { borderColor: theme.borderPrimary, backgroundColor: `${theme.bgSecondary}50` }]}>
+        <Ionicons name={icon as any} size={15} color={theme.textTertiary} style={{ marginRight: Spacing.sm }} />
         {children}
         {action}
       </View>
-      {hint && !error && <Text style={orgFieldStyles.hint}>{hint}</Text>}
+      {hint && !error && <Text style={[orgFieldStyles.hint, { color: theme.textTertiary }]}>{hint}</Text>}
       {error && (
         <View style={orgFieldStyles.errorRow}>
-          <Ionicons name="alert-circle-outline" size={11} color="#f87171" />
-          <Text style={orgFieldStyles.errorText}>{error}</Text>
+          <Ionicons name="alert-circle-outline" size={11} color={theme.error} />
+          <Text style={[orgFieldStyles.errorText, { color: theme.error }]}>{error}</Text>
         </View>
       )}
     </View>
@@ -580,7 +591,7 @@ const orgFieldStyles = StyleSheet.create({
 
 // ── Styles ────────────────────────────────────────────────
 const createStyles = (theme: ThemeColors) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#060610' },
+  root: { flex: 1, backgroundColor: theme.bgPrimary },
   scrollContent: { flexGrow: 1, paddingBottom: 60 },
   orb1: {
     position: 'absolute',
@@ -621,9 +632,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: `${theme.bgSecondary}50`,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: theme.borderPrimary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -631,9 +642,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: `${theme.bgSecondary}50`,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: theme.borderPrimary,
     borderRadius: UI.borderRadius.pill,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.xs,
@@ -648,7 +659,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   brandText: {
     fontSize: 11,
     fontWeight: '800',
-    color: 'rgba(255,255,255,0.7)',
+    color: theme.textSecondary,
     letterSpacing: 2,
   },
   heroWrap: {
@@ -659,14 +670,14 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   heroEyebrow: {
     fontSize: 10,
     fontWeight: '700',
-    color: 'rgba(129,140,248,0.65)',
+    color: theme.accentSecondary,
     letterSpacing: 2,
     marginBottom: Spacing.sm,
   },
   heroTitle: {
     fontSize: 36,
     fontWeight: '800',
-    color: '#f4f4f5',
+    color: theme.textPrimary,
     lineHeight: 42,
     letterSpacing: -0.8,
   },
@@ -688,58 +699,58 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: theme.borderSecondary,
+    backgroundColor: theme.bgSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepCircleActive: {
-    borderColor: '#6366f1',
-    backgroundColor: '#6366f1',
+    borderColor: theme.accentPrimary,
+    backgroundColor: theme.accentPrimary,
   },
   stepCircleDone: {
-    borderColor: '#34d399',
-    backgroundColor: '#34d399',
+    borderColor: theme.success,
+    backgroundColor: theme.success,
   },
   stepNum: {
     fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.35)',
+    color: theme.textTertiary,
   },
   stepLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.3)',
+    color: theme.textSecondary,
   },
-  stepLabelOn: { color: 'rgba(255,255,255,0.85)' },
+  stepLabelOn: { color: theme.textPrimary },
   stepDesc: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.2)',
+    color: theme.textTertiary,
     marginTop: 1,
   },
   stepLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: theme.borderPrimary,
     marginHorizontal: Spacing.sm,
   },
-  stepLineDone: { backgroundColor: 'rgba(52,211,153,0.4)' },
+  stepLineDone: { backgroundColor: theme.success },
 
   // Form panel
   formPanel: {
-    backgroundColor: 'rgba(13,13,26,0.85)',
+    backgroundColor: `${theme.bgPrimary}F0`,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
     borderBottomWidth: 0,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: theme.borderPrimary,
     padding: Spacing['2xl'],
     minHeight: height * 0.65,
   },
   input: {
     flex: 1,
     fontSize: Typography.size.md,
-    color: '#f4f4f5',
+    color: theme.textPrimary,
     height: 50,
   },
   twoCol: {
@@ -778,13 +789,13 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     borderRadius: UI.borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: theme.borderPrimary,
+    backgroundColor: theme.bgSecondary,
   },
   backBtnText: {
     fontSize: Typography.size.md,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.55)',
+    color: theme.textSecondary,
   },
   // Strength
   strengthWrap: {
@@ -814,19 +825,18 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   // Security note
   securityNote: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     gap: Spacing.sm,
     padding: Spacing.lg,
-    backgroundColor: 'rgba(245,158,11,0.07)',
     borderRadius: UI.borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.2)',
+    backgroundColor: `${theme.warning}10`,
+    borderColor: `${theme.warning}40`,
     marginBottom: Spacing.xl,
   },
   securityNoteText: {
     flex: 1,
     fontSize: Typography.size.sm,
-    color: 'rgba(245,158,11,0.75)',
+    color: theme.warning,
     lineHeight: 18,
   },
 });

@@ -31,6 +31,7 @@ const BORDER_WIDTH = UI.borderWidth.base;
 // --- UTILS ---
 const formatCurrency = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val || 0);
 const formatDate = (dateStr: string) => dateStr ? new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
+const getApiErrorMessage = (err: any, fallback: string) => err?.response?.data?.message || err?.message || fallback;
 
 const getStatusTheme = (status: string) => {
   switch (status?.toLowerCase()) {
@@ -123,8 +124,8 @@ export default function PurchaseDetailsScreen() {
     try {
       await PurchaseService.recordPayment(purchase._id, {
         amount: amt,
-        method: paymentForm.paymentMethod,
-        referenceNumber: paymentForm.reference,
+        paymentMethod: paymentForm.paymentMethod,
+        reference: paymentForm.reference,
         notes: paymentForm.notes
       });
       setShowPaymentModal(false);
@@ -132,7 +133,21 @@ export default function PurchaseDetailsScreen() {
       Alert.alert('Success', 'Payment recorded successfully.');
       loadData();
     } catch (err) {
-      Alert.alert('Error', 'Failed to record payment.');
+      Alert.alert('Error', getApiErrorMessage(err, 'Failed to record payment.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMarkAsReceived = async () => {
+    setShowActionMenu(false);
+    setIsSubmitting(true);
+    try {
+      await PurchaseService.updateStatus(purchase._id, 'received', 'Marked as received from mobile app');
+      Alert.alert('Success', 'Purchase marked as received.');
+      loadData();
+    } catch (err) {
+      Alert.alert('Error', getApiErrorMessage(err, 'Failed to update purchase status.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -147,10 +162,11 @@ export default function PurchaseDetailsScreen() {
     try {
       await PurchaseService.cancelPurchase(purchase._id, cancelReason);
       setShowCancelModal(false);
+      setCancelReason('');
       Alert.alert('Success', 'Purchase cancelled.');
       loadData();
     } catch (err) {
-      Alert.alert('Error', 'Failed to cancel purchase.');
+      Alert.alert('Error', getApiErrorMessage(err, 'Failed to cancel purchase.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -415,7 +431,7 @@ export default function PurchaseDetailsScreen() {
       </ScrollView>
 
       {/* FLOATING ACTION BOTTOM BAR */}
-      {purchase.status !== 'cancelled' && purchase.paymentStatus !== 'paid' && (
+      {purchase.status === 'received' && purchase.paymentStatus !== 'paid' && (
         <View style={styles.bottomBar}>
           <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowPaymentModal(true)}>
             <Ionicons name="wallet" size={20} color={theme.bgPrimary} />
@@ -434,25 +450,29 @@ export default function PurchaseDetailsScreen() {
             </View>
 
             {purchase.status === 'draft' && (
-              <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); Alert.alert('Success', 'Status updated.'); }}>
+              <TouchableOpacity style={styles.actionItem} onPress={handleMarkAsReceived} disabled={isSubmitting}>
                 <View style={[styles.actionIconBox, { backgroundColor: `${theme.success}15` }]}><Ionicons name="checkmark" size={20} color={theme.success} /></View>
                 <View><Text style={styles.actionItemTitle}>Mark as Received</Text></View>
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); router.push(`/(tabs)/purchase/${purchase._id}/edit` as any); }}>
-              <View style={[styles.actionIconBox, { backgroundColor: `${DARK_BLUE_ACCENT}15` }]}><Ionicons name="pencil" size={20} color={DARK_BLUE_ACCENT} /></View>
-              <View><Text style={styles.actionItemTitle}>Edit Invoice</Text></View>
-            </TouchableOpacity>
+            {purchase.status !== 'cancelled' && (
+              <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); router.push(`/(tabs)/purchase/${purchase._id}/edit` as any); }}>
+                <View style={[styles.actionIconBox, { backgroundColor: `${DARK_BLUE_ACCENT}15` }]}><Ionicons name="pencil" size={20} color={DARK_BLUE_ACCENT} /></View>
+                <View><Text style={styles.actionItemTitle}>Edit Invoice</Text></View>
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); router.push(`/(tabs)/purchase/return/${purchase._id}` as any); }}>
-              <View style={[styles.actionIconBox, { backgroundColor: `${theme.info}15` }]}><Ionicons name="arrow-undo-outline" size={20} color={theme.info} /></View>
-              <View><Text style={styles.actionItemTitle}>Return / Debit Note</Text></View>
-            </TouchableOpacity>
+            {purchase.status === 'received' && (
+              <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); router.push(`/(tabs)/purchase/return/${purchase._id}` as any); }}>
+                <View style={[styles.actionIconBox, { backgroundColor: `${theme.info}15` }]}><Ionicons name="arrow-undo-outline" size={20} color={theme.info} /></View>
+                <View><Text style={styles.actionItemTitle}>Return / Debit Note</Text></View>
+              </TouchableOpacity>
+            )}
 
             <View style={styles.sheetDivider} />
 
-            {purchase.status === 'received' && purchase.paymentStatus !== 'paid' && (
+            {['draft', 'received'].includes(purchase.status) && Number(purchase.paidAmount || 0) <= 0 && (
               <TouchableOpacity style={styles.actionItem} onPress={() => { setShowActionMenu(false); setShowCancelModal(true); }}>
                 <View style={[styles.actionIconBox, { backgroundColor: `${theme.error}15` }]}><Ionicons name="close-outline" size={20} color={theme.error} /></View>
                 <View><Text style={[styles.actionItemTitle, { color: theme.error }]}>Cancel Order</Text></View>

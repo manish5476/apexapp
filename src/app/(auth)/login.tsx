@@ -24,6 +24,7 @@ import { z } from 'zod';
 import { authService } from '@/src/features/auth/services/auth.service';
 import { ThemedText } from '../../components/themed-text';
 import { useAuthStore } from '../../store/auth.store';
+import { useAppTheme } from '@/src/hooks/use-app-theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -72,8 +73,10 @@ export default function LoginScreen() {
   const [activeSessions, setActiveSessions] = useState<any[]>([]);
   const { setAuth } = useAuthStore();
 
-  const currentTheme = Themes.dark;
-  const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
+  const theme = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const isDark = theme.name.toLowerCase().includes('dark') || theme.name.toLowerCase().includes('night') || theme.bgPrimary === '#08080a';
+  const blurTint = isDark ? 'dark' : 'light';
 
   // Entry animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -121,14 +124,14 @@ export default function LoginScreen() {
     <View style={styles.root}>
       {/* ── Deep background gradient ── */}
       <LinearGradient
-        colors={['#0a0a14', '#0d1117', '#0a0f1e']}
+        colors={[theme.bgPrimary, theme.bgSecondary, theme.bgTernary]}
         style={StyleSheet.absoluteFillObject}
       />
 
       {/* ── Ambient orbs ── */}
-      <FloatingOrb delay={0} color="#4f46e5" style={styles.orb1} />
-      <FloatingOrb delay={800} color="#818cf8" style={styles.orb2} />
-      <FloatingOrb delay={1600} color="#2563eb" style={styles.orb3} />
+      <FloatingOrb delay={0} color={theme.accentPrimary} style={[styles.orb1, { backgroundColor: `${theme.accentPrimary}25` }]} />
+      <FloatingOrb delay={800} color={theme.accentSecondary} style={[styles.orb2, { backgroundColor: `${theme.accentSecondary}15` }]} />
+      <FloatingOrb delay={1600} color={theme.info} style={[styles.orb3, { backgroundColor: `${theme.info}20` }]} />
 
       {/* ── Grid overlay for texture ── */}
       <View style={styles.gridOverlay} pointerEvents="none" />
@@ -142,8 +145,8 @@ export default function LoginScreen() {
               {/* ── Brand mark ── */}
               <View style={styles.brandRow}>
                 <View style={styles.logoGlyph}>
-                  <LinearGradient colors={['#818cf8', '#4f46e5']} style={styles.logoGradient}>
-                    <Ionicons name="layers" size={20} color="#fff" />
+                  <LinearGradient colors={[theme.accentSecondary, theme.accentPrimary]} style={styles.logoGradient}>
+                    <Ionicons name="layers" size={20} color={theme.bgPrimary} />
                   </LinearGradient>
                 </View>
                 <ThemedText style={styles.wordmark}>APEX</ThemedText>
@@ -160,17 +163,17 @@ export default function LoginScreen() {
 
               {/* ── Error banner ── */}
               {errorMessage && (
-                <BlurView intensity={20} tint="dark" style={styles.errorBanner}>
-                  <Ionicons name="alert-circle" size={18} color="#f87171" />
+                <BlurView intensity={20} tint={blurTint as any} style={styles.errorBanner}>
+                  <Ionicons name="alert-circle" size={18} color={theme.error} />
                   <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
                   <TouchableOpacity onPress={() => setErrorMessage(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="close" size={18} color="#f87171" />
+                    <Ionicons name="close" size={18} color={theme.error} />
                   </TouchableOpacity>
                 </BlurView>
               )}
 
               {/* ── Glass form card ── */}
-              <BlurView intensity={25} tint="dark" style={styles.glassCard}>
+              <BlurView intensity={25} tint={blurTint as any} style={styles.glassCard}>
                 <View style={styles.glassCardInner}>
 
                   {/* Email / Phone */}
@@ -179,14 +182,14 @@ export default function LoginScreen() {
                     icon="mail-outline"
                     error={errors.email?.message}
                     focused={focusedField === 'email'}
-                    theme={currentTheme}
+                    theme={theme}
                   >
                     <Controller control={control} name="email"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput
                           style={styles.fieldInput}
                           placeholder="name@company.com"
-                          placeholderTextColor="rgba(255,255,255,0.25)"
+                          placeholderTextColor={theme.textTertiary}
                           onFocus={() => setFocusedField('email')}
                           onBlur={() => { onBlur(); setFocusedField(null); }}
                           onChangeText={onChange}
@@ -204,14 +207,14 @@ export default function LoginScreen() {
                     icon="business-outline"
                     error={errors.uniqueShopId?.message}
                     focused={focusedField === 'shopId'}
-                    theme={currentTheme}
+                    theme={theme}
                   >
                     <Controller control={control} name="uniqueShopId"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput
                           style={styles.fieldInput}
                           placeholder="e.g. APEX-001"
-                          placeholderTextColor="rgba(255,255,255,0.25)"
+                          placeholderTextColor={theme.textTertiary}
                           autoCapitalize="characters"
                           onFocus={() => setFocusedField('shopId')}
                           onBlur={() => { onBlur(); setFocusedField(null); }}
@@ -228,10 +231,10 @@ export default function LoginScreen() {
                     icon="lock-closed-outline"
                     error={errors.password?.message}
                     focused={focusedField === 'password'}
-                    theme={currentTheme}
+                    theme={theme}
                     action={
                       <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="rgba(255,255,255,0.4)" />
+                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={theme.textTertiary} />
                       </TouchableOpacity>
                     }
                     rightLabel={
@@ -247,7 +250,7 @@ export default function LoginScreen() {
                         <TextInput
                           style={styles.fieldInput}
                           placeholder="••••••••"
-                          placeholderTextColor="rgba(255,255,255,0.25)"
+                          placeholderTextColor={theme.textTertiary}
                           secureTextEntry={!showPassword}
                           onFocus={() => setFocusedField('password')}
                           onBlur={() => { onBlur(); setFocusedField(null); }}
@@ -263,7 +266,7 @@ export default function LoginScreen() {
                     render={({ field: { onChange, value } }) => (
                       <TouchableOpacity style={styles.rememberRow} onPress={() => onChange(!value)} activeOpacity={0.7}>
                         <View style={[styles.checkbox, value && styles.checkboxChecked]}>
-                          {value && <Ionicons name="checkmark" size={12} color="#fff" />}
+                          {value && <Ionicons name="checkmark" size={12} color={theme.bgPrimary} />}
                         </View>
                         <ThemedText style={styles.rememberText}>Keep me signed in for 30 days</ThemedText>
                       </TouchableOpacity>
@@ -278,16 +281,16 @@ export default function LoginScreen() {
                     activeOpacity={0.85}
                   >
                     <LinearGradient
-                      colors={isLoading ? ['#374151', '#374151'] : ['#6366f1', '#4f46e5']}
+                      colors={isLoading ? [theme.disabledText, theme.disabledText] : [theme.accentSecondary, theme.accentPrimary]}
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                       style={styles.submitGradient}
                     >
                       {isLoading ? (
-                        <ActivityIndicator color="#fff" />
+                        <ActivityIndicator color={theme.bgPrimary} />
                       ) : (
                         <>
-                          <ThemedText style={styles.submitText}>Sign in</ThemedText>
-                          <Ionicons name="arrow-forward" size={18} color="#fff" />
+                          <ThemedText style={[styles.submitText, { color: theme.bgPrimary }]}>Sign in</ThemedText>
+                          <Ionicons name="arrow-forward" size={18} color={theme.bgPrimary} />
                         </>
                       )}
                     </LinearGradient>
@@ -326,7 +329,7 @@ export default function LoginScreen() {
 
       {/* ── Concurrent Session Modal ── */}
       <Modal visible={showConcurrencyModal} transparent animationType="fade">
-        <BlurView intensity={40} tint="dark" style={styles.modalOverlay}>
+        <BlurView intensity={40} tint={blurTint as any} style={styles.modalOverlay}>
           <Animated.View style={styles.modalBox}>
             <View style={styles.modalIconWrap}>
               <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.modalIconGradient}>
@@ -355,8 +358,8 @@ export default function LoginScreen() {
                 <ThemedText style={styles.modalBtnCancelText}>Cancel</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalBtnForce} onPress={handleForceLogout}>
-                <LinearGradient colors={['#f59e0b', '#d97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalBtnGradient}>
-                  <ThemedText style={styles.modalBtnForceText}>Logout Others</ThemedText>
+                <LinearGradient colors={[theme.warning, theme.error]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalBtnGradient}>
+                  <ThemedText style={[styles.modalBtnForceText, { color: theme.bgPrimary }]}>Logout Others</ThemedText>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -373,26 +376,26 @@ function GlassField({ label, icon, error, focused, theme, children, action, righ
   theme: ThemeColors; children: React.ReactNode; action?: React.ReactNode; rightLabel?: React.ReactNode;
 }) {
   const borderColor = error
-    ? 'rgba(248,113,113,0.6)'
+    ? theme.error
     : focused
-      ? 'rgba(99,102,241,0.8)'
-      : 'rgba(255,255,255,0.1)';
+      ? theme.accentPrimary
+      : theme.borderPrimary;
 
   return (
     <View style={{ marginBottom: Spacing.lg }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
-        <ThemedText style={fieldStyles.label}>{label}</ThemedText>
+        <ThemedText style={[fieldStyles.label, { color: theme.textSecondary }]}>{label}</ThemedText>
         {rightLabel}
       </View>
-      <View style={[fieldStyles.inputWrap, { borderColor }]}>
-        <Ionicons name={icon as any} size={16} color={focused ? 'rgba(99,102,241,0.9)' : 'rgba(255,255,255,0.3)'} style={{ marginRight: Spacing.sm }} />
+      <View style={[fieldStyles.inputWrap, { borderColor, backgroundColor: `${theme.bgSecondary}50` }]}>
+        <Ionicons name={icon as any} size={16} color={focused ? theme.accentPrimary : theme.textTertiary} style={{ marginRight: Spacing.sm }} />
         {children}
         {action}
       </View>
       {error && (
         <View style={fieldStyles.errorRow}>
-          <Ionicons name="alert-circle-outline" size={12} color="#f87171" />
-          <ThemedText style={fieldStyles.errorMsg}>{error}</ThemedText>
+          <Ionicons name="alert-circle-outline" size={12} color={theme.error} />
+          <ThemedText style={[fieldStyles.errorMsg, { color: theme.error }]}>{error}</ThemedText>
         </View>
       )}
     </View>
@@ -430,7 +433,7 @@ const fieldStyles = StyleSheet.create({
 
 // ── Styles ────────────────────────────────────────────────
 const createStyles = (theme: ThemeColors) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0a0a14' },
+  root: { flex: 1, backgroundColor: theme.bgPrimary },
   safeArea: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
@@ -492,14 +495,14 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   wordmark: {
     fontSize: Typography.size.md,
     fontWeight: '800',
-    color: 'rgba(255,255,255,0.9)',
+    color: theme.textPrimary,
     letterSpacing: 3,
     flex: 1,
   },
   versionBadge: {
-    backgroundColor: 'rgba(99,102,241,0.2)',
+    backgroundColor: `${theme.accentPrimary}25`,
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.4)',
+    borderColor: `${theme.accentPrimary}50`,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: UI.borderRadius.pill,
@@ -507,7 +510,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   versionText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#818cf8',
+    color: theme.accentPrimary,
     letterSpacing: 0.5,
   },
 
@@ -516,14 +519,14 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   heroEyebrow: {
     fontSize: 10,
     fontWeight: '700',
-    color: 'rgba(129,140,248,0.7)',
+    color: theme.accentSecondary,
     letterSpacing: 2,
     marginBottom: Spacing.sm,
   },
   heroTitle: {
     fontSize: 38,
     fontWeight: '800',
-    color: '#f4f4f5',
+    color: theme.textPrimary,
     lineHeight: 44,
     letterSpacing: -1,
   },
@@ -536,14 +539,14 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: UI.borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(248,113,113,0.3)',
+    borderColor: `${theme.error}50`,
     marginBottom: Spacing.xl,
     overflow: 'hidden',
   },
   errorText: {
     flex: 1,
     fontSize: Typography.size.sm,
-    color: '#f87171',
+    color: theme.error,
   },
 
   // Glass card
@@ -551,22 +554,22 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     borderRadius: UI.borderRadius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: theme.borderPrimary,
   },
   glassCardInner: {
     padding: Spacing['2xl'],
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: `${theme.bgSecondary}20`,
   },
 
   fieldInput: {
     flex: 1,
     fontSize: Typography.size.md,
-    color: '#f4f4f5',
+    color: theme.textPrimary,
     height: 52,
   },
   forgotText: {
     fontSize: Typography.size.xs,
-    color: '#818cf8',
+    color: theme.accentPrimary,
     fontWeight: '600',
   },
 
@@ -582,18 +585,18 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     height: 20,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: theme.borderSecondary,
+    backgroundColor: theme.bgSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
+    backgroundColor: theme.accentPrimary,
+    borderColor: theme.accentPrimary,
   },
   rememberText: {
     fontSize: Typography.size.sm,
-    color: 'rgba(255,255,255,0.45)',
+    color: theme.textSecondary,
   },
 
   // Submit
@@ -612,7 +615,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   submitText: {
     fontSize: Typography.size.lg,
     fontWeight: '700',
-    color: '#fff',
+    color: theme.bgPrimary,
     letterSpacing: 0.3,
   },
 
@@ -627,11 +630,11 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: theme.borderPrimary,
   },
   dividerText: {
     fontSize: Typography.size.xs,
-    color: 'rgba(255,255,255,0.25)',
+    color: theme.textTertiary,
   },
   footerLinks: {
     flexDirection: 'row',
@@ -640,15 +643,15 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   footerGrayText: {
     fontSize: Typography.size.sm,
-    color: 'rgba(255,255,255,0.35)',
+    color: theme.textSecondary,
   },
   footerLinkText: {
     fontSize: Typography.size.sm,
-    color: '#818cf8',
+    color: theme.accentPrimary,
     fontWeight: '600',
   },
   footerDot: {
-    color: 'rgba(255,255,255,0.2)',
+    color: theme.textTertiary,
   },
 
   // Modal
@@ -658,11 +661,11 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     padding: Spacing['2xl'],
   },
   modalBox: {
-    backgroundColor: 'rgba(17,17,19,0.95)',
+    backgroundColor: `${theme.bgSecondary}F0`,
     borderRadius: UI.borderRadius.xl,
     padding: Spacing['2xl'],
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: theme.borderPrimary,
     alignItems: 'center',
   },
   modalIconWrap: {
@@ -679,13 +682,13 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   modalTitle: {
     fontSize: Typography.size['2xl'],
     fontWeight: '800',
-    color: '#f4f4f5',
+    color: theme.textPrimary,
     marginBottom: Spacing.md,
     textAlign: 'center',
   },
   modalSub: {
     fontSize: Typography.size.md,
-    color: 'rgba(255,255,255,0.45)',
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: Spacing['2xl'],
@@ -696,27 +699,27 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
     padding: Spacing.lg,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: theme.bgSecondary,
     borderRadius: UI.borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: theme.borderPrimary,
   },
   sessionIconWrap: {
     width: 36,
     height: 36,
     borderRadius: UI.borderRadius.sm,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: theme.bgPrimary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sessionTitle: {
     fontSize: Typography.size.sm,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.8)',
+    color: theme.textPrimary,
   },
   sessionSub: {
     fontSize: Typography.size.xs,
-    color: 'rgba(255,255,255,0.35)',
+    color: theme.textTertiary,
     marginTop: 2,
   },
   modalActions: { flexDirection: 'row', gap: Spacing.lg, width: '100%' },
@@ -725,15 +728,15 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     height: 50,
     borderRadius: UI.borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: theme.borderPrimary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: theme.bgPrimary,
   },
   modalBtnCancelText: {
     fontSize: Typography.size.md,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.6)',
+    color: theme.textPrimary,
   },
   modalBtnForce: { flex: 1, borderRadius: UI.borderRadius.md, overflow: 'hidden' },
   modalBtnGradient: {
@@ -744,7 +747,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   modalBtnForceText: {
     fontSize: Typography.size.md,
     fontWeight: '700',
-    color: '#fff',
+    color: theme.bgPrimary,
   },
 });
 // import { getElevation, Spacing, ThemeColors, Themes, Typography, UI } from '@/src/constants/theme';

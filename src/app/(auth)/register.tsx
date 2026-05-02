@@ -23,6 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { authService } from '@/src/features/auth/services/auth.service';
+import { useAppTheme } from '@/src/hooks/use-app-theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -78,8 +79,20 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const currentTheme = Themes.dark;
-  const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
+  const theme = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const isDark = theme.name.toLowerCase().includes('dark') || theme.name.toLowerCase().includes('night') || theme.bgPrimary === '#08080a';
+  const blurTint = isDark ? 'dark' : 'light';
+
+  const getStrengthColor = (score: number) => {
+    switch (score) {
+      case 1: return theme.error;
+      case 2: return theme.warning;
+      case 3: return theme.info;
+      case 4: return theme.success;
+      default: return 'transparent';
+    }
+  };
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -128,12 +141,12 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#0a0a14', '#0d1117', '#0f0a1e']} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={[theme.bgPrimary, theme.bgSecondary, theme.bgTernary]} style={StyleSheet.absoluteFillObject} />
 
       {/* Ambient orbs */}
-      <FloatingOrb delay={0} style={styles.orb1} />
-      <FloatingOrb delay={1000} style={styles.orb2} />
-      <FloatingOrb delay={2000} style={styles.orb3} />
+      <FloatingOrb delay={0} style={[styles.orb1, { backgroundColor: `${theme.accentPrimary}20` }]} />
+      <FloatingOrb delay={1000} style={[styles.orb2, { backgroundColor: `${theme.accentSecondary}15` }]} />
+      <FloatingOrb delay={2000} style={[styles.orb3, { backgroundColor: `${theme.success}10` }]} />
 
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -148,8 +161,8 @@ export default function RegisterScreen() {
               {/* Header */}
               <View style={styles.header}>
                 <View style={styles.headerBadge}>
-                  <LinearGradient colors={['rgba(99,102,241,0.3)', 'rgba(79,70,229,0.15)']} style={styles.headerBadgeGrad}>
-                    <Ionicons name="person-add-outline" size={16} color="#818cf8" />
+                  <LinearGradient colors={[`${theme.accentPrimary}50`, `${theme.accentPrimary}25`]} style={styles.headerBadgeGrad}>
+                    <Ionicons name="person-add-outline" size={16} color={theme.accentPrimary} />
                     <Text style={styles.headerBadgeText}>NEW ACCOUNT</Text>
                   </LinearGradient>
                 </View>
@@ -159,17 +172,17 @@ export default function RegisterScreen() {
 
               {/* Error banner */}
               {errorMessage && (
-                <BlurView intensity={20} tint="dark" style={styles.errorBanner}>
-                  <Ionicons name="alert-circle" size={16} color="#f87171" />
+                <BlurView intensity={20} tint={blurTint as any} style={styles.errorBanner}>
+                  <Ionicons name="alert-circle" size={16} color={theme.error} />
                   <Text style={styles.errorBannerText}>{errorMessage}</Text>
                   <TouchableOpacity onPress={() => setErrorMessage(null)}>
-                    <Ionicons name="close" size={16} color="#f87171" />
+                    <Ionicons name="close" size={16} color={theme.error} />
                   </TouchableOpacity>
                 </BlurView>
               )}
 
               {/* Glass form */}
-              <BlurView intensity={20} tint="dark" style={styles.glassCard}>
+              <BlurView intensity={20} tint={blurTint as any} style={styles.glassCard}>
                 <View style={styles.cardInner}>
 
                   {/* Name */}
@@ -177,13 +190,14 @@ export default function RegisterScreen() {
                     label="FULL NAME" icon="person-outline"
                     error={errors.name?.message}
                     focused={isFocus('name')}
+                    theme={theme}
                   >
                     <Controller control={control} name="name"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput
                           style={styles.textInput}
                           placeholder="Jane Smith"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           onFocus={() => focus('name')}
                           onBlur={() => { onBlur(); blur(); }}
                           onChangeText={onChange} value={value}
@@ -197,13 +211,14 @@ export default function RegisterScreen() {
                     label="EMAIL" icon="mail-outline"
                     error={errors.email?.message}
                     focused={isFocus('email')}
+                    theme={theme}
                   >
                     <Controller control={control} name="email"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput
                           style={styles.textInput}
                           placeholder="you@company.com"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           autoCapitalize="none" keyboardType="email-address"
                           onFocus={() => focus('email')}
                           onBlur={() => { onBlur(); blur(); }}
@@ -218,13 +233,14 @@ export default function RegisterScreen() {
                     label="PHONE" icon="call-outline"
                     error={errors.phone?.message}
                     focused={isFocus('phone')}
+                    theme={theme}
                   >
                     <Controller control={control} name="phone"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput
                           style={styles.textInput}
                           placeholder="+91 98765 43210"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           keyboardType="phone-pad"
                           onFocus={() => focus('phone')}
                           onBlur={() => { onBlur(); blur(); }}
@@ -240,13 +256,14 @@ export default function RegisterScreen() {
                     error={errors.uniqueShopId?.message}
                     focused={isFocus('shopId')}
                     hint="Your unique workspace identifier"
+                    theme={theme}
                   >
                     <Controller control={control} name="uniqueShopId"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput
                           style={styles.textInput}
                           placeholder="APEX-001"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           autoCapitalize="characters"
                           onFocus={() => focus('shopId')}
                           onBlur={() => { onBlur(); blur(); }}
@@ -261,9 +278,10 @@ export default function RegisterScreen() {
                     label="PASSWORD" icon="lock-closed-outline"
                     error={errors.password?.message}
                     focused={isFocus('password')}
+                    theme={theme}
                     action={
                       <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={16} color="rgba(255,255,255,0.35)" />
+                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={16} color={theme.textTertiary} />
                       </TouchableOpacity>
                     }
                   >
@@ -272,7 +290,7 @@ export default function RegisterScreen() {
                         <TextInput
                           style={styles.textInput}
                           placeholder="Min. 8 characters"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           secureTextEntry={!showPassword}
                           onFocus={() => focus('password')}
                           onBlur={() => { onBlur(); blur(); }}
@@ -282,31 +300,30 @@ export default function RegisterScreen() {
                     />
                   </GlassInput>
 
-                  {/* Strength bar */}
                   {passwordValue.length > 0 && (
                     <View style={styles.strengthWrap}>
                       <View style={styles.strengthBars}>
                         {[1, 2, 3, 4].map(i => (
                           <View key={i} style={[
                             styles.strengthSegment,
-                            { backgroundColor: i <= strengthScore ? STRENGTH_COLORS[strengthScore] : 'rgba(255,255,255,0.08)' }
+                            { backgroundColor: i <= strengthScore ? getStrengthColor(strengthScore) : theme.borderSecondary }
                           ]} />
                         ))}
                       </View>
-                      <Text style={[styles.strengthLabel, { color: STRENGTH_COLORS[strengthScore] || 'transparent' }]}>
+                      <Text style={[styles.strengthLabel, { color: getStrengthColor(strengthScore) }]}>
                         {STRENGTH_LABELS[strengthScore]}
                       </Text>
                     </View>
                   )}
 
-                  {/* Confirm Password */}
                   <GlassInput
                     label="CONFIRM PASSWORD" icon="shield-checkmark-outline"
                     error={errors.passwordConfirm?.message}
                     focused={isFocus('confirm')}
+                    theme={theme}
                     action={
                       <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={16} color="rgba(255,255,255,0.35)" />
+                        <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={16} color={theme.textTertiary} />
                       </TouchableOpacity>
                     }
                   >
@@ -315,7 +332,7 @@ export default function RegisterScreen() {
                         <TextInput
                           style={styles.textInput}
                           placeholder="Repeat password"
-                          placeholderTextColor="rgba(255,255,255,0.2)"
+                          placeholderTextColor={theme.textTertiary}
                           secureTextEntry={!showConfirm}
                           onFocus={() => focus('confirm')}
                           onBlur={() => { onBlur(); blur(); }}
@@ -331,7 +348,7 @@ export default function RegisterScreen() {
                       <View style={{ marginBottom: Spacing.xl }}>
                         <TouchableOpacity style={styles.termsRow} onPress={() => onChange(value ? undefined : true)} activeOpacity={0.7}>
                           <View style={[styles.checkbox, value && styles.checkboxOn, errors.terms && styles.checkboxErr]}>
-                            {value && <Ionicons name="checkmark" size={11} color="#fff" />}
+                            {value && <Ionicons name="checkmark" size={11} color={theme.bgPrimary} />}
                           </View>
                           <Text style={styles.termsText}>
                             I agree to the{' '}
@@ -355,16 +372,16 @@ export default function RegisterScreen() {
                     activeOpacity={0.85}
                   >
                     <LinearGradient
-                      colors={['#6366f1', '#4f46e5']}
+                      colors={isLoading ? [theme.disabledText, theme.disabledText] : [theme.accentSecondary, theme.accentPrimary]}
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                       style={styles.submitGradient}
                     >
                       {isLoading ? (
-                        <ActivityIndicator color="#fff" />
+                        <ActivityIndicator color={theme.bgPrimary} />
                       ) : (
                         <>
-                          <Text style={styles.submitText}>Create Account</Text>
-                          <Ionicons name="arrow-forward" size={18} color="#fff" />
+                          <Text style={[styles.submitText, { color: theme.bgPrimary }]}>Create Account</Text>
+                          <Ionicons name="arrow-forward" size={18} color={theme.bgPrimary} />
                         </>
                       )}
                     </LinearGradient>
@@ -403,36 +420,36 @@ export default function RegisterScreen() {
 }
 
 // ── GlassInput sub-component ─────────────────────────────
-function GlassInput({ label, icon, error, focused, children, action, hint }: {
+function GlassInput({ label, icon, error, focused, theme, children, action, hint }: {
   label: string; icon: string; error?: string;
-  focused: boolean; children: React.ReactNode;
+  focused: boolean; theme: ThemeColors; children: React.ReactNode;
   action?: React.ReactNode; hint?: string;
 }) {
   const border = error
-    ? 'rgba(248,113,113,0.5)'
+    ? theme.error
     : focused
-      ? 'rgba(99,102,241,0.7)'
-      : 'rgba(255,255,255,0.08)';
-  const bg = focused ? 'rgba(99,102,241,0.06)' : 'rgba(255,255,255,0.04)';
+      ? theme.accentPrimary
+      : theme.borderPrimary;
+  const bg = focused ? `${theme.accentPrimary}10` : `${theme.bgSecondary}50`;
 
   return (
     <View style={{ marginBottom: Spacing.lg }}>
-      <Text style={inputStyles.label}>{label}</Text>
+      <Text style={[inputStyles.label, { color: theme.textSecondary }]}>{label}</Text>
       <View style={[inputStyles.wrap, { borderColor: border, backgroundColor: bg }]}>
         <Ionicons
           name={icon as any}
           size={15}
-          color={focused ? '#818cf8' : 'rgba(255,255,255,0.28)'}
+          color={focused ? theme.accentPrimary : theme.textTertiary}
           style={{ marginRight: Spacing.sm }}
         />
         {children}
         {action}
       </View>
-      {hint && !error && <Text style={inputStyles.hint}>{hint}</Text>}
+      {hint && !error && <Text style={[inputStyles.hint, { color: theme.textTertiary }]}>{hint}</Text>}
       {error && (
         <View style={inputStyles.errorRow}>
-          <Ionicons name="alert-circle-outline" size={11} color="#f87171" />
-          <Text style={inputStyles.errorText}>{error}</Text>
+          <Ionicons name="alert-circle-outline" size={11} color={theme.error} />
+          <Text style={[inputStyles.errorText, { color: theme.error }]}>{error}</Text>
         </View>
       )}
     </View>
@@ -475,7 +492,7 @@ const inputStyles = StyleSheet.create({
 
 // ── Styles ────────────────────────────────────────────────
 const createStyles = (theme: ThemeColors) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0a0a14' },
+  root: { flex: 1, backgroundColor: theme.bgPrimary },
   safeArea: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
@@ -513,9 +530,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: `${theme.bgSecondary}50`,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: theme.borderPrimary,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.xl,
@@ -528,7 +545,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     overflow: 'hidden',
     marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.3)',
+    borderColor: `${theme.accentPrimary}50`,
   },
   headerBadgeGrad: {
     flexDirection: 'row',
@@ -540,20 +557,20 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   headerBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#818cf8',
+    color: theme.accentPrimary,
     letterSpacing: 1,
   },
   title: {
     fontSize: 34,
     fontWeight: '800',
-    color: '#f4f4f5',
+    color: theme.textPrimary,
     lineHeight: 40,
     letterSpacing: -0.8,
     marginBottom: Spacing.sm,
   },
   subtitle: {
     fontSize: Typography.size.md,
-    color: 'rgba(255,255,255,0.38)',
+    color: theme.textSecondary,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -562,29 +579,29 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: UI.borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(248,113,113,0.25)',
+    borderColor: `${theme.error}50`,
     marginBottom: Spacing.xl,
     overflow: 'hidden',
   },
   errorBannerText: {
     flex: 1,
     fontSize: Typography.size.sm,
-    color: '#f87171',
+    color: theme.error,
   },
   glassCard: {
     borderRadius: UI.borderRadius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: theme.borderPrimary,
   },
   cardInner: {
     padding: Spacing['2xl'],
-    backgroundColor: 'rgba(255,255,255,0.025)',
+    backgroundColor: `${theme.bgSecondary}20`,
   },
   textInput: {
     flex: 1,
     fontSize: Typography.size.md,
-    color: '#f4f4f5',
+    color: theme.textPrimary,
     height: 52,
   },
   strengthWrap: {
@@ -621,33 +638,33 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     height: 20,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: theme.borderSecondary,
+    backgroundColor: theme.bgSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
   },
   checkboxOn: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
+    backgroundColor: theme.accentPrimary,
+    borderColor: theme.accentPrimary,
   },
   checkboxErr: {
-    borderColor: '#f87171',
-    backgroundColor: 'rgba(248,113,113,0.08)',
+    borderColor: theme.error,
+    backgroundColor: `${theme.error}15`,
   },
   termsText: {
     flex: 1,
     fontSize: Typography.size.sm,
-    color: 'rgba(255,255,255,0.45)',
+    color: theme.textSecondary,
     lineHeight: 20,
   },
   termsLink: {
-    color: '#818cf8',
+    color: theme.accentPrimary,
     fontWeight: '600',
   },
   inlineError: {
     fontSize: 11,
-    color: '#f87171',
+    color: theme.error,
     marginTop: Spacing.xs,
     marginLeft: 28,
   },
@@ -665,7 +682,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   submitText: {
     fontSize: Typography.size.lg,
     fontWeight: '700',
-    color: '#fff',
+    color: theme.bgPrimary,
     letterSpacing: 0.2,
   },
   footer: {
@@ -679,17 +696,17 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   footerGray: {
     fontSize: Typography.size.sm,
-    color: 'rgba(255,255,255,0.3)',
+    color: theme.textSecondary,
   },
   footerLink: {
     fontSize: Typography.size.sm,
-    color: '#818cf8',
+    color: theme.accentPrimary,
     fontWeight: '600',
   },
   footerDivider: {
     height: 1,
     width: 120,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: theme.borderPrimary,
   },
 });
 // // app/(auth)/register.tsx

@@ -56,6 +56,34 @@ interface DropdownResponse {
   data: DropdownOption[];
 }
 
+const getOptionValue = (item: any): string => {
+  const value = item?.value ?? item?._id ?? item?.id;
+  return value ? String(value) : '';
+};
+
+const getOptionLabel = (item: any): string => {
+  if (item?.label) return String(item.label);
+  if (item?.companyName) {
+    return item.contactPerson ? `${item.companyName} (${item.contactPerson})` : String(item.companyName);
+  }
+  if (item?.name && item?.sku) return `${item.name} (${item.sku})`;
+  if (item?.name && item?.branchCode) return `${item.name} [${item.branchCode}]`;
+  if (item?.referenceNumber && item?.amount) return `${item.referenceNumber} - ${item.amount}`;
+  return String(item?.name ?? item?.title ?? item?.invoiceNumber ?? item?.loanNumber ?? item?._id ?? item?.id ?? 'Unknown');
+};
+
+const normalizeDropdownItem = (item: any): DropdownOption | null => {
+  const value = getOptionValue(item);
+  if (!value) return null;
+
+  return {
+    label: getOptionLabel(item),
+    value,
+    data: item?.data ?? item,
+    meta: item?.meta,
+  };
+};
+
 // export type DropdownEndpoint =
 //   | 'users' | 'branches' | 'roles' | 'customers' | 'suppliers' | 'masters' | 'channels' | 'transfer-requests'
 //   | 'products' | 'purchases' | 'sales' | 'sales-returns' | 'purchase-returns'
@@ -112,13 +140,16 @@ export const MasterDropdownService = {
       // The interceptor already unwraps the Axios response, so 'response' is the JSON body.
       const resBody: any = response;
       const dataArray = Array.isArray(resBody) ? resBody : (Array.isArray(resBody.data) ? resBody.data : []);
+      const normalizedData = dataArray
+        .map(normalizeDropdownItem)
+        .filter(Boolean) as DropdownOption[];
 
       const result: DropdownResponse = {
         status: resBody.status || 'success',
-        results: resBody.results || dataArray.length,
-        total: resBody.total || resBody.results || dataArray.length,
+        results: resBody.results || normalizedData.length,
+        total: resBody.total || resBody.results || normalizedData.length,
         hasMore: resBody.hasMore ?? (dataArray.length === limit),
-        data: dataArray,
+        data: normalizedData,
       };
 
       // ✅ Cache the successful result
