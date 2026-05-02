@@ -14,26 +14,32 @@ export interface SessionRecord {
 
 export const SessionService = {
   getAllSessions: (params?: any) => {
-    return apiClient.get('/v1/session', { params });
+    // Backend mount: GET /api/v1/sessions
+    return apiClient.get('/v1/sessions', { params });
   },
 
   getMySessions: () => {
-    return apiClient.get('/v1/session/me');
+    // Backend mount: GET /api/v1/sessions/me
+    return apiClient.get('/v1/sessions/me');
   },
 
   revokeSession: (id: string) => {
-    return apiClient.patch(`/v1/session/${id}/revoke`);
+    // Backend mount: PATCH /api/v1/sessions/:id/revoke
+    return apiClient.patch(`/v1/sessions/${id}/revoke`);
   },
 
   deleteSession: (id: string) => {
-    return apiClient.delete(`/v1/session/${id}`);
+    // Backend mount: DELETE /api/v1/sessions/:id
+    return apiClient.delete(`/v1/sessions/${id}`);
   },
 
   bulkDeleteSessions: (ids: string[]) => {
-    return apiClient.delete('/v1/session/bulk-delete', { data: { ids } });
+    // Backend mount: DELETE /api/v1/sessions/bulk-delete
+    return apiClient.delete('/v1/sessions/bulk-delete', { data: { ids } });
   },
 
   revokeAllOthers: () => {
-    return apiClient.patch('/v1/session/revoke-all');
+    // Backend mount: PATCH /api/v1/sessions/revoke-all
+    return apiClient.patch('/v1/sessions/revoke-all');
   }
 };

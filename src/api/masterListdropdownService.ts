@@ -1,39 +1,47 @@
 import apiClient from './client'; // Your configured Axios instance
 
 export const MasterService = {
-  endpoint: '/v1/masters',
+  // Backend mount: /api/v1/master-list/*
+  endpoint: '/v1/master-list',
 
   getMasterList: async (filters?: any) => {
-    return apiClient.get(`${MasterService.endpoint}/list`, { params: filters });
+    // GET /api/v1/master-list (generic list with filters)
+    return apiClient.get(`${MasterService.endpoint}`, { params: filters });
   },
 
   getSpecificList: async (type: string, filters?: any) => {
-    return apiClient.get(`${MasterService.endpoint}/list/${type}`, { params: filters });
+    // GET /api/v1/master-list/list?type=...&...
+    return apiClient.get(`${MasterService.endpoint}/list`, { params: { type, ...(filters ?? {}) } });
   },
 
   getFilterOptions: async (type: string) => {
-    return apiClient.get(`${MasterService.endpoint}/filters/${type}`);
+    // GET /api/v1/master-list/filter-options?type=...
+    return apiClient.get(`${MasterService.endpoint}/filter-options`, { params: { type } });
   },
 
   getQuickStats: async (period: string = 'month') => {
-    return apiClient.get(`${MasterService.endpoint}/stats`, { params: { period } });
+    // GET /api/v1/master-list/quick-stats?period=...
+    return apiClient.get(`${MasterService.endpoint}/quick-stats`, { params: { period } });
   },
 
   getEntityDetails: async (type: string, id: string) => {
-    return apiClient.get(`/v1/${type}s/${id}`); // Assumes standard REST paths
+    // GET /api/v1/master-list/details/:type/:id
+    return apiClient.get(`${MasterService.endpoint}/details/${type}/${id}`);
   },
 
   exportFilteredData: async (type: string, filters: any, format: string = 'csv') => {
-    return apiClient.get(`${MasterService.endpoint}/export/${type}`, {
-      params: { ...filters, format },
-      responseType: 'blob',
+    // GET /api/v1/master-list/export-filtered?type=...&format=...
+    return apiClient.get(`${MasterService.endpoint}/export-filtered`, {
+      params: { type, ...(filters ?? {}), format },
+      responseType: 'blob' as any,
     });
   },
 
   exportMasterList: async (format: string = 'csv') => {
-    return apiClient.get(`${MasterService.endpoint}/export/all`, {
+    // GET /api/v1/master-list/export?format=...
+    return apiClient.get(`${MasterService.endpoint}/export`, {
       params: { format },
-      responseType: 'blob',
+      responseType: 'blob' as any,
     });
   }
 };

@@ -64,11 +64,11 @@ export const ApiService = {
   },
 
   forgotPassword: (data: { email: string }) => {
-    return apiClient.post('/v1/auth/forgotPassword', data);
+    return apiClient.post('/v1/auth/forgot-password', data);
   },
 
   resetPassword: (token: string, data: any) => {
-    return apiClient.patch(`/v1/auth/resetPassword/${token}`, data);
+    return apiClient.patch(`/v1/auth/reset-password/${token}`, data);
   },
 
   sendVerificationEmail: () => {
@@ -80,37 +80,43 @@ export const ApiService = {
   },
 
   getActiveSessions: () => {
-    return apiClient.get('/v1/auth/sessions');
+    return apiClient.get('/v1/sessions/me');
   },
 
   terminateSession: (sessionId: string) => {
-    return apiClient.delete(`/v1/auth/sessions/${sessionId}`);
+    return apiClient.delete(`/v1/sessions/${sessionId}`);
   },
 
   // ======================== SESSION MANAGEMENT (Dedicated) ========================
 
   getAllSessions: (params?: any) => {
-    return apiClient.get('/v1/session', { params });
+    // Backend mount: GET /api/v1/sessions
+    return apiClient.get('/v1/sessions', { params });
   },
 
   getMySessions: () => {
-    return apiClient.get('/v1/session/me');
+    // Backend mount: GET /api/v1/sessions/me
+    return apiClient.get('/v1/sessions/me');
   },
 
   revokeSession: (id: string) => {
-    return apiClient.patch(`/v1/session/${id}/revoke`);
+    // Backend mount: PATCH /api/v1/sessions/:id/revoke
+    return apiClient.patch(`/v1/sessions/${id}/revoke`);
   },
 
   deleteSession: (id: string) => {
-    return apiClient.delete(`/v1/session/${id}`);
+    // Backend mount: DELETE /api/v1/sessions/:id
+    return apiClient.delete(`/v1/sessions/${id}`);
   },
 
   bulkDeleteSessions: (ids: string[]) => {
-    return apiClient.delete('/v1/session/bulk-delete', { data: { ids } });
+    // Backend mount: DELETE /api/v1/sessions/bulk-delete
+    return apiClient.delete('/v1/sessions/bulk-delete', { data: { ids } });
   },
 
   revokeAllOthers: () => {
-    return apiClient.patch('/v1/session/revoke-all');
+    // Backend mount: PATCH /api/v1/sessions/revoke-all
+    return apiClient.patch('/v1/sessions/revoke-all');
   },
 
   // ======================== USER ROUTES ========================
@@ -130,7 +136,7 @@ export const ApiService = {
   },
 
   updateMyPassword: (data: any) => {
-    return apiClient.patch('/v1/users/updateMyPassword', data);
+    return apiClient.patch('/v1/auth/update-my-password', data);
   },
 
   getMyPermissions: () => {
@@ -214,23 +220,38 @@ export const ApiService = {
   // ======================== MASTERS (CRUD) ========================
 
   getMasters: (params?: any) => {
-    return apiClient.get('/v1/masters', { params });
+    // Backend mount: GET /api/v1/master
+    return apiClient.get('/v1/master', { params });
   },
 
   createMaster: (data: any) => {
-    return apiClient.post('/v1/masters', data);
+    // Backend mount: POST /api/v1/master
+    return apiClient.post('/v1/master', data);
   },
 
   updateMaster: (id: string, data: any) => {
-    return apiClient.patch(`/v1/masters/${id}`, data);
+    // Backend mount: PATCH /api/v1/master/:id
+    return apiClient.patch(`/v1/master/${id}`, data);
   },
 
   deleteMaster: (id: string) => {
-    return apiClient.delete(`/v1/masters/${id}`);
+    // Backend mount: DELETE /api/v1/master/:id
+    return apiClient.delete(`/v1/master/${id}`);
   },
 
   bulkDeleteMasters: (ids: string[]) => {
-    return apiClient.delete('/v1/masters/bulk', { data: { ids } });
+    // Backend mount: DELETE /api/v1/master/bulk
+    return apiClient.delete('/v1/master/bulk', { data: { ids } });
+  },
+
+  createBulkMasters: (items: any[]) => {
+    // Backend mount: POST /api/v1/master/bulk
+    return apiClient.post('/v1/master/bulk', { items });
+  },
+
+  bulkUpdateMasters: (items: any[]) => {
+    // Backend mount: PATCH /api/v1/master/bulk
+    return apiClient.patch('/v1/master/bulk', { items });
   },
 
   // ======================== MASTER LIST ROUTES ========================
@@ -304,15 +325,83 @@ export const ApiService = {
     return apiClient.get('/v1/hrms/shifts', { params: params || {} });
   },
 
+  getDesignations: (params?: any) => {
+    return apiClient.get('/v1/hrms/designations', { params: params || {} });
+  },
+
+  getShiftGroups: (params?: any) => {
+    return apiClient.get('/v1/hrms/shift-groups', { params: params || {} });
+  },
+
   getLeaveRequests: (params?: any) => {
     return apiClient.get('/v1/hrms/leave-requests', { params: params || {} });
+  },
+
+  getLeaveBalances: (params?: any) => {
+    return apiClient.get('/v1/hrms/leave-balances', { params: params || {} });
   },
 
   getAttendanceLogs: (params?: any) => {
     return apiClient.get('/v1/hrms/attendance/logs', { params: params || {} });
   },
 
+  getDailyAttendance: (params?: any) => {
+    return apiClient.get('/v1/hrms/attendance/daily', { params: params || {} });
+  },
+
+  getAttendanceMachines: (params?: any) => {
+    return apiClient.get('/v1/hrms/attendance/machines', { params: params || {} });
+  },
+
+  getGeoFences: (params?: any) => {
+    return apiClient.get('/v1/hrms/attendance/geofences', { params: params || {} });
+  },
+
   getHolidays: (params?: any) => {
     return apiClient.get('/v1/hrms/attendance/holidays', { params: params || {} });
+  },
+
+  getDepartmentById: (id: string) => {
+    return apiClient.get(`/v1/hrms/departments/${id}`);
+  },
+
+  getDesignationById: (id: string) => {
+    return apiClient.get(`/v1/hrms/designations/${id}`);
+  },
+
+  getShiftById: (id: string) => {
+    return apiClient.get(`/v1/hrms/shifts/${id}`);
+  },
+
+  getShiftGroupById: (id: string) => {
+    return apiClient.get(`/v1/hrms/shift-groups/${id}`);
+  },
+
+  getLeaveRequestById: (id: string) => {
+    return apiClient.get(`/v1/hrms/leave-requests/${id}`);
+  },
+
+  getLeaveBalanceById: (id: string) => {
+    return apiClient.get(`/v1/hrms/leave-balances/${id}`);
+  },
+
+  getAttendanceLogById: (id: string) => {
+    return apiClient.get(`/v1/hrms/attendance/logs/${id}`);
+  },
+
+  getDailyAttendanceById: (id: string) => {
+    return apiClient.get(`/v1/hrms/attendance/daily/${id}`);
+  },
+
+  getAttendanceMachineById: (id: string) => {
+    return apiClient.get(`/v1/hrms/attendance/machines/${id}`);
+  },
+
+  getGeoFenceById: (id: string) => {
+    return apiClient.get(`/v1/hrms/attendance/geofences/${id}`);
+  },
+
+  getHolidayById: (id: string) => {
+    return apiClient.get(`/v1/hrms/attendance/holidays/${id}`);
   },
 };

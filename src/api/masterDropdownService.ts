@@ -13,18 +13,18 @@ export interface UniversalDropdownApiResponse<TData = unknown, TMeta = unknown> 
   page: number;
   totalPages: number;
   hasMore: boolean;
-  data: Array<UniversalDropdownApiItem<TData, TMeta>>;
+  data: UniversalDropdownApiItem<TData, TMeta>[];
 }
 
 export interface DropdownOption<TData = unknown, TMeta = unknown> {
   label: string;
   value: string;
-  data: TData;
-  meta?: TMeta;
+  data?: TData; // Full raw object from backend (optional)
+  meta?: TMeta; // Rich meta fields (optional)
 }
 
 export interface DropdownFetchResult<TData = unknown, TMeta = unknown> {
-  data: Array<DropdownOption<TData, TMeta>>;
+  data: DropdownOption<TData, TMeta>[];
   hasMore: boolean;
   total: number;
   page: number;
@@ -47,12 +47,6 @@ export function adaptUniversalDropdownResponse<TData = unknown, TMeta = unknown>
     page: Number(response?.page ?? 1)
   };
 }
-export interface DropdownOption {
-  label: string;
-  value: string;
-  data?: any; // The full raw object from the backend
-  meta?: any; // Additional rich data (e.g. stock, balance)
-}
 
 interface DropdownResponse {
   status: string;
@@ -73,7 +67,7 @@ interface DropdownResponse {
 export type DropdownEndpoint =
   | 'users' | 'branches' | 'roles' | 'customers' | 'suppliers' | 'masters' | 'channels' | 'transfer-requests'
   | 'products' | 'purchases' | 'sales' | 'sales-returns' | 'purchase-returns'
-  | 'brands' | 'categories' | 'subcategories' | 'units' | 'taxes'
+  | 'brands' | 'categories' | 'subcategories' | 'units'
   | 'accounts' | 'invoices' | 'payments' | 'emis'
   | 'departments' | 'designations' | 'shifts' | 'shift-assignments'
   | 'holidays' | 'geofencing' | 'attendance-machines' | 'attendance-requests' | 'leave-requests'

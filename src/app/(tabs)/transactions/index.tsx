@@ -124,7 +124,6 @@ export default function TransactionsScreen() {
   const [search, setSearch] = useState('');
   const [type, setType] = useState('');
   const [effect, setEffect] = useState('');
-  const [viewMode, setViewMode] = useState<'all' | 'mine'>('all');
   
   const [showFilterModal, setShowFilterModal] = useState(false);
 
@@ -157,7 +156,6 @@ export default function TransactionsScreen() {
         search: search || undefined,
         type: type || undefined,
         effect: effect || undefined,
-        mine: viewMode === 'mine' ? 'true' : undefined,
       };
 
       const res = await TransactionService.getAllTransactions(params) as any;
@@ -182,7 +180,7 @@ export default function TransactionsScreen() {
   useEffect(() => {
     const timer = setTimeout(() => loadData(true), 500);
     return () => clearTimeout(timer);
-  }, [search, type, effect, viewMode]);
+  }, [search, type, effect]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -284,21 +282,6 @@ export default function TransactionsScreen() {
 
       {/* Mode Toggle & Search */}
       <View style={[styles.toolbar, { backgroundColor: currentTheme.bgSecondary, borderBottomColor: currentTheme.borderPrimary }]}>
-        <View style={[styles.modeToggle, { backgroundColor: currentTheme.bgTernary }]}>
-          <TouchableOpacity 
-            style={[styles.modeBtn, viewMode === 'all' && [styles.modeBtnActive, { backgroundColor: currentTheme.accentPrimary }]]}
-            onPress={() => setViewMode('all')}
-          >
-            <Text style={[styles.modeBtnText, { color: currentTheme.textSecondary }, viewMode === 'all' && { color: '#fff' }]}>All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.modeBtn, viewMode === 'mine' && [styles.modeBtnActive, { backgroundColor: currentTheme.accentPrimary }]]}
-            onPress={() => setViewMode('mine')}
-          >
-            <Text style={[styles.modeBtnText, { color: currentTheme.textSecondary }, viewMode === 'mine' && { color: '#fff' }]}>Mine</Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.searchRow}>
           <View style={[styles.searchBar, { backgroundColor: currentTheme.bgPrimary, borderColor: currentTheme.borderPrimary }]}>
             <Ionicons name="search" size={18} color={currentTheme.textTertiary} />
@@ -387,30 +370,6 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingHorizontal: Spacing.xl,
     borderBottomWidth: 1,
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    borderRadius: UI.borderRadius.pill,
-    padding: 4,
-    marginBottom: Spacing.md,
-  },
-  modeBtn: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-    borderRadius: UI.borderRadius.pill,
-  },
-  modeBtnActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  modeBtnText: {
-    fontFamily: 'Inter',
-    fontSize: Typography.size.sm,
-    fontWeight: '600',
   },
   searchRow: {
     flexDirection: 'row',

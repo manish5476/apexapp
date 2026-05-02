@@ -38,246 +38,127 @@ export default function DrawerLayout() {
         headerRightContainerStyle: { paddingRight: 14 },
       }}
     >
+      {/* ─── Primary Navigation ─────────────────────────────────────── */}
       <Drawer.Screen
         name="index"
-        options={{
-          title: 'Dashboard',
-          drawerIcon: ({ color }) => <Ionicons name="grid-outline" size={20} color={color} />
-        }}
+        options={{ title: 'Dashboard', drawerIcon: ({ color }) => <Ionicons name="grid-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="product/index"
-        options={{
-          title: 'Products',
-          drawerIcon: ({ color }) => <Ionicons name="cube-outline" size={20} color={color} />
-        }}
+        name="product"
+        options={{ title: 'Products', drawerIcon: ({ color }) => <Ionicons name="cube-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="customers/index"
-        options={{
-          title: 'Customers',
-          drawerIcon: ({ color }) => <Ionicons name="people-outline" size={20} color={color} />
-        }}
+        name="customers"
+        options={{ title: 'Customers', drawerIcon: ({ color }) => <Ionicons name="people-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="sales/index"
-        options={{
-          title: 'Sales',
-          drawerIcon: ({ color }) => <Ionicons name="receipt-outline" size={20} color={color} />
-        }}
+        name="sales"
+        options={{ title: 'Sales', drawerIcon: ({ color }) => <Ionicons name="receipt-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="purchase/index"
-        options={{
-          title: 'Purchases',
-          drawerIcon: ({ color }) => <Ionicons name="bag-handle-outline" size={20} color={color} />
-        }}
+        name="purchase"
+        options={{ title: 'Purchases', drawerIcon: ({ color }) => <Ionicons name="bag-handle-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="payments/index"
-        options={{
-          title: 'Payments',
-          drawerIcon: ({ color }) => <Ionicons name="card-outline" size={20} color={color} />
-        }}
+        name="invoice"
+        options={{ title: 'Invoices', drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="transactions/index"
-        options={{
-          title: 'Transactions',
-          drawerIcon: ({ color }) => <Ionicons name="swap-horizontal-outline" size={20} color={color} />
-        }}
+        name="payments"
+        options={{ title: 'Payments', drawerIcon: ({ color }) => <Ionicons name="card-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="salesReturn/index"
-        options={{
-          title: 'Sales Returns',
-          drawerIcon: ({ color }) => <Ionicons name="arrow-undo-outline" size={20} color={color} />
-        }}
+        name="transactions"
+        options={{ title: 'Transactions', drawerIcon: ({ color }) => <Ionicons name="swap-horizontal-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="emi/index"
-        options={{
-          title: 'EMI Management',
-          drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} />
-        }}
+        name="salesReturn"
+        options={{ title: 'Sales Returns', drawerIcon: ({ color }) => <Ionicons name="arrow-undo-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="ledger/index"
-        options={{
-          title: 'Ledger',
-          drawerIcon: ({ color }) => <Ionicons name="book-outline" size={20} color={color} />
-        }}
+        name="emi"
+        options={{ title: 'EMI Management', drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="accounts/index"
+        name="ledger"
+        options={{ title: 'Ledger', drawerIcon: ({ color }) => <Ionicons name="book-outline" size={20} color={color} /> }}
+      />
+      <Drawer.Screen
+        name="accounts"
         options={{
           title: 'Accounts',
           drawerItemStyle: canReadAccounts ? undefined : { display: 'none' },
-          drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} />
+          drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} />,
         }}
       />
       <Drawer.Screen
-        name="suppliers/index"
-        options={{
-          title: 'Suppliers',
-          drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} />
-        }}
+        name="suppliers"
+        options={{ title: 'Suppliers', drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} /> }}
       />
       <Drawer.Screen
-        name="organization/index"
-        options={{
-          title: 'Organization',
-          drawerIcon: ({ color }) => <Ionicons name="settings-outline" size={20} color={color} />
-        }}
-      />
-      <Drawer.Screen
-        name="branch/index"
-        options={{
-          title: 'Branches',
-          drawerItemStyle: canReadBranch ? undefined : { display: 'none' },
-          drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} />
-        }}
-      />
-      <Drawer.Screen
-        name="hrms/index"
+        name="hrms"
         options={{
           title: 'HRMS',
           drawerItemStyle: canReadHrms ? undefined : { display: 'none' },
-          drawerIcon: ({ color }) => <Ionicons name="people-circle-outline" size={20} color={color} />
+          drawerIcon: ({ color }) => <Ionicons name="people-circle-outline" size={20} color={color} />,
         }}
       />
       <Drawer.Screen
-        name="notes/index"
+        name="analytics"
+        options={{ title: 'Analytics Hub', drawerIcon: ({ color }) => <Ionicons name="analytics-outline" size={20} color={color} /> }}
+      />
+      <Drawer.Screen
+        name="notes"
         options={{
           title: 'Notes',
           drawerItemStyle: canReadNotes ? undefined : { display: 'none' },
-          drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} />
+          drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} />,
         }}
       />
       <Drawer.Screen
-        name="notifications/index"
+        name="notifications"
         options={{
           title: 'Notifications',
           drawerItemStyle: canReadNotifications ? undefined : { display: 'none' },
-          drawerIcon: ({ color }) => <Ionicons name="notifications-outline" size={20} color={color} />
+          drawerIcon: ({ color }) => <Ionicons name="notifications-outline" size={20} color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="master-data"
+        options={{
+          title: 'Master Data',
+          drawerIcon: ({ color }) => <Ionicons name="database-outline" size={20} color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="organization"
+        options={{ title: 'Organization', drawerIcon: ({ color }) => <Ionicons name="settings-outline" size={20} color={color} /> }}
+      />
+      <Drawer.Screen
+        name="branch"
+        options={{
+          title: 'Branches',
+          drawerItemStyle: canReadBranch ? undefined : { display: 'none' },
+          drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="rolemanagement"
+        options={{
+          title: 'Roles & Permissions',
+          drawerIcon: ({ color }) => <Ionicons name="lock-closed-outline" size={20} color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="sessions"
+        options={{
+          title: 'Active Sessions',
+          drawerIcon: ({ color }) => <Ionicons name="desktop-outline" size={20} color={color} />,
         }}
       />
 
-
-      <Drawer.Screen name="suppliers/create" options={{ drawerItemStyle: { display: 'none' }, title: 'New Supplier' }} />
-      <Drawer.Screen name="suppliers/[id]/index" options={{ drawerItemStyle: { display: 'none' }, title: 'Supplier Details' }} />
-      <Drawer.Screen name="suppliers/[id]/edit" options={{ drawerItemStyle: { display: 'none' }, title: 'Edit Supplier' }} />
-      <Drawer.Screen name="suppliers/[id]/kyc" options={{ drawerItemStyle: { display: 'none' }, title: 'KYC Documents' }} />
-      <Drawer.Screen name="suppliers/[id]/ledger" options={{ drawerItemStyle: { display: 'none' }, title: 'Supplier Ledger' }} />
-      <Drawer.Screen name="suppliers/[id]/dashboard" options={{ drawerItemStyle: { display: 'none' }, title: 'Supplier Dashboard' }} />
-
-      <Drawer.Screen name="product/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="product/[id]/edit" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="product/[id]/history" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="product/create" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen
-        name="product/low-stock"
-        options={{
-          title: 'Low Stock Alerts',
-          drawerIcon: ({ color }) => <Ionicons name="warning-outline" size={20} color={color} />
-        }}
-      />
-      <Drawer.Screen name="customers/create" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="customers/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="customers/[id]/edit" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen
-        name="customers/analytics"
-        options={{
-          title: 'Customer Analytics',
-          drawerIcon: ({ color }) => <Ionicons name="people-circle-outline" size={20} color={color} />
-        }}
-      />
-      <Drawer.Screen name="payments/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="salesReturn/CreateSalesReturnScreen" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="purchase/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="purchase/[id]/edit" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="purchase/return/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="purchase/return/[id]" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="purchase/return/details/[id]" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen
-        name="invoice/index"
-        options={{
-          title: 'Invoices',
-          drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} />
-        }}
-      />
-      <Drawer.Screen
-        name="invoice/analytics"
-        options={{
-          title: 'Invoice Analytics',
-          drawerIcon: ({ color }) => <Ionicons name="bar-chart-outline" size={20} color={color} />
-        }}
-      />
-      <Drawer.Screen
-        name="invoice/advanced-analytics"
-        options={{
-          title: 'Advanced Analytics',
-          drawerIcon: ({ color }) => <Ionicons name="analytics-outline" size={20} color={color} />
-        }}
-      />
-      <Drawer.Screen
-        name="invoice/profit-dashboard"
-        options={{
-          title: 'Profit Dashboard',
-          drawerIcon: ({ color }) => <Ionicons name="stats-chart-outline" size={20} color={color} />
-        }}
-      />
-      <Drawer.Screen
-        name="analytics/index"
-        options={{
-          title: 'Analytics Hub',
-          drawerIcon: ({ color }) => <Ionicons name="analytics-outline" size={20} color={color} />
-        }}
-      />
-      <Drawer.Screen name="analytics/executive" options={{ drawerItemStyle: { display: 'none' }, title: 'Executive Dashboard' }} />
-      <Drawer.Screen name="analytics/live-monitor" options={{ drawerItemStyle: { display: 'none' }, title: 'Live Monitor' }} />
-      <Drawer.Screen name="analytics/audit-logs" options={{ drawerItemStyle: { display: 'none' }, title: 'Audit Logs' }} />
-      <Drawer.Screen name="analytics/branch-compare" options={{ drawerItemStyle: { display: 'none' }, title: 'Branch Comparison' }} />
-      <Drawer.Screen name="analytics/finance-main" options={{ drawerItemStyle: { display: 'none' }, title: 'Financial Dashboard' }} />
-      <Drawer.Screen name="analytics/cash-flow" options={{ drawerItemStyle: { display: 'none' }, title: 'Cash Flow' }} />
-      <Drawer.Screen name="analytics/emi-analytics" options={{ drawerItemStyle: { display: 'none' }, title: 'EMI Analytics' }} />
-      <Drawer.Screen name="analytics/customer-360" options={{ drawerItemStyle: { display: 'none' }, title: 'Customer 360' }} />
-      <Drawer.Screen name="analytics/customer-segmentation" options={{ drawerItemStyle: { display: 'none' }, title: 'Customer Segmentation' }} />
-      <Drawer.Screen name="analytics/customer-ltv-analysis" options={{ drawerItemStyle: { display: 'none' }, title: 'Customer LTV' }} />
-      <Drawer.Screen name="analytics/product-stats" options={{ drawerItemStyle: { display: 'none' }, title: 'Product Performance' }} />
-      <Drawer.Screen name="analytics/dead-stock" options={{ drawerItemStyle: { display: 'none' }, title: 'Dead Stock' }} />
-      <Drawer.Screen name="analytics/predictive" options={{ drawerItemStyle: { display: 'none' }, title: 'Predictive Analytics' }} />
-      <Drawer.Screen name="analytics/sales-forecast" options={{ drawerItemStyle: { display: 'none' }, title: 'Sales Forecast' }} />
-      <Drawer.Screen name="analytics/operational" options={{ drawerItemStyle: { display: 'none' }, title: 'Operational Metrics' }} />
-      <Drawer.Screen name="analytics/peak-hours" options={{ drawerItemStyle: { display: 'none' }, title: 'Peak Hours' }} />
-      <Drawer.Screen name="analytics/staff-performance" options={{ drawerItemStyle: { display: 'none' }, title: 'Staff Performance' }} />
-      <Drawer.Screen name="analytics/compliance" options={{ drawerItemStyle: { display: 'none' }, title: 'Compliance Dashboard' }} />
-      <Drawer.Screen name="analytics/data-health" options={{ drawerItemStyle: { display: 'none' }, title: 'Data Health' }} />
-      <Drawer.Screen name="analytics/export-hub" options={{ drawerItemStyle: { display: 'none' }, title: 'Export Hub' }} />
-      <Drawer.Screen name="analytics/time-analytics" options={{ drawerItemStyle: { display: 'none' }, title: 'Time Analytics' }} />
-      <Drawer.Screen name="analytics/settings/ownership" options={{ drawerItemStyle: { display: 'none' }, title: 'Accept Ownership' }} />
-      <Drawer.Screen name="invoice/create" options={{ drawerItemStyle: { display: 'none' }, title: 'Create Invoice' }} />
-      <Drawer.Screen name="invoice/[id]/index" options={{ drawerItemStyle: { display: 'none' }, title: 'Invoice Details' }} />
-      <Drawer.Screen name="chat/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="chat/[channelId]" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="users/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="users/create" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="users/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="users/[id]/edit" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="branch/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="branch/create" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="branch/[id]/edit" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="notes/create" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="notes/[id]/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="assets/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="rolemanagement/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="emi/create" options={{ drawerItemStyle: { display: 'none' }, title: 'New EMI Plan' }} />
-      <Drawer.Screen name="emi/[id]/index" options={{ drawerItemStyle: { display: 'none' }, title: 'EMI Details' }} />
-      <Drawer.Screen name="sessions/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="MasterDataScreen/index" options={{ drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="profile" options={{ drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="explore" options={{ drawerItemStyle: { display: 'none' } }} />
+      <Drawer.Screen name="profile" options={{ drawerItemStyle: { display: 'none' } }} />
     </Drawer>
   );
 }
-

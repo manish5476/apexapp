@@ -8,6 +8,7 @@ interface UseMasterDropdownProps {
   labelField?: string;
   isMulti?: boolean;
   limit?: number;
+  extraParams?: Record<string, unknown>;
 }
 
 export function useMasterDropdown({
@@ -16,7 +17,8 @@ export function useMasterDropdown({
   searchField,
   labelField,
   isMulti = false,
-  limit = 50
+  limit = 50,
+  extraParams = {}
 }: UseMasterDropdownProps) {
   const [options, setOptions] = useState<DropdownOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +47,8 @@ export function useMasterDropdown({
         limit,
         searchField,
         labelField,
-        includeIds
+        includeIds,
+        extraParams
       );
 
       setIsLastPage(!response.hasMore);
@@ -65,7 +68,7 @@ export function useMasterDropdown({
     } finally {
       setLoading(false);
     }
-  }, [endpoint, isLastPage, searchTerm, page, searchField, labelField, limit]);
+  }, [endpoint, isLastPage, searchTerm, page, searchField, labelField, limit, extraParams]);
 
   // --- INITIAL LOAD & VALUE SYNC ---
   useEffect(() => {

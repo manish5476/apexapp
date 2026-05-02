@@ -1,5 +1,5 @@
-import AdminAnalyticsScreen from '@/src/components/analytics/AdminAnalyticsScreen';
+import ExecutiveDashboard from '@/src/components/analytics/ExecutiveDashboard';
 
 export default function Screen() {
-  return <AdminAnalyticsScreen slug="executive" />;
+  return <ExecutiveDashboard />;
 }

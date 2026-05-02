@@ -37,7 +37,8 @@ export const InvoiceService = {
   },
 
   getLowStockWarnings: (id: string) => {
-    return apiClient.get(`${InvoiceService.endpoint}/${id}/low-stock-warnings`);
+    // Backend route: GET /api/v1/invoices/:id/low-stock
+    return apiClient.get(`${InvoiceService.endpoint}/${id}/low-stock`);
   },
 
   getAlternativeProducts: (id: string) => {

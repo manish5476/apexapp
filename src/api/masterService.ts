@@ -17,23 +17,28 @@ export const MasterService = {
   },
 
   getDepartments: (params?: any) => {
-    return apiClient.get('/v1/departments', { params });
+    // Backend mount: GET /api/v1/hrms/departments (also /api/v1/departments exists, but HRMS is canonical)
+    return apiClient.get('/v1/hrms/departments', { params });
   },
 
   getDesignations: (params?: any) => {
-    return apiClient.get('/v1/designations', { params });
+    // Backend mount: GET /api/v1/hrms/designations
+    return apiClient.get('/v1/hrms/designations', { params });
   },
 
   getShifts: (params?: any) => {
-    return apiClient.get('/v1/shifts', { params });
+    // Backend mount: GET /api/v1/hrms/shifts
+    return apiClient.get('/v1/hrms/shifts', { params });
   },
 
   getShiftGroups: (params?: any) => {
-    return apiClient.get('/v1/shifts/groups', { params });
+    // Backend mount: GET /api/v1/hrms/shift-groups
+    return apiClient.get('/v1/hrms/shift-groups', { params });
   },
 
   getGeoFences: (params?: any) => {
-    return apiClient.get('/v1/geofencing', { params });
+    // Backend mount: GET /api/v1/hrms/attendance/geofences
+    return apiClient.get('/v1/hrms/attendance/geofences', { params });
   },
 
   /**
@@ -53,23 +58,28 @@ export const MasterService = {
    * Get master list data (all entities)
    */
   getMasters: (params?: any) => {
-    return apiClient.get('/v1/masters', { params });
+    // Backend mount: GET /api/v1/master
+    return apiClient.get('/v1/master', { params });
   },
 
   createMaster: (data: any) => {
-    return apiClient.post('/v1/masters', data);
+    // Backend mount: POST /api/v1/master
+    return apiClient.post('/v1/master', data);
   },
 
   updateMaster: (id: string, data: any) => {
-    return apiClient.patch(`/v1/masters/${id}`, data);
+    // Backend mount: PATCH /api/v1/master/:id
+    return apiClient.patch(`/v1/master/${id}`, data);
   },
 
   deleteMaster: (id: string) => {
-    return apiClient.delete(`/v1/masters/${id}`);
+    // Backend mount: DELETE /api/v1/master/:id
+    return apiClient.delete(`/v1/master/${id}`);
   },
 
   bulkDeleteMasters: (ids: string[]) => {
-    return apiClient.delete('/v1/masters/bulk', { data: { ids } });
+    // Backend mount: DELETE /api/v1/master/bulk
+    return apiClient.delete('/v1/master/bulk', { data: { ids } });
   },
 
   // ... rest of existing methods

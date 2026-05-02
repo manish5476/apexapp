@@ -63,34 +63,37 @@ function collectMetrics(source: any): { label: string; value: string }[] {
 
   const out: { label: string; value: string }[] = [];
 
-  const pushMetric = (key: string, value: any) => {
-    if (value === null || value === undefined) return;
-    if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
-      out.push({ label: toLabel(key), value: String(value) });
-    }
-  };
+  const flatten = (obj: any, prefix = '') => {
+    if (out.length >= 20) return; // limit to 20 metrics max
+    if (obj === null || obj === undefined) return;
 
-  Object.entries(source).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      if (value.length && out.length < 10) {
-        out.push({ label: `${toLabel(key)} Count`, value: String(value.length) });
+    if (Array.isArray(obj)) {
+      if (obj.length > 0) {
+        out.push({ label: toLabel(prefix ? `${prefix} Count` : 'Count'), value: String(obj.length) });
       }
       return;
     }
 
-    if (value && typeof value === 'object') {
-      Object.entries(value as Record<string, any>).forEach(([nestedKey, nestedValue]) => {
-        if (out.length < 14) {
-          pushMetric(`${key} ${nestedKey}`, nestedValue);
-        }
+    if (typeof obj === 'object') {
+      Object.entries(obj).forEach(([k, v]) => {
+        const newKey = prefix ? `${prefix} ${k}` : k;
+        flatten(v, newKey);
       });
       return;
     }
 
-    pushMetric(key, value);
-  });
+    // It's a primitive
+    if (typeof obj === 'number') {
+      // Format number nicely
+      const val = Number.isInteger(obj) ? obj.toString() : obj.toFixed(2);
+      out.push({ label: toLabel(prefix), value: val });
+    } else {
+      out.push({ label: toLabel(prefix), value: String(obj) });
+    }
+  };
 
-  return out.slice(0, 14);
+  flatten(source);
+  return out;
 }
 
 export default function AdminAnalyticsScreen({ slug }: Props) {

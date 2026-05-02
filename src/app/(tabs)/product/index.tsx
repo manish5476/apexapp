@@ -41,8 +41,9 @@ export default function ProductListScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState({
-    brand: null as string | null,
-    category: null as string | null,
+    // Backend Product model filter fields are ObjectId refs: brandId, categoryId
+    brandId: null as string | null,
+    categoryId: null as string | null,
   });
 
   // Action Menu
@@ -59,8 +60,8 @@ export default function ProductListScreen() {
         limit: 20,
         name: searchQuery || undefined,
         sku: searchQuery || undefined, // Search across both
-        brand: activeFilters.brand || undefined,
-        category: activeFilters.category || undefined,
+        brandId: activeFilters.brandId || undefined,
+        categoryId: activeFilters.categoryId || undefined,
       };
 
       const res = await productService.list(params) as any;
@@ -96,7 +97,7 @@ export default function ProductListScreen() {
   };
 
   const resetFilters = () => {
-    setActiveFilters({ brand: null, category: null });
+    setActiveFilters({ brandId: null, categoryId: null });
     setSearchQuery('');
     setShowFilters(false);
   };
@@ -300,8 +301,18 @@ export default function ProductListScreen() {
                 </TouchableOpacity>
               )}
             </View>
-            <TouchableOpacity style={[styles.filterBtn, (activeFilters.brand || activeFilters.category) && styles.filterBtnActive]} onPress={() => setShowFilters(true)}>
-              <Ionicons name="filter" size={20} color={(activeFilters.brand || activeFilters.category) ? theme.bgSecondary : theme.textPrimary} />
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                (activeFilters.brandId || activeFilters.categoryId) && styles.filterBtnActive
+              ]}
+              onPress={() => setShowFilters(true)}
+            >
+              <Ionicons
+                name="filter"
+                size={20}
+                color={(activeFilters.brandId || activeFilters.categoryId) ? theme.bgSecondary : theme.textPrimary}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -357,8 +368,8 @@ export default function ProductListScreen() {
               <ThemedText style={styles.filterGroupLabel}>Brand</ThemedText>
               <FilterDropdown 
                 endpoint="brands" 
-                value={activeFilters.brand} 
-                onChange={(val:any) => setActiveFilters(p => ({ ...p, brand: val }))} 
+                value={activeFilters.brandId} 
+                onChange={(val:any) => setActiveFilters(p => ({ ...p, brandId: val }))} 
                 placeholder="Select Brand" 
               />
             </View>
@@ -367,8 +378,8 @@ export default function ProductListScreen() {
               <ThemedText style={styles.filterGroupLabel}>Category</ThemedText>
               <FilterDropdown 
                 endpoint="categories" 
-                value={activeFilters.category} 
-                onChange={(val:any) => setActiveFilters(p => ({ ...p, category: val }))} 
+                value={activeFilters.categoryId} 
+                onChange={(val:any) => setActiveFilters(p => ({ ...p, categoryId: val }))} 
                 placeholder="Select Category" 
               />
             </View>
