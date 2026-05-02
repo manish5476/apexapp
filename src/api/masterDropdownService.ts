@@ -67,7 +67,8 @@ interface DropdownResponse {
 export type DropdownEndpoint =
   | 'users' | 'branches' | 'roles' | 'customers' | 'suppliers' | 'masters' | 'channels' | 'transfer-requests'
   | 'products' | 'purchases' | 'sales' | 'sales-returns' | 'purchase-returns'
-  | 'brands' | 'categories' | 'subcategories' | 'units'
+  | 'master-departments' | 'brands' | 'categories' | 'subcategories' | 'sub-categories' | 'units'
+  | 'tax-rates' | 'warranty-plans' | 'product-conditions'
   | 'accounts' | 'invoices' | 'payments' | 'emis'
   | 'departments' | 'designations' | 'shifts' | 'shift-assignments'
   | 'holidays' | 'geofencing' | 'attendance-machines' | 'attendance-requests' | 'leave-requests'

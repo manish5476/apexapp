@@ -42,11 +42,14 @@ interface Master {
 }
 
 const MASTER_TYPES = [
+  { label: 'Department', value: 'department' },
   { label: 'Category', value: 'category' },
+  { label: 'Sub Category', value: 'sub_category' },
   { label: 'Brand', value: 'brand' },
   { label: 'Unit', value: 'unit' },
-  { label: 'Subcategory', value: 'subcategory' },
-  { label: 'Tag', value: 'tag' }
+  { label: 'Tax Rate', value: 'tax_rate' },
+  { label: 'Warranty Plan', value: 'warranty_plan' },
+  { label: 'Product Condition', value: 'product_condition' }
 ];
 
 // --- UTILS ---
@@ -59,9 +62,13 @@ const getInitials = (name: string) => {
 const getTypeColor = (type: string) => {
   switch (type) {
     case 'category': return theme.info;
+    case 'sub_category': return theme.accentPrimary;
     case 'brand': return theme.warning;
     case 'unit': return theme.success;
-    case 'tag': return theme.accentSecondary;
+    case 'department': return theme.accentSecondary;
+    case 'tax_rate': return theme.error;
+    case 'warranty_plan': return theme.info;
+    case 'product_condition': return theme.textSecondary;
     default: return theme.textTertiary;
   }
 };
