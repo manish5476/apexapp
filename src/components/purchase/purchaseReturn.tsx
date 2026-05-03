@@ -33,6 +33,8 @@ interface ReturnItem {
   price: number;
   taxRate: number;
   returnQty: number;
+  alreadyReturned: number;
+  maxReturnable: number;
 }
 
 // --- UTILS ---
@@ -62,20 +64,46 @@ export default function PurchaseReturnScreen() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const res = await PurchaseService.getPurchaseById(id);
-      const data = res.data?.data || res.data;
+      // Fetch both purchase and past returns in parallel
+      const [purchaseRes, returnsRes] = await Promise.all([
+        PurchaseService.getPurchaseById(id),
+        PurchaseService.getAllReturns({ purchaseId: id, limit: 100 })
+      ]);
+
+      const data = purchaseRes.data?.data || purchaseRes.data;
       setPurchase(data);
 
+      const pastReturns = returnsRes.data?.returns || returnsRes.data || [];
+      const returnedQtyMap: { [key: string]: number } = {};
+      
+      for (const r of pastReturns) {
+        if (r.status !== 'rejected') {
+          for (const i of r.items) {
+            const key = i.productId?._id || i.productId;
+            returnedQtyMap[key] = (returnedQtyMap[key] || 0) + i.quantity;
+          }
+        }
+      }
+
       // Initialize return items
-      const initialItems: ReturnItem[] = data.items.map((it: any, index: number) => ({
-        id: index.toString(),
-        productId: it.productId?._id || it.productId,
-        name: it.productId?.name || 'Unknown Product',
-        purchasedQty: it.quantity,
-        price: it.purchasePrice,
-        taxRate: it.taxRate || 0,
-        returnQty: 0
-      }));
+      const initialItems: ReturnItem[] = data.items.map((it: any, index: number) => {
+        const prodId = it.productId?._id || it.productId;
+        const alreadyReturned = returnedQtyMap[prodId] || 0;
+        const maxReturnable = Math.max(0, it.quantity - alreadyReturned);
+
+        return {
+          id: index.toString(),
+          productId: prodId,
+          name: it.productId?.name || 'Unknown Product',
+          purchasedQty: it.quantity,
+          price: it.purchasePrice,
+          taxRate: it.taxRate || 0,
+          returnQty: 0,
+          alreadyReturned,
+          maxReturnable
+        };
+      }).filter((it: ReturnItem) => it.maxReturnable > 0);
+      
       setItems(initialItems);
 
     } catch (err) {
@@ -107,7 +135,7 @@ export default function PurchaseReturnScreen() {
   const updateReturnQty = (id: string, delta: number) => {
     setItems(prevItems => prevItems.map(item => {
       if (item.id === id) {
-        const newQty = Math.max(0, Math.min(item.purchasedQty, item.returnQty + delta));
+        const newQty = Math.max(0, Math.min(item.maxReturnable, item.returnQty + delta));
         return { ...item, returnQty: newQty };
       }
       return item;
@@ -194,7 +222,10 @@ export default function PurchaseReturnScreen() {
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
-                      <Text style={styles.itemPurchased}>Max Qty: {item.purchasedQty}</Text>
+                      <Text style={styles.itemPurchased}>Max Qty: {item.maxReturnable}</Text>
+                      {item.alreadyReturned > 0 && (
+                        <Text style={[styles.itemPurchased, { color: '#eab308' }]}>Returned: {item.alreadyReturned}</Text>
+                      )}
                     </View>
                   </View>
 
@@ -211,9 +242,9 @@ export default function PurchaseReturnScreen() {
                       <TouchableOpacity
                         style={styles.stepperBtn}
                         onPress={() => updateReturnQty(item.id, 1)}
-                        disabled={item.returnQty === item.purchasedQty}
+                        disabled={item.returnQty === item.maxReturnable}
                       >
-                        <Ionicons name="add" size={20} color={item.returnQty < item.purchasedQty ? DARK_BLUE_ACCENT : theme.textTertiary} />
+                        <Ionicons name="add" size={20} color={item.returnQty < item.maxReturnable ? DARK_BLUE_ACCENT : theme.textTertiary} />
                       </TouchableOpacity>
                     </View>
 

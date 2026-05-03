@@ -18,6 +18,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { InvoiceService } from '@/src/api/invoiceService';
+import { SalesReturnService } from '@/src/api/SalesReturnService';
 import { UI, getElevation } from '@/src/constants/theme';
 
 const DARK_BLUE_ACCENT = '#1d4ed8';
@@ -31,9 +33,12 @@ interface ReturnItem {
   invoicedQty: number;
   price: number;
   taxRate: number;
+  taxRate: number;
   unit: string;
   returnQuantity: number;
   isSelected: boolean;
+  alreadyReturned: number;
+  maxReturnable: number;
 }
 
 // --- UTILS ---
@@ -115,35 +120,58 @@ export default function CreateSalesReturnScreen() {
     const loadInvoiceData = async () => {
       setIsLoading(true);
       try {
-        // Simulate API call to fetch invoice details
-        await new Promise(resolve => setTimeout(resolve, 800));
+        if (!invoiceId) {
+          Alert.alert('Error', 'No invoice ID provided.');
+          router.back();
+          return;
+        }
 
-        const mockInvoice = {
-          _id: invoiceId || 'inv123',
-          invoiceNumber: 'INV-2026-089',
-          customerId: { name: 'Acme Technologies' },
-          items: [
-            { productId: 'p1', name: 'Dell Server Rack 42U', quantity: 2, price: 45000, taxRate: 18, unit: 'pcs' },
-            { productId: 'p2', name: 'Cat6 Ethernet Cable Box', quantity: 5, price: 2500, taxRate: 18, unit: 'box' }
-          ]
-        };
+        const [invoiceRes, returnsRes] = await Promise.all([
+          InvoiceService.getInvoiceById(invoiceId),
+          SalesReturnService.getSalesReturns({ invoiceId, limit: 100 })
+        ]);
 
-        setInvoice(mockInvoice);
+        const invoiceData = invoiceRes.data?.data || invoiceRes.data?.invoice || invoiceRes.data;
+        setInvoice(invoiceData);
+
+        const pastReturns = returnsRes.data?.returns || returnsRes.data || [];
+        const returnedQtyMap: { [key: string]: number } = {};
+        
+        for (const r of pastReturns) {
+          if (r.status !== 'rejected') {
+            for (const i of r.items) {
+              const key = i.productId?._id || i.productId;
+              returnedQtyMap[key] = (returnedQtyMap[key] || 0) + i.quantity;
+            }
+          }
+        }
 
         // Initialize return items
-        setItems(mockInvoice.items.map((i: any, idx: number) => ({
-          id: idx.toString(),
-          productId: i.productId,
-          name: i.name,
-          invoicedQty: i.quantity,
-          price: i.price,
-          taxRate: i.taxRate,
-          unit: i.unit,
-          returnQuantity: i.quantity, // Default to returning all
-          isSelected: false // Default to unselected
-        })));
+        const initialItems = (invoiceData.items || []).map((i: any, idx: number) => {
+          const prodId = i.productId?._id || i.productId;
+          const qty = Number(i.quantity || 0);
+          const alreadyReturned = returnedQtyMap[prodId] || 0;
+          const maxReturnable = Math.max(0, qty - alreadyReturned);
+
+          return {
+            id: idx.toString(),
+            productId: prodId,
+            name: i.name || i.productId?.name || 'Unknown Product',
+            invoicedQty: qty,
+            price: i.price || 0,
+            taxRate: i.taxRate || 0,
+            unit: i.unit || '',
+            returnQuantity: 0,
+            isSelected: false,
+            alreadyReturned,
+            maxReturnable
+          };
+        }).filter((i: any) => i.maxReturnable > 0);
+
+        setItems(initialItems);
 
       } catch (err) {
+        console.log(err);
         Alert.alert('Error', 'Failed to fetch invoice details.');
         router.back();
       } finally {
@@ -183,7 +211,7 @@ export default function CreateSalesReturnScreen() {
   const updateQuantity = (id: string, delta: number) => {
     setItems(prev => prev.map(item => {
       if (item.id === id) {
-        const newQty = Math.max(0, Math.min(item.invoicedQty, item.returnQuantity + delta));
+        const newQty = Math.max(0, Math.min(item.maxReturnable, item.returnQuantity + delta));
         // Auto-select if quantity becomes > 0 and wasn't selected, auto-deselect if 0
         const isSelected = newQty > 0 ? true : false;
         return { ...item, returnQuantity: newQty, isSelected };
@@ -203,12 +231,11 @@ export default function CreateSalesReturnScreen() {
         notes,
         items: items.filter(i => i.isSelected && i.returnQuantity > 0).map(i => ({
           productId: i.productId,
-          returnQuantity: i.returnQuantity
+          quantity: i.returnQuantity
         }))
       };
 
-      // Simulate API Submission
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await SalesReturnService.createSalesReturn(payload);
       Alert.alert('Success', 'Sales Return initiated successfully.');
       router.back();
     } catch (err) {
@@ -279,6 +306,7 @@ export default function CreateSalesReturnScreen() {
                       <ThemedText style={styles.itemName}>{item.name}</ThemedText>
                       <ThemedText style={styles.itemMeta}>
                         Invoiced: {item.invoicedQty} {item.unit} • Price: {formatCurrency(item.price)}
+                        {item.alreadyReturned > 0 && <Text style={{ color: '#eab308', fontWeight: 'bold' }}> • Returned: {item.alreadyReturned}</Text>}
                       </ThemedText>
                     </View>
                   </View>
@@ -299,9 +327,9 @@ export default function CreateSalesReturnScreen() {
                         <TouchableOpacity
                           style={styles.stepperBtn}
                           onPress={() => updateQuantity(item.id, 1)}
-                          disabled={item.returnQuantity === item.invoicedQty}
+                          disabled={item.returnQuantity === item.maxReturnable}
                         >
-                          <Ionicons name="add" size={20} color={item.returnQuantity < item.invoicedQty ? DARK_BLUE_ACCENT : theme.textTertiary} />
+                          <Ionicons name="add" size={20} color={item.returnQuantity < item.maxReturnable ? DARK_BLUE_ACCENT : theme.textTertiary} />
                         </TouchableOpacity>
                       </View>
                     </View>
