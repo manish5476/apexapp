@@ -374,10 +374,10 @@ const createStyles = (theme: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.bgSecondary },
 
   // HEADER
-  header: { backgroundColor: theme.bgPrimary, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: theme.borderSecondary },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  header: { backgroundColor: theme.bgPrimary, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.borderSecondary },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   pageTitle: { fontFamily: theme.fonts.heading, fontSize: 24, fontWeight: 'bold', color: theme.textPrimary },
-  pageSubtitle: { fontFamily: theme.fonts.body, fontSize: 14, color: theme.textSecondary, marginTop: 2 },
+  pageSubtitle: { fontFamily: theme.fonts.body, fontSize: 13, color: theme.textSecondary, marginTop: 2 },
   primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: DARK_BLUE_ACCENT, paddingHorizontal: 16, height: 44, borderRadius: 8, gap: 8, borderWidth: 1, borderColor: DARK_BLUE_ACCENT },
   primaryBtnText: { fontFamily: theme.fonts.heading, fontSize: 14, fontWeight: 'bold', color: theme.bgPrimary },
 
@@ -389,19 +389,19 @@ const createStyles = (theme: any) => StyleSheet.create({
   filterBadgeIndicator: { position: 'absolute', top: -6, right: -6, backgroundColor: theme.error, borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: theme.bgPrimary },
   filterBadgeIndicatorText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
 
-  listContent: { padding: 16, paddingBottom: 48 },
+  listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 },
 
   // CARD
-  card: { backgroundColor: theme.bgPrimary, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: theme.borderSecondary, overflow: 'hidden' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.bgSecondary },
+  card: { backgroundColor: theme.bgPrimary, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.borderSecondary, overflow: 'hidden' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: theme.bgSecondary },
   invoiceText: { fontFamily: theme.fonts.mono, fontSize: 16, fontWeight: 'bold', color: DARK_BLUE_ACCENT },
   branchText: { fontSize: 12, color: theme.textTertiary, marginTop: 4 },
   dateText: { fontSize: 12, color: theme.textSecondary, marginBottom: 4 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
   statusText: { fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  cardBody: { padding: 16 },
-  customerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  cardBody: { padding: 12 },
+  customerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   avatarBox: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 14, fontWeight: 'bold' },
   customerName: { fontSize: 16, fontWeight: 'bold', color: theme.textPrimary },
@@ -411,11 +411,11 @@ const createStyles = (theme: any) => StyleSheet.create({
   itemsCount: { fontSize: 12, fontWeight: 'bold', color: theme.textPrimary },
   itemsList: { fontSize: 12, color: theme.textTertiary, marginTop: 2 },
 
-  cardFooter: { padding: 16, backgroundColor: theme.bgSecondary, borderTopWidth: 1, borderTopColor: theme.borderSecondary },
-  financialRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  cardFooter: { padding: 12, backgroundColor: theme.bgSecondary, borderTopWidth: 1, borderTopColor: theme.borderSecondary },
+  financialRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   financialLabel: { fontSize: 10, color: theme.textTertiary, textTransform: 'uppercase', fontWeight: 'bold', marginBottom: 4 },
-  grandTotal: { fontFamily: theme.fonts.heading, fontSize: 18, fontWeight: 'bold', color: theme.textPrimary },
-  dueAmount: { fontFamily: theme.fonts.heading, fontSize: 18, fontWeight: 'bold' },
+  grandTotal: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: theme.textPrimary },
+  dueAmount: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold' },
 
   progressContainer: { marginBottom: 8 },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
@@ -436,19 +436,19 @@ const createStyles = (theme: any) => StyleSheet.create({
 
   // MODAL
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: theme.bgPrimary, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  modalContent: { backgroundColor: theme.bgPrimary, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  modalTitle: { fontFamily: theme.fonts.heading, fontSize: 20, fontWeight: 'bold', color: theme.textPrimary },
+  modalTitle: { fontFamily: theme.fonts.heading, fontSize: 18, fontWeight: 'bold', color: theme.textPrimary },
   closeBtn: { padding: 4, backgroundColor: theme.bgSecondary, borderRadius: 20 },
   filterGroupLabel: { fontFamily: theme.fonts.body, fontSize: 14, fontWeight: 'bold', color: theme.textSecondary, marginBottom: 12 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
   chip: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.bgPrimary, borderWidth: 1, borderColor: theme.borderSecondary },
   chipActive: { backgroundColor: DARK_BLUE_ACCENT, borderColor: DARK_BLUE_ACCENT },
-  chipText: { fontFamily: theme.fonts.body, fontSize: 14, fontWeight: 'bold', color: theme.textSecondary, textTransform: 'capitalize' },
+  chipText: { fontFamily: theme.fonts.body, fontSize: 13, fontWeight: 'bold', color: theme.textSecondary, textTransform: 'capitalize' },
   chipTextActive: { color: theme.bgPrimary },
   modalFooterActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
   modalClearBtn: { flex: 1, padding: 16, borderRadius: 8, alignItems: 'center', backgroundColor: theme.bgSecondary, borderWidth: 1, borderColor: theme.borderSecondary },
-  modalClearBtnText: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: theme.textPrimary },
+  modalClearBtnText: { fontFamily: theme.fonts.heading, fontSize: 14, fontWeight: 'bold', color: theme.textPrimary },
   modalApplyBtn: { flex: 2, backgroundColor: DARK_BLUE_ACCENT, padding: 16, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: DARK_BLUE_ACCENT },
-  modalApplyBtnText: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: theme.bgPrimary },
+  modalApplyBtnText: { fontFamily: theme.fonts.heading, fontSize: 14, fontWeight: 'bold', color: theme.bgPrimary },
 });

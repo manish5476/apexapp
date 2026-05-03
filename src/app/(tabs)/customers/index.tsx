@@ -19,6 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '../../../components/themed-text';
 import { ThemedView } from '../../../components/themed-view';
+import { AppLoader } from '@/src/components/AppLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -473,7 +474,7 @@ export default function CustomerListScreen() {
           }
           ListFooterComponent={
             isLoading && !isRefreshing ? (
-              <ActivityIndicator style={styles.loader} color={theme.accentPrimary} />
+              <View style={styles.loader}><AppLoader size={32} /></View>
             ) : (
               <View style={styles.footerSpace} />
             )
@@ -503,6 +504,7 @@ export default function CustomerListScreen() {
             ) : null
           }
         />
+        {isLoading && data.length === 0 && !isRefreshing && <AppLoader overlay text="Loading customers..." />}
       </SafeAreaView>
     </ThemedView>
   );
@@ -519,13 +521,13 @@ const createStyles = (theme: ThemeColors) =>
     },
 
     header: {
-      paddingHorizontal: Spacing['2xl'],
-      paddingTop: Spacing.lg,
-      paddingBottom: Spacing.lg,
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.md,
       flexDirection: 'row',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
-      gap: Spacing.lg,
+      gap: Spacing.md,
     },
     headerContent: {
       flex: 1,
@@ -577,9 +579,9 @@ const createStyles = (theme: ThemeColors) =>
     },
 
     toolbar: {
-      paddingHorizontal: Spacing['2xl'],
-      marginBottom: Spacing.lg,
-      gap: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+      gap: Spacing.sm,
     },
     searchShell: {
       backgroundColor: theme.bgSecondary,
@@ -595,8 +597,8 @@ const createStyles = (theme: ThemeColors) =>
       gap: Spacing.md,
       backgroundColor: theme.bgSecondary,
       borderRadius: UI.borderRadius.lg,
-      paddingHorizontal: Spacing.xl,
-      height: 50,
+      paddingHorizontal: Spacing.lg,
+      height: 48,
     },
     searchInput: {
       flex: 1,
@@ -628,8 +630,8 @@ const createStyles = (theme: ThemeColors) =>
     },
 
     listContent: {
-      paddingHorizontal: Spacing['2xl'],
-      paddingBottom: Spacing['2xl'],
+      paddingHorizontal: Spacing.lg,
+      paddingBottom: Spacing.xl,
     },
     loader: {
       marginVertical: Spacing['2xl'],
@@ -640,12 +642,12 @@ const createStyles = (theme: ThemeColors) =>
 
     card: {
       backgroundColor: theme.bgSecondary,
-      borderRadius: 24,
-      marginBottom: Spacing.lg,
+      borderRadius: 20,
+      marginBottom: Spacing.md,
       borderWidth: UI.borderWidth.thin,
       borderColor: theme.borderPrimary,
       overflow: 'hidden',
-      padding: Spacing.xl,
+      padding: Spacing.lg,
       ...getElevation(1, theme),
     },
     cardGlow: {
@@ -662,7 +664,7 @@ const createStyles = (theme: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.md,
-      marginBottom: Spacing.lg,
+      marginBottom: Spacing.md,
     },
     avatarShell: {
       width: 50,
@@ -766,8 +768,8 @@ const createStyles = (theme: ThemeColors) =>
     contactPanel: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: Spacing.sm,
-      marginBottom: Spacing.lg,
+      gap: Spacing.xs,
+      marginBottom: Spacing.md,
     },
     contactChip: {
       flexDirection: 'row',
@@ -793,8 +795,8 @@ const createStyles = (theme: ThemeColors) =>
 
     metricsRow: {
       flexDirection: 'row',
-      gap: Spacing.sm,
-      marginBottom: Spacing.lg,
+      gap: Spacing.xs,
+      marginBottom: Spacing.md,
     },
     metricCard: {
       flex: 1,
