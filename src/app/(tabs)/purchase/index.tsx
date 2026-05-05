@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Adjust these imports to your actual paths
 import { purchaseService } from '@/src/features/purchase/services/purchase.service';
+import { extractPurchaseList, extractPurchasePagination } from '@/src/api/PurchaseService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { getElevation, Spacing, Typography, UI } from '@/src/constants/theme';
@@ -212,26 +213,11 @@ export default function PurchaseListScreen() {
       };
 
       const res = await purchaseService.list(filters);
-      const responseBody = res.data;
-      
-      let fetchedItems = [];
-      let hasNext = false;
-
-      // Robust parsing based on the Angular app's response structure
-      if (responseBody.data && Array.isArray(responseBody.data.data)) {
-        fetchedItems = responseBody.data.data;
-      } else if (Array.isArray(responseBody.data)) {
-        fetchedItems = responseBody.data;
-      } else if (Array.isArray(responseBody)) {
-        fetchedItems = responseBody;
-      }
-
-      // Pagination parsing
-      if (responseBody.pagination) {
-        hasNext = !!responseBody.pagination.hasNextPage || (pageNum * 15 < responseBody.pagination.totalResults);
-      } else if (responseBody.data?.pagination) {
-        hasNext = !!responseBody.data.pagination.hasNextPage;
-      }
+      const fetchedItems = extractPurchaseList(res);
+      const pagination = extractPurchasePagination(res);
+      const hasNext = pagination
+        ? Boolean(pagination.hasNextPage) || pageNum * (pagination.limit || 15) < (pagination.totalResults || 0)
+        : fetchedItems.length >= 15;
 
       setPurchases(prev => (isRefresh || pageNum === 1 ? fetchedItems : [...prev, ...fetchedItems]));
       setHasNextPage(hasNext);

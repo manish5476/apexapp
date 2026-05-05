@@ -1,4 +1,4 @@
-import { PurchaseService } from '@/src/api/PurchaseService';
+import { PurchaseService, extractPurchaseList } from '@/src/api/PurchaseService';
 import { ThemedText } from '@/src/components/themed-text';
 import { getElevation, UI } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
@@ -111,8 +111,7 @@ export default function PurchaseReturnListScreen() {
 
     try {
       const res = await PurchaseService.getAllReturns();
-      const data = res.data?.data || res.data;
-      const fetchedItems = Array.isArray(data) ? data : (data.docs || []);
+      const fetchedItems = extractPurchaseList(res);
 
       setData(fetchedItems);
     } catch (err) {

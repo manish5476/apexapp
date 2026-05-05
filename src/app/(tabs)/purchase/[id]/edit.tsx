@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MasterDropdownService } from '@/src/api/masterDropdownService';
 import { AppDatePicker } from '@/src/components/AppDatePicker';
-import { PurchaseService } from '@/src/api/PurchaseService';
+import { PurchaseService, extractPurchaseItem } from '@/src/api/PurchaseService';
 import { SupplierService } from '@/src/api/supplierService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
@@ -189,7 +189,8 @@ export default function PurchaseFormScreen() {
     setIsLoading(true);
     try {
       const res = await PurchaseService.getPurchaseById(id);
-      const data = res.data?.data || res.data;
+      const data = extractPurchaseItem(res);
+      if (!data) throw new Error('Purchase not found');
 
       setInvoiceDetails({
         supplierId: data.supplierId?._id || data.supplierId,

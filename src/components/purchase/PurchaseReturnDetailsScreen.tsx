@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Adjust this path to match your actual theme file location
-import { PurchaseService } from '@/src/api/PurchaseService';
+import { PurchaseService, extractPurchaseItem } from '@/src/api/PurchaseService';
 import { getElevation, Spacing, Themes, Typography, UI } from '@/src/constants/theme';
 
 const theme = Themes.light;
@@ -44,7 +44,8 @@ export default function PurchaseReturnDetailsScreen() {
     setIsLoading(true);
     try {
       const res = await PurchaseService.getReturnById(id);
-      const data = res.data?.data || res.data;
+      const data = extractPurchaseItem(res);
+      if (!data) throw new Error('Debit note not found');
       setRet(data);
     } catch (err) {
       Alert.alert('Error', 'Failed to load Debit Note details.');

@@ -16,6 +16,47 @@ export interface PaymentPayload {
   [key: string]: any;
 }
 
+export const extractPurchaseList = (payload: any): any[] => {
+  const body = payload?.data ?? payload;
+  const candidates = [
+    body?.data?.data,
+    body?.data?.docs,
+    body?.data?.purchases,
+    body?.data,
+    body?.docs,
+    body?.purchases,
+    body,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+};
+
+export const extractPurchaseItem = (payload: any): any | null => {
+  const body = payload?.data ?? payload;
+  const candidates = [
+    body?.data?.data,
+    body?.data?.purchase,
+    body?.data,
+    body?.purchase,
+    body,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && !Array.isArray(candidate) && typeof candidate === 'object') return candidate;
+  }
+
+  return null;
+};
+
+export const extractPurchasePagination = (payload: any) => {
+  const body = payload?.data ?? payload;
+  return body?.pagination ?? body?.data?.pagination ?? null;
+};
+
 // =============================================================================
 // Purchase Service (Expo / React Native)
 // =============================================================================

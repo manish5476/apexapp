@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Adjust path to your design system
-import { PurchaseService } from '@/src/api/PurchaseService';
+import { PurchaseService, extractPurchaseItem, extractPurchaseList } from '@/src/api/PurchaseService';
 import { Spacing, Themes, Typography, UI } from '@/src/constants/theme';
 
 const theme = Themes.light;
@@ -84,8 +84,9 @@ export default function PurchaseDetailsScreen() {
         PurchaseService.getPaymentHistory(id)
       ]);
 
-      const data = purchaseRes.data?.data || purchaseRes.data;
-      const paymentsData = paymentsRes.data?.data?.payments || paymentsRes.data?.payments || paymentsRes.data || [];
+      const data = extractPurchaseItem(purchaseRes);
+      const paymentsData = paymentsRes.data?.data?.payments || paymentsRes.data?.payments || extractPurchaseList(paymentsRes);
+      if (!data) throw new Error('Purchase not found');
       
       setPurchase(data);
       setItems(data.items || []);
@@ -331,10 +332,12 @@ export default function PurchaseDetailsScreen() {
               {items.map((item, i) => (
                 <View key={i} style={styles.listItem}>
                   <View style={styles.listItemHeader}>
-                    <Text style={styles.itemTitle}>{item.productId?.name}</Text>
-                    <Text style={styles.itemTotal}>{formatCurrency(item.total)}</Text>
+                    <Text style={styles.itemTitle}>{item.productId?.name || item.name || 'Purchase item'}</Text>
+                    <Text style={styles.itemTotal}>
+                      {formatCurrency((item.quantity || 0) * (item.purchasePrice || 0) + ((item.quantity || 0) * (item.purchasePrice || 0) * (item.taxRate || 0)) / 100 - (item.discount || 0))}
+                    </Text>
                   </View>
-                  <Text style={styles.itemSub}>SKU: {item.productId?.sku}</Text>
+                  <Text style={styles.itemSub}>SKU: {item.productId?.sku || 'N/A'}</Text>
                   <View style={styles.itemMetricsRow}>
                     <Text style={styles.itemMetric}>Qty: {item.quantity}</Text>
                     <Text style={styles.itemMetric}>Price: ₹{item.purchasePrice}</Text>

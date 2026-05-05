@@ -1,4 +1,4 @@
-import { PurchaseService } from '@/src/api/PurchaseService';
+import { PurchaseService, extractPurchaseItem, extractPurchaseList } from '@/src/api/PurchaseService';
 import { Spacing, Themes, Typography, UI } from '@/src/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -70,10 +70,11 @@ export default function PurchaseReturnScreen() {
         PurchaseService.getAllReturns({ purchaseId: id, limit: 100 })
       ]);
 
-      const data = purchaseRes.data?.data || purchaseRes.data;
+      const data = extractPurchaseItem(purchaseRes);
+      if (!data) throw new Error('Purchase not found');
       setPurchase(data);
 
-      const pastReturns = returnsRes.data?.returns || returnsRes.data || [];
+      const pastReturns = returnsRes.data?.returns || extractPurchaseList(returnsRes);
       const returnedQtyMap: { [key: string]: number } = {};
       
       for (const r of pastReturns) {
