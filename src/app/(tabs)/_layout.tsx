@@ -11,16 +11,47 @@ import React from 'react';
 
 const theme = Themes.light;
 const DARK_BLUE_ACCENT = '#1d4ed8';
+const hiddenDrawerItem = { display: 'none' as const };
 
 export default function DrawerLayout() {
   useSocket();
   useNotifications();
-  const { hasPermission } = usePermissions();
-  const canReadBranch = hasPermission(PERMISSIONS.BRANCH.READ);
+  const { hasPermission, hasPermissions, loaded, isLoading } = usePermissions();
+  const permissionsReady = loaded || !isLoading;
+  const drawerVisibility = (allowed: boolean) => (permissionsReady && !allowed ? hiddenDrawerItem : undefined);
+
+  const canViewDashboard = hasPermission(PERMISSIONS.DASHBOARD.VIEW);
+  const canReadProducts = hasPermission(PERMISSIONS.PRODUCT.READ);
+  const canReadCustomers = hasPermission(PERMISSIONS.CUSTOMER.READ);
+  const canReadSales = hasPermission(PERMISSIONS.SALES.VIEW) || hasPermission(PERMISSIONS.SALES.MANAGE);
+  const canReadPurchases = hasPermission(PERMISSIONS.PURCHASE.READ);
+  const canReadInvoices = hasPermission(PERMISSIONS.INVOICE.READ);
+  const canReadPayments = hasPermission(PERMISSIONS.PAYMENT.READ);
+  const canReadTransactions = hasPermission(PERMISSIONS.TRANSACTION.READ);
+  const canReadSalesReturns = hasPermission(PERMISSIONS.SALES_RETURN.READ);
+  const canReadEmi = hasPermission(PERMISSIONS.EMI.READ);
+  const canReadLedger = hasPermission(PERMISSIONS.LEDGER.READ);
   const canReadAccounts = hasPermission(PERMISSIONS.ACCOUNT.READ);
-  const canReadHrms = hasPermission(PERMISSIONS.DEPARTMENT.READ) || hasPermission(PERMISSIONS.DESIGNATION.READ);
+  const canReadSuppliers = hasPermission(PERMISSIONS.SUPPLIER.READ);
+  const canReadHrms = hasPermissions(
+    [
+      PERMISSIONS.DEPARTMENT.READ,
+      PERMISSIONS.DESIGNATION.READ,
+      PERMISSIONS.SHIFT.READ,
+      PERMISSIONS.ATTENDANCE.READ,
+      PERMISSIONS.LEAVE.READ,
+      PERMISSIONS.USER.READ,
+    ],
+    'any'
+  );
+  const canReadAnalytics = hasPermission(PERMISSIONS.ANALYTICS.READ);
   const canReadNotes = hasPermission(PERMISSIONS.NOTE.READ);
   const canReadNotifications = hasPermission(PERMISSIONS.NOTIFICATION.READ);
+  const canReadMasterData = hasPermission(PERMISSIONS.MASTER.READ);
+  const canManageOrganization = hasPermission(PERMISSIONS.ORG.MANAGE);
+  const canReadBranch = hasPermission(PERMISSIONS.BRANCH.READ);
+  const canManageRoles = hasPermission(PERMISSIONS.ROLE.MANAGE);
+  const canViewSessions = hasPermission(PERMISSIONS.SESSION.VIEW_ALL);
 
   return (
     <Drawer
@@ -41,77 +72,129 @@ export default function DrawerLayout() {
       {/* ─── Primary Navigation ─────────────────────────────────────── */}
       <Drawer.Screen
         name="index"
-        options={{ title: 'Dashboard', drawerIcon: ({ color }) => <Ionicons name="grid-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Dashboard',
+          drawerItemStyle: drawerVisibility(canViewDashboard),
+          drawerIcon: ({ color }) => <Ionicons name="grid-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="product"
-        options={{ title: 'Products', drawerIcon: ({ color }) => <Ionicons name="cube-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Products',
+          drawerItemStyle: drawerVisibility(canReadProducts),
+          drawerIcon: ({ color }) => <Ionicons name="cube-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="customers"
-        options={{ title: 'Customers', drawerIcon: ({ color }) => <Ionicons name="people-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Customers',
+          drawerItemStyle: drawerVisibility(canReadCustomers),
+          drawerIcon: ({ color }) => <Ionicons name="people-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="sales"
-        options={{ title: 'Sales', drawerIcon: ({ color }) => <Ionicons name="receipt-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Sales',
+          drawerItemStyle: drawerVisibility(canReadSales),
+          drawerIcon: ({ color }) => <Ionicons name="receipt-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="purchase"
-        options={{ title: 'Purchases', drawerIcon: ({ color }) => <Ionicons name="bag-handle-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Purchases',
+          drawerItemStyle: drawerVisibility(canReadPurchases),
+          drawerIcon: ({ color }) => <Ionicons name="bag-handle-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="invoice"
-        options={{ title: 'Invoices', drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Invoices',
+          drawerItemStyle: drawerVisibility(canReadInvoices),
+          drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="payments"
-        options={{ title: 'Payments', drawerIcon: ({ color }) => <Ionicons name="card-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Payments',
+          drawerItemStyle: drawerVisibility(canReadPayments),
+          drawerIcon: ({ color }) => <Ionicons name="card-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="transactions"
-        options={{ title: 'Transactions', drawerIcon: ({ color }) => <Ionicons name="swap-horizontal-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Transactions',
+          drawerItemStyle: drawerVisibility(canReadTransactions),
+          drawerIcon: ({ color }) => <Ionicons name="swap-horizontal-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="salesReturn"
-        options={{ title: 'Sales Returns', drawerIcon: ({ color }) => <Ionicons name="arrow-undo-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Sales Returns',
+          drawerItemStyle: drawerVisibility(canReadSalesReturns),
+          drawerIcon: ({ color }) => <Ionicons name="arrow-undo-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="emi"
-        options={{ title: 'EMI Management', drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} /> }}
+        options={{
+          title: 'EMI Management',
+          drawerItemStyle: drawerVisibility(canReadEmi),
+          drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="ledger"
-        options={{ title: 'Ledger', drawerIcon: ({ color }) => <Ionicons name="book-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Ledger',
+          drawerItemStyle: drawerVisibility(canReadLedger),
+          drawerIcon: ({ color }) => <Ionicons name="book-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="accounts"
         options={{
           title: 'Accounts',
-          drawerItemStyle: canReadAccounts ? undefined : { display: 'none' },
+          drawerItemStyle: drawerVisibility(canReadAccounts),
           drawerIcon: ({ color }) => <Ionicons name="wallet-outline" size={20} color={color} />,
         }}
       />
       <Drawer.Screen
         name="suppliers"
-        options={{ title: 'Suppliers', drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Suppliers',
+          drawerItemStyle: drawerVisibility(canReadSuppliers),
+          drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="hrms"
         options={{
           title: 'HRMS',
-          drawerItemStyle: canReadHrms ? undefined : { display: 'none' },
+          drawerItemStyle: drawerVisibility(canReadHrms),
           drawerIcon: ({ color }) => <Ionicons name="people-circle-outline" size={20} color={color} />,
         }}
       />
       <Drawer.Screen
         name="analytics"
-        options={{ title: 'Analytics Hub', drawerIcon: ({ color }) => <Ionicons name="analytics-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Analytics Hub',
+          drawerItemStyle: drawerVisibility(canReadAnalytics),
+          drawerIcon: ({ color }) => <Ionicons name="analytics-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="notes"
         options={{
           title: 'Notes',
-          drawerItemStyle: canReadNotes ? undefined : { display: 'none' },
+          drawerItemStyle: drawerVisibility(canReadNotes),
           drawerIcon: ({ color }) => <Ionicons name="document-text-outline" size={20} color={color} />,
         }}
       />
@@ -119,7 +202,7 @@ export default function DrawerLayout() {
         name="notifications"
         options={{
           title: 'Notifications',
-          drawerItemStyle: canReadNotifications ? undefined : { display: 'none' },
+          drawerItemStyle: drawerVisibility(canReadNotifications),
           drawerIcon: ({ color }) => <Ionicons name="notifications-outline" size={20} color={color} />,
         }}
       />
@@ -127,18 +210,23 @@ export default function DrawerLayout() {
         name="master-data"
         options={{
           title: 'Master Data',
-          drawerIcon: ({ color }) => <Ionicons name="database-outline" size={20} color={color} />,
+          drawerItemStyle: drawerVisibility(canReadMasterData),
+          drawerIcon: ({ color }) => <Ionicons name="server-outline" size={20} color={color} />,
         }}
       />
       <Drawer.Screen
         name="organization"
-        options={{ title: 'Organization', drawerIcon: ({ color }) => <Ionicons name="settings-outline" size={20} color={color} /> }}
+        options={{
+          title: 'Organization',
+          drawerItemStyle: drawerVisibility(canManageOrganization),
+          drawerIcon: ({ color }) => <Ionicons name="settings-outline" size={20} color={color} />,
+        }}
       />
       <Drawer.Screen
         name="branch"
         options={{
           title: 'Branches',
-          drawerItemStyle: canReadBranch ? undefined : { display: 'none' },
+          drawerItemStyle: drawerVisibility(canReadBranch),
           drawerIcon: ({ color }) => <Ionicons name="business-outline" size={20} color={color} />,
         }}
       />
@@ -146,6 +234,7 @@ export default function DrawerLayout() {
         name="rolemanagement"
         options={{
           title: 'Roles & Permissions',
+          drawerItemStyle: drawerVisibility(canManageRoles),
           drawerIcon: ({ color }) => <Ionicons name="lock-closed-outline" size={20} color={color} />,
         }}
       />
@@ -153,6 +242,7 @@ export default function DrawerLayout() {
         name="sessions"
         options={{
           title: 'Active Sessions',
+          drawerItemStyle: drawerVisibility(canViewSessions),
           drawerIcon: ({ color }) => <Ionicons name="desktop-outline" size={20} color={color} />,
         }}
       />

@@ -53,6 +53,7 @@ export default function NotificationsScreen() {
   const [announcementLoading, setAnnouncementLoading] = useState(false);
   const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
   const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
+  const [showComposer, setShowComposer] = useState(false);
   const [targetSearch, setTargetSearch] = useState('');
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
 
@@ -101,6 +102,7 @@ export default function NotificationsScreen() {
     setForm(EMPTY_FORM);
     setSelectedTargetIds([]);
     setTargetSearch('');
+    setShowComposer(false);
   };
 
   const toggleTargetId = (id: string) => {
@@ -110,6 +112,7 @@ export default function NotificationsScreen() {
   const startEdit = (item: AnnouncementItem) => {
     if (!canManageAnnouncements) return;
     setActiveTab('announcements');
+    setShowComposer(true);
     setEditingAnnouncementId(item._id);
     setForm({
       title: item.title || '',
@@ -184,6 +187,158 @@ export default function NotificationsScreen() {
   };
 
   const targetOptions = form.targetAudience === 'role' ? roleDropdown.options : userDropdown.options;
+
+  const renderAnnouncementComposer = () => {
+    if (!canManageAnnouncements || activeTab !== 'announcements') return null;
+
+    if (!showComposer) {
+      return (
+        <TouchableOpacity
+          style={styles.newAnnouncementButton}
+          onPress={() => {
+            resetComposer();
+            setShowComposer(true);
+          }}
+        >
+          <Ionicons name="megaphone-outline" size={18} color={theme.bgPrimary} />
+          <ThemedText style={styles.newAnnouncementText}>New Announcement</ThemedText>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <View style={styles.announceComposer}>
+        <View style={styles.rowBetween}>
+          <View>
+            <ThemedText style={styles.composeTitle}>
+              {editingAnnouncementId ? 'Edit Announcement' : 'Create Announcement'}
+            </ThemedText>
+            <ThemedText style={styles.composeSubtitle}>Broadcast updates to everyone, selected roles, or specific users.</ThemedText>
+          </View>
+          <TouchableOpacity style={styles.iconButton} onPress={resetComposer}>
+            <Ionicons name="close-outline" size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formRow}>
+          <TextInput
+            value={form.title}
+            onChangeText={(title) => setForm((prev) => ({ ...prev, title }))}
+            placeholder="Title"
+            placeholderTextColor={theme.textTertiary}
+            style={styles.input}
+          />
+          <TextInput
+            value={form.type || 'info'}
+            onChangeText={(type) => setForm((prev) => ({ ...prev, type }))}
+            placeholder="Type: info, success, warning, urgent"
+            placeholderTextColor={theme.textTertiary}
+            style={styles.input}
+          />
+        </View>
+
+        <View style={styles.formRow}>
+          <TextInput
+            value={form.targetAudience || 'all'}
+            onChangeText={(targetAudience) => {
+              const next = targetAudience.toLowerCase();
+              setForm((prev) => ({ ...prev, targetAudience: next }));
+              setSelectedTargetIds([]);
+            }}
+            placeholder="Audience: all, role, specific"
+            placeholderTextColor={theme.textTertiary}
+            style={styles.input}
+          />
+          <TextInput
+            value={form.priority || 'low'}
+            onChangeText={(priority) => setForm((prev) => ({ ...prev, priority }))}
+            placeholder="Priority: low, medium, high"
+            placeholderTextColor={theme.textTertiary}
+            style={styles.input}
+          />
+        </View>
+
+        {form.targetAudience === 'role' || form.targetAudience === 'specific' ? (
+          <View style={styles.targetBox}>
+            <TextInput
+              value={targetSearch}
+              onChangeText={setTargetSearch}
+              placeholder={form.targetAudience === 'role' ? 'Search roles...' : 'Search users...'}
+              placeholderTextColor={theme.textTertiary}
+              style={styles.input}
+            />
+
+            <ScrollView style={styles.targetList} nestedScrollEnabled>
+              {targetOptions.map((option) => {
+                const checked = selectedTargetIds.includes(option.value);
+                return (
+                  <TouchableOpacity key={option.value} style={styles.targetRow} onPress={() => toggleTargetId(option.value)}>
+                    <Ionicons
+                      name={checked ? 'checkbox' : 'square-outline'}
+                      size={18}
+                      color={checked ? theme.accentPrimary : theme.textTertiary}
+                    />
+                    <ThemedText style={styles.targetLabel}>{option.label}</ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
+
+        {selectedTargetIds.length > 0 ? (
+          <View style={styles.selectedWrap}>
+            {selectedTargetIds.map((id) => (
+              <View key={id} style={styles.selectedChip}>
+                <ThemedText style={styles.selectedChipText}>{id}</ThemedText>
+                <TouchableOpacity onPress={() => toggleTargetId(id)}>
+                  <Ionicons name="close" size={14} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        <View style={styles.switchGroup}>
+          <ThemedText style={styles.switchLabel}>Pinned</ThemedText>
+          <Switch
+            value={Boolean(form.isPinned)}
+            onValueChange={(isPinned) => setForm((prev) => ({ ...prev, isPinned }))}
+            thumbColor={theme.bgPrimary}
+            trackColor={{ false: theme.borderPrimary, true: theme.accentPrimary }}
+          />
+          <ThemedText style={styles.switchLabel}>Urgent</ThemedText>
+          <Switch
+            value={Boolean(form.isUrgent)}
+            onValueChange={(isUrgent) => setForm((prev) => ({ ...prev, isUrgent }))}
+            thumbColor={theme.bgPrimary}
+            trackColor={{ false: theme.borderPrimary, true: theme.error }}
+          />
+        </View>
+
+        <TextInput
+          value={form.message}
+          onChangeText={(message) => setForm((prev) => ({ ...prev, message }))}
+          placeholder="Write announcement message..."
+          placeholderTextColor={theme.textTertiary}
+          style={[styles.input, styles.messageInput]}
+          multiline
+          textAlignVertical="top"
+        />
+
+        <TouchableOpacity style={styles.broadcastButton} disabled={sendingAnnouncement} onPress={submitAnnouncement}>
+          {sendingAnnouncement ? (
+            <ActivityIndicator size="small" color={theme.bgPrimary} />
+          ) : (
+            <>
+              <Ionicons name={editingAnnouncementId ? 'save-outline' : 'send-outline'} size={16} color={theme.bgPrimary} />
+              <ThemedText style={styles.broadcastText}>{editingAnnouncementId ? 'Update Announcement' : 'Broadcast Now'}</ThemedText>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const renderNotifications = () => (
     <FlatList
@@ -335,139 +490,7 @@ export default function NotificationsScreen() {
             </TouchableOpacity>
           </View>
 
-          {canManageAnnouncements ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.announceComposerWrap}>
-              <View style={styles.announceComposer}>
-                <View style={styles.rowBetween}>
-                  <ThemedText style={styles.composeTitle}>
-                    {editingAnnouncementId ? 'Edit Announcement' : 'Broadcast Announcement'}
-                  </ThemedText>
-                  {editingAnnouncementId ? (
-                    <TouchableOpacity onPress={resetComposer}>
-                      <ThemedText style={styles.cancelEditText}>Cancel Edit</ThemedText>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-
-                <View style={styles.formRow}>
-                  <TextInput
-                    value={form.title}
-                    onChangeText={(title) => setForm((prev) => ({ ...prev, title }))}
-                    placeholder="Title"
-                    placeholderTextColor={theme.textTertiary}
-                    style={styles.input}
-                  />
-                  <TextInput
-                    value={form.type || 'info'}
-                    onChangeText={(type) => setForm((prev) => ({ ...prev, type }))}
-                    placeholder="Type (info/success/warning/urgent)"
-                    placeholderTextColor={theme.textTertiary}
-                    style={styles.input}
-                  />
-                </View>
-
-                <View style={styles.formRow}>
-                  <TextInput
-                    value={form.targetAudience || 'all'}
-                    onChangeText={(targetAudience) => {
-                      const next = targetAudience.toLowerCase();
-                      setForm((prev) => ({ ...prev, targetAudience: next }));
-                      setSelectedTargetIds([]);
-                    }}
-                    placeholder="Audience (all/role/specific)"
-                    placeholderTextColor={theme.textTertiary}
-                    style={styles.input}
-                  />
-                  <TextInput
-                    value={form.priority || 'low'}
-                    onChangeText={(priority) => setForm((prev) => ({ ...prev, priority }))}
-                    placeholder="Priority (low/medium/high)"
-                    placeholderTextColor={theme.textTertiary}
-                    style={styles.input}
-                  />
-                </View>
-
-                {form.targetAudience === 'role' || form.targetAudience === 'specific' ? (
-                  <View style={styles.targetBox}>
-                    <TextInput
-                      value={targetSearch}
-                      onChangeText={setTargetSearch}
-                      placeholder={form.targetAudience === 'role' ? 'Search roles...' : 'Search users...'}
-                      placeholderTextColor={theme.textTertiary}
-                      style={styles.input}
-                    />
-
-                    <ScrollView style={styles.targetList}>
-                      {targetOptions.map((option) => {
-                        const checked = selectedTargetIds.includes(option.value);
-                        return (
-                          <TouchableOpacity key={option.value} style={styles.targetRow} onPress={() => toggleTargetId(option.value)}>
-                            <Ionicons
-                              name={checked ? 'checkbox' : 'square-outline'}
-                              size={18}
-                              color={checked ? theme.accentPrimary : theme.textTertiary}
-                            />
-                            <ThemedText style={styles.targetLabel}>{option.label}</ThemedText>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-                  </View>
-                ) : null}
-
-                {selectedTargetIds.length > 0 ? (
-                  <View style={styles.selectedWrap}>
-                    {selectedTargetIds.map((id) => (
-                      <View key={id} style={styles.selectedChip}>
-                        <ThemedText style={styles.selectedChipText}>{id}</ThemedText>
-                        <TouchableOpacity onPress={() => toggleTargetId(id)}>
-                          <Ionicons name="close" size={14} color={theme.textSecondary} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-
-                <View style={styles.switchGroup}>
-                  <ThemedText style={styles.switchLabel}>Pinned</ThemedText>
-                  <Switch
-                    value={Boolean(form.isPinned)}
-                    onValueChange={(isPinned) => setForm((prev) => ({ ...prev, isPinned }))}
-                    thumbColor={theme.bgPrimary}
-                    trackColor={{ false: theme.borderPrimary, true: theme.accentPrimary }}
-                  />
-                  <ThemedText style={styles.switchLabel}>Urgent</ThemedText>
-                  <Switch
-                    value={Boolean(form.isUrgent)}
-                    onValueChange={(isUrgent) => setForm((prev) => ({ ...prev, isUrgent }))}
-                    thumbColor={theme.bgPrimary}
-                    trackColor={{ false: theme.borderPrimary, true: theme.error }}
-                  />
-                </View>
-
-                <TextInput
-                  value={form.message}
-                  onChangeText={(message) => setForm((prev) => ({ ...prev, message }))}
-                  placeholder="Write announcement message..."
-                  placeholderTextColor={theme.textTertiary}
-                  style={[styles.input, styles.messageInput]}
-                  multiline
-                  textAlignVertical="top"
-                />
-
-                <TouchableOpacity style={styles.broadcastButton} disabled={sendingAnnouncement} onPress={submitAnnouncement}>
-                  {sendingAnnouncement ? (
-                    <ActivityIndicator size="small" color={theme.bgPrimary} />
-                  ) : (
-                    <>
-                      <Ionicons name={editingAnnouncementId ? 'save-outline' : 'megaphone-outline'} size={16} color={theme.bgPrimary} />
-                      <ThemedText style={styles.broadcastText}>{editingAnnouncementId ? 'Update Announcement' : 'Broadcast Now'}</ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          ) : null}
+          {renderAnnouncementComposer()}
 
           <View style={styles.body}>{activeTab === 'notifications' ? renderNotifications() : renderAnnouncements()}</View>
         </SafeAreaView>
@@ -579,38 +602,61 @@ const createStyles = (theme: ThemeColors) =>
       color: theme.accentPrimary,
       fontWeight: Typography.weight.bold,
     },
-    announceComposerWrap: {
+    newAnnouncementButton: {
+      margin: Spacing.md,
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      backgroundColor: theme.accentPrimary,
+      borderRadius: UI.borderRadius.md,
       paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.md,
+      paddingVertical: Spacing.sm,
+    },
+    newAnnouncementText: {
+      color: theme.bgPrimary,
+      fontWeight: Typography.weight.bold,
+    },
+    iconButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: theme.bgSecondary,
+      borderWidth: 1,
+      borderColor: theme.borderPrimary,
     },
     announceComposer: {
-      minWidth: 760,
-      width: '100%',
+      marginHorizontal: Spacing.md,
+      marginVertical: Spacing.md,
       backgroundColor: theme.bgPrimary,
       borderRadius: UI.borderRadius.lg,
       borderWidth: 1,
       borderColor: theme.borderPrimary,
       padding: Spacing.md,
-      gap: Spacing.sm,
+      gap: Spacing.md,
       ...getElevation(1, theme),
     },
     composeTitle: {
       color: theme.textPrimary,
       fontWeight: Typography.weight.bold,
     },
-    cancelEditText: {
-      color: theme.warning,
-      fontWeight: Typography.weight.bold,
+    composeSubtitle: {
+      marginTop: 2,
+      color: theme.textSecondary,
       fontSize: Typography.size.xs,
+      maxWidth: 520,
     },
     formRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'stretch',
+      flexWrap: 'wrap',
       gap: Spacing.sm,
     },
     input: {
       flex: 1,
+      minWidth: 220,
       backgroundColor: theme.bgSecondary,
       borderWidth: 1,
       borderColor: theme.borderPrimary,
@@ -789,4 +835,3 @@ const createStyles = (theme: ThemeColors) =>
       color: theme.textSecondary,
     },
   });
-

@@ -1,6 +1,7 @@
-import { Stack } from 'expo-router';
 import React from 'react';
+import { ProtectedStackLayout } from '@/src/components/permission/ProtectedStackLayout';
+import { PERMISSIONS } from '@/src/constants/permissions';
 
 export default function DesignationsLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <ProtectedStackLayout permissions={[PERMISSIONS.DESIGNATION.READ]} />;
 }

@@ -17,7 +17,7 @@ export function NotificationBell() {
     <TouchableOpacity
       activeOpacity={0.82}
       style={styles.button}
-      onPress={() => router.push('/(tabs)/notifications/index' as any)}
+      onPress={() => router.push('/(tabs)/notifications' as any)}
     >
       <Ionicons name="notifications-outline" size={20} color={theme.textPrimary} />
       {unreadCount > 0 ? (

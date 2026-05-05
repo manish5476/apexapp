@@ -41,11 +41,17 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
     }
   },
   clear: () => set({ permissions: [], isLoading: false, loaded: false }),
-  hasPermission: (permission) => (!permission ? true : get().permissions.includes(permission)),
+  hasPermission: (permission) => {
+    if (!permission) return true;
+    const permissions = get().permissions;
+    if (permissions.includes('*') || permissions.includes(permission)) return true;
+    const [resource] = permission.split(':');
+    return Boolean(resource && permissions.includes(`${resource}:*`));
+  },
   hasPermissions: (permissions, mode = 'all') =>
     permissions.length === 0
       ? true
       : mode === 'all'
-        ? permissions.every((permission) => get().permissions.includes(permission))
-        : permissions.some((permission) => get().permissions.includes(permission)),
+        ? permissions.every((permission) => get().hasPermission(permission))
+        : permissions.some((permission) => get().hasPermission(permission)),
 }));

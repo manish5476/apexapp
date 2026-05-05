@@ -49,6 +49,8 @@ export const PERMISSIONS = {
     GEOFENCE_MANAGE: 'attendance:geofence_manage',
   },
   HOLIDAY: { READ: 'holiday:read', MANAGE: 'holiday:manage' },
+  STATEMENT: { READ: 'statement:read' },
+  TRANSACTION: { READ: 'transaction:read' },
   PAYMENT: {
     READ: 'payment:read',
     CREATE: 'payment:create',

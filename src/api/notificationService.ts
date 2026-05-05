@@ -24,6 +24,6 @@ export const NotificationService = {
     extractNotifications(await apiClient.get('/v1/notifications', { params: params ?? {} })),
   markAsRead: (id: string) => apiClient.patch(`/v1/notifications/${id}/read`, {}),
   markManyAsRead: (notificationIds: string[]) => apiClient.patch('/v1/notifications/mark-read', { notificationIds }),
-  markAllAsRead: () => apiClient.patch('/v1/notifications/read-all', {}),
+  markAllAsRead: () => apiClient.patch('/v1/notifications/mark-all-read', {}),
   deleteNotification: (id: string) => apiClient.delete(`/v1/notifications/${id}`),
 };

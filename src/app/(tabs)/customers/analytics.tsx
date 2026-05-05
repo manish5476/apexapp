@@ -10,6 +10,9 @@ import { ThemedText } from '@/src/components/themed-text';
 import { Spacing, Typography, UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { AppLoader } from '@/src/components/AppLoader';
+import { NotificationBell } from '@/src/components/navigation/notification-bell';
+import { PERMISSIONS } from '@/src/constants/permissions';
+import { usePermissions } from '@/src/hooks/use-permissions';
 type TabType = 'overview' | 'financials' | 'payment' | 'ltv' | 'segmentation' | 'geo';
 type OverviewData = {
   overview?: {
@@ -104,6 +107,8 @@ const clamp = (value: number, min = 0, max = 100) => Math.min(Math.max(value, mi
 export default function CustomerAnalyticsScreen() {
   const theme = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { hasPermission } = usePermissions();
+  const canReadNotifications = hasPermission(PERMISSIONS.NOTIFICATION.READ);
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [refreshing, setRefreshing] = useState(false);
@@ -378,9 +383,12 @@ export default function CustomerAnalyticsScreen() {
           <ThemedText style={styles.headerSub}>360 view · behaviour · lifetime value · financials</ThemedText>
         </View>
       </View>
-      <TouchableOpacity style={styles.refreshBtn} onPress={() => void loadAll()} disabled={anyLoading}>
-        <Ionicons name="refresh" size={18} color={theme.textSecondary} />
-      </TouchableOpacity>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <TouchableOpacity style={styles.refreshBtn} onPress={() => void loadAll()} disabled={anyLoading}>
+          <Ionicons name="refresh" size={18} color={theme.textSecondary} />
+        </TouchableOpacity>
+        {canReadNotifications && <NotificationBell />}
+      </View>
     </View>
   );
 

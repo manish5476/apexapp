@@ -130,3 +130,7 @@ export const HRMS_MODULES: HrmsModuleConfig[] = [
 ];
 
 export const getHrmsModuleConfig = (key?: string) => HRMS_MODULES.find((module) => module.key === key);
+
+export default function HrmsModuleConfigRoute() {
+  return null;
+}

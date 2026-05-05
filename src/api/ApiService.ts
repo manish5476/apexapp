@@ -304,7 +304,7 @@ export const ApiService = {
   // ======================== NOTIFICATIONS ========================
 
   getMyNotifications: (params?: any) => {
-    return apiClient.get('/v1/notifications/my-notifications', { params: params || {} });
+    return apiClient.get('/v1/notifications', { params: params || {} });
   },
 
   markNotificationAsRead: (id: string) => {
@@ -312,7 +312,7 @@ export const ApiService = {
   },
 
   markAllNotificationsAsRead: () => {
-    return apiClient.patch('/v1/notifications/read-all', {});
+    return apiClient.patch('/v1/notifications/mark-all-read', {});
   },
 
   // ======================== HRMS ROUTES ========================
