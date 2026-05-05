@@ -12,7 +12,8 @@ const canReadNotifications = (permissions: string[]) =>
   permissions.includes('notification:*');
 
 export function useNotifications() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
+  const isFullAccess = Boolean(user?.isOwner || user?.isSuperAdmin || user?.role?.isSuperAdmin);
   const permissions = usePermissionStore((state) => state.permissions);
   const permissionsLoaded = usePermissionStore((state) => state.loaded);
   const loadPermissions = usePermissionStore((state) => state.loadPermissions);
@@ -34,12 +35,12 @@ export function useNotifications() {
       return;
     }
 
-    if (!permissionsLoaded) {
+    if (!isFullAccess && !permissionsLoaded) {
       loadPermissions().catch(() => {});
       return;
     }
 
-    if (!canReadNotifications(permissions)) {
+    if (!isFullAccess && !canReadNotifications(permissions)) {
       clear();
       return;
     }
@@ -54,7 +55,7 @@ export function useNotifications() {
     return () => {
       socketService.off('newNotification', handleLiveNotification);
     };
-  }, [isAuthenticated, permissions, permissionsLoaded, loadPermissions, clear, loadNotifications, receiveNotification]);
+  }, [isAuthenticated, isFullAccess, permissions, permissionsLoaded, loadPermissions, clear, loadNotifications, receiveNotification]);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.isRead).length,

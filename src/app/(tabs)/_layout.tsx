@@ -16,8 +16,8 @@ const hiddenDrawerItem = { display: 'none' as const };
 export default function DrawerLayout() {
   useSocket();
   useNotifications();
-  const { hasPermission, hasPermissions, loaded, isLoading } = usePermissions();
-  const permissionsReady = loaded || !isLoading;
+  const { hasPermission, hasPermissions, loaded, isFullAccess } = usePermissions();
+  const permissionsReady = isFullAccess || loaded;
   const drawerVisibility = (allowed: boolean) => (permissionsReady && !allowed ? hiddenDrawerItem : undefined);
 
   const canViewDashboard = hasPermission(PERMISSIONS.DASHBOARD.VIEW);

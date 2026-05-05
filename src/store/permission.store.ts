@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ApiService } from '@/src/api/ApiService';
+import { useAuthStore } from '@/src/store/auth.store';
 import type { Permission, PermissionMode } from '@/src/constants/permissions';
 
 interface PermissionState {
@@ -12,7 +13,16 @@ interface PermissionState {
   hasPermissions: (permissions: Permission[], mode?: PermissionMode) => boolean;
 }
 
+const hasFullAccessUserFlag = () => {
+  const user = useAuthStore.getState().user;
+  return Boolean(user?.isOwner || user?.isSuperAdmin || user?.role?.isSuperAdmin);
+};
+
 const extractPermissions = (payload: any): Permission[] => {
+  if (payload?.data?.isOwner || payload?.data?.isSuperAdmin || payload?.isOwner || payload?.isSuperAdmin) {
+    return ['*'];
+  }
+
   const candidates = [payload?.data?.permissions, payload?.permissions, payload?.data, payload?.data?.data?.permissions];
   for (const candidate of candidates) {
     if (Array.isArray(candidate)) {
@@ -43,13 +53,14 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
   clear: () => set({ permissions: [], isLoading: false, loaded: false }),
   hasPermission: (permission) => {
     if (!permission) return true;
+    if (hasFullAccessUserFlag()) return true;
     const permissions = get().permissions;
     if (permissions.includes('*') || permissions.includes(permission)) return true;
     const [resource] = permission.split(':');
     return Boolean(resource && permissions.includes(`${resource}:*`));
   },
   hasPermissions: (permissions, mode = 'all') =>
-    permissions.length === 0
+    hasFullAccessUserFlag() || permissions.length === 0
       ? true
       : mode === 'all'
         ? permissions.every((permission) => get().hasPermission(permission))

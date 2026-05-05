@@ -4,8 +4,9 @@ import { usePermissionStore } from '@/src/store/permission.store';
 import type { Permission, PermissionMode } from '@/src/constants/permissions';
 
 export function usePermissions() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { permissions, isLoading, loaded, loadPermissions, clear, hasPermission, hasPermissions } = usePermissionStore();
+  const isFullAccess = Boolean(user?.isOwner || user?.isSuperAdmin || user?.role?.isSuperAdmin);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -19,6 +20,7 @@ export function usePermissions() {
     permissions,
     isLoading,
     loaded,
+    isFullAccess,
     reloadPermissions: () => loadPermissions(true),
     hasPermission: (permission?: Permission | null) => hasPermission(permission),
     hasPermissions: (required: Permission[], mode?: PermissionMode) => hasPermissions(required, mode),
