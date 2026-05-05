@@ -1,5 +1,5 @@
 import { getElevation, Spacing, ThemeColors, Typography, UI } from '@/src/constants/theme';
-import { useNotifications } from '@/src/hooks/use-notifications';
+import { NotificationBell } from '@/src/components/navigation/notification-bell';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { AdminAnalyticsService } from '@/src/api/AdminAnalyticsService';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,7 +64,6 @@ function fmt(v?: number): string {
 
 export default function HomeScreen() {
   const { user, organization } = useAuthStore();
-  const { unreadCount } = useNotifications();
   const currentTheme = useAppTheme();
   const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
 
@@ -120,14 +119,7 @@ export default function HomeScreen() {
               <ThemedText style={styles.welcomeText}>{greeting}</ThemedText>
               <ThemedText style={styles.nameText}>{firstName}</ThemedText>
             </View>
-            <TouchableOpacity
-              style={styles.notificationBtn}
-              activeOpacity={0.7}
-              onPress={() => router.push('/(tabs)/notifications' as any)}
-            >
-              <Ionicons name="notifications-outline" size={Typography.size['3xl']} color={currentTheme.textPrimary} />
-              {unreadCount > 0 ? <View style={styles.notificationBadge} /> : null}
-            </TouchableOpacity>
+            <NotificationBell />
           </View>
 
           {/* Org Hero Card */}
@@ -198,8 +190,6 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing['3xl'], marginTop: Spacing.md },
   welcomeText: { fontFamily: theme.fonts.body, fontSize: Typography.size.lg, color: theme.textTertiary },
   nameText: { fontFamily: theme.fonts.heading, fontSize: Typography.size['4xl'], fontWeight: Typography.weight.bold, color: theme.textPrimary, letterSpacing: -0.5 },
-  notificationBtn: { width: 52, height: 52, borderRadius: UI.borderRadius.pill, backgroundColor: theme.bgSecondary, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary, alignItems: 'center', justifyContent: 'center', ...getElevation(1, theme) },
-  notificationBadge: { position: 'absolute', top: 14, right: 14, width: 10, height: 10, borderRadius: UI.borderRadius.pill, backgroundColor: theme.error, borderWidth: UI.borderWidth.base, borderColor: theme.bgSecondary },
   statusCard: { backgroundColor: theme.textPrimary, borderRadius: UI.borderRadius.xl, padding: Spacing['2xl'], marginBottom: Spacing['3xl'], ...getElevation(3, theme) },
   statusHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   orgInfo: { flex: 1 },

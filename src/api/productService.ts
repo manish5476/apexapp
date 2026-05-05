@@ -34,6 +34,30 @@ export interface ScanProductPayload {
   barcode: string;
 }
 
+export const extractProductList = (payload: any): any[] => {
+  const body = payload?.data ?? payload;
+  const candidates = [
+    body?.data?.data,
+    body?.data?.products,
+    body?.data?.docs,
+    body?.data,
+    body?.products,
+    body?.docs,
+    body,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+};
+
+export const extractProductPagination = (payload: any) => {
+  const body = payload?.data ?? payload;
+  return body?.pagination ?? body?.data?.pagination ?? null;
+};
+
 // =============================================================================
 // Product Service
 // =============================================================================

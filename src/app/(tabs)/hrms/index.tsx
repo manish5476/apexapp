@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { NotificationBell } from '@/src/components/navigation/notification-bell';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,11 +24,14 @@ export default function HrmsScreen() {
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
           <View style={styles.header}>
-            <View>
-              <ThemedText style={styles.title}>HRMS</ThemedText>
-              <ThemedText style={styles.subtitle}>
-                Module directory based on your role permissions
-              </ThemedText>
+            <View style={styles.headerContent}>
+              <View>
+                <ThemedText style={styles.title}>HRMS</ThemedText>
+                <ThemedText style={styles.subtitle}>
+                  Module directory based on your role permissions
+                </ThemedText>
+              </View>
+              <NotificationBell />
             </View>
           </View>
           <ScrollView contentContainerStyle={styles.content}>
@@ -72,6 +76,11 @@ const createStyles = (theme: ThemeColors) =>
       backgroundColor: theme.bgPrimary,
       borderBottomWidth: 1,
       borderBottomColor: theme.borderPrimary,
+    },
+    headerContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
     title: {
       color: theme.textPrimary,

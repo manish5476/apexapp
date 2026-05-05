@@ -46,6 +46,30 @@ export interface UpdateCreditLimitPayload {
   creditLimit: number;
 }
 
+export const extractCustomerList = (payload: any): any[] => {
+  const body = payload?.data ?? payload;
+  const candidates = [
+    body?.data?.data,
+    body?.data?.customers,
+    body?.data?.docs,
+    body?.data,
+    body?.customers,
+    body?.docs,
+    body,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+};
+
+export const extractCustomerPagination = (payload: any) => {
+  const body = payload?.data ?? payload;
+  return body?.pagination ?? body?.data?.pagination ?? null;
+};
+
 // =============================================================================
 // Customer Service
 // =============================================================================

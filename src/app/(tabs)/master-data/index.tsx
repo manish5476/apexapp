@@ -1,6 +1,7 @@
 import { Spacing, Themes, Typography, UI, getElevation } from '@/src/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { NotificationBell } from '@/src/components/navigation/notification-bell';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -331,7 +332,9 @@ export default function MasterDataScreen() {
               <Text style={styles.pageTitle}>Master Data</Text>
               <Text style={styles.pageSubtitle}>Configuration Hub</Text>
             </View>
-            <View style={styles.headerActions}>
+            <NotificationBell />
+          </View>
+          <View style={[styles.headerActions, { marginTop: Spacing.md }]}>
               <TouchableOpacity style={styles.iconBtn} onPress={() => fetchData(true)}>
                 <Ionicons name="refresh" size={22} color={DARK_BLUE_ACCENT} />
               </TouchableOpacity>
@@ -344,7 +347,6 @@ export default function MasterDataScreen() {
                 <Text style={styles.primaryBtnText}>Add New</Text>
               </TouchableOpacity>
             </View>
-          </View>
 
           {/* SEARCH & STATS */}
           <View style={styles.searchRow}>

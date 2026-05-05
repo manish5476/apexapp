@@ -1,7 +1,11 @@
 import { AppLoader } from '@/src/components/AppLoader';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { customerService } from '@/src/features/customer/services/customer.service';
+import { extractCustomerList, extractCustomerPagination } from '@/src/api/customerService';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
+import { NotificationBell } from '@/src/components/navigation/notification-bell';
+import { PERMISSIONS } from '@/src/constants/permissions';
+import { usePermissions } from '@/src/hooks/use-permissions';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -244,31 +248,33 @@ const CustomerCard = React.memo(
             </View>
 
             <View style={styles.metricCard}>
-              <ThemedText style={styles.metricLabel}>Invoices</ThemedText>
+              <ThemedText style={styles.metricLabel}>Purchases</ThemedText>
               <ThemedText
                 style={[
                   styles.metricValueStrong,
                   {
                     color:
-                      (item.invoiceCount || 0) > 0 ? theme.accentPrimary : theme.textTertiary,
+                      (item.totalPurchases || 0) > 0 ? theme.accentPrimary : theme.textTertiary,
                   },
                 ]}
               >
-                {item.invoiceCount || 0}
+                {item.totalPurchases > 0 ? formatCurrency(item.totalPurchases) : '0'}
               </ThemedText>
             </View>
           </View>
 
           <View style={styles.actionRow}>
-            {item.gstNumber ? (
+            {item.gstNumber || item.panNumber ? (
               <View style={styles.docStrip}>
                 <Ionicons name="shield-checkmark-outline" size={12} color={theme.textTertiary} />
-                <ThemedText style={styles.docText} numberOfLines={1}>
-                  GST {item.gstNumber}
-                </ThemedText>
+                {item.gstNumber ? (
+                  <ThemedText style={styles.docText} numberOfLines={1}>
+                    GST {item.gstNumber}
+                  </ThemedText>
+                ) : null}
                 {item.panNumber ? (
                   <>
-                    <View style={styles.dot} />
+                    {item.gstNumber ? <View style={styles.dot} /> : null}
                     <ThemedText style={styles.docText} numberOfLines={1}>
                       PAN {item.panNumber}
                     </ThemedText>
@@ -309,6 +315,8 @@ CustomerCard.displayName = 'CustomerCard';
 export default function CustomerListScreen() {
   const theme = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { hasPermission } = usePermissions();
+  const canReadNotifications = hasPermission(PERMISSIONS.NOTIFICATION.READ);
 
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -331,8 +339,8 @@ export default function CustomerListScreen() {
         limit: pageSize,
       })) as any;
 
-      const fetchedData = res.data?.data || [];
-      const pagination = res.pagination;
+      const fetchedData = extractCustomerList(res);
+      const pagination = extractCustomerPagination(res);
 
       setHasNextPage(pagination?.hasNextPage ?? false);
       setTotalCount(pagination?.totalResults ?? 0);
@@ -415,13 +423,16 @@ export default function CustomerListScreen() {
             </ThemedText>
           </View>
 
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => router.push('/(tabs)/customers/create' as any)}
-            activeOpacity={0.88}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            {canReadNotifications && <NotificationBell />}
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => router.push('/(tabs)/customers/create' as any)}
+              activeOpacity={0.88}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.toolbar}>
@@ -575,6 +586,11 @@ const createStyles = (theme: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       ...getElevation(3, theme),
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
     },
 
     toolbar: {

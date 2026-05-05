@@ -1,4 +1,5 @@
 import { productService } from '@/src/features/product/services/product.service';
+import { extractProductList, extractProductPagination } from '@/src/api/productService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
@@ -7,6 +8,7 @@ import { useMasterDropdown } from '@/src/hooks/use-master-dropdown';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
+import { NotificationBell } from '@/src/components/navigation/notification-bell';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
@@ -34,6 +36,7 @@ export default function ProductListScreen() {
   const [products, setProducts] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -65,10 +68,12 @@ export default function ProductListScreen() {
       };
 
       const res = await productService.list(params) as any;
-      const newData = res.data?.data || res.data || [];
+      const newData = extractProductList(res);
+      const pagination = extractProductPagination(res);
       
-      setProducts(isRefresh || pageNum === 1 ? newData : [...products, ...newData]);
-      setHasNextPage(res.pagination?.hasNextPage ?? (newData.length === 20));
+      setProducts((prev) => (isRefresh || pageNum === 1 ? newData : [...prev, ...newData]));
+      setHasNextPage(pagination?.hasNextPage ?? (newData.length === 20));
+      setTotalCount(pagination?.totalResults ?? (isRefresh || pageNum === 1 ? newData.length : totalCount));
       setPage(pageNum);
     } catch (err: any) {
       Alert.alert('Error', err.response?.data?.message || 'Failed to load products.');
@@ -195,7 +200,7 @@ export default function ProductListScreen() {
     const isLow = totalStock > 0 && totalStock <= reorderLevel;
     
     const avatar = getAvatarStyle(item.name);
-    const imageUrl = item.images?.[0];
+    const imageUrl = item.images?.[0] || item.imageAssets?.[0]?.url;
 
     // Margin Calculation
     const buy = item.purchasePrice || 0;
@@ -206,7 +211,7 @@ export default function ProductListScreen() {
       <TouchableOpacity 
         style={[styles.card, !item.isActive && { opacity: 0.6 }]} 
         activeOpacity={0.7} 
-        onPress={() => router.push(`/product/${item._id}` as any)}
+        onPress={() => router.push(`/(tabs)/product/${item._id}` as any)}
         onLongPress={() => handleLongPress(item)}
       >
         <View style={styles.cardLayout}>
@@ -231,16 +236,17 @@ export default function ProductListScreen() {
             
             <View style={styles.metaRow}>
               <ThemedText style={styles.skuText}>{item.sku || 'No SKU'}</ThemedText>
-              {item.categoryId?.name && (
+              {(item.categoryId?.name || item.tags?.[0]) && (
                 <>
                   <ThemedText style={styles.metaDot}>•</ThemedText>
-                  <ThemedText style={styles.categoryText}>{item.categoryId.name}</ThemedText>
+                  <ThemedText style={styles.categoryText}>{item.categoryId?.name || item.tags[0]}</ThemedText>
                 </>
               )}
             </View>
 
             <View style={styles.financialRow}>
               <ThemedText style={styles.priceText}>{formatCurrency(item.sellingPrice)}</ThemedText>
+              <ThemedText style={styles.taxText}>Tax {item.taxRate || 0}%</ThemedText>
               <View style={[styles.marginBadge, margin > 20 ? styles.marginGood : margin < 10 ? styles.marginLow : styles.marginOk]}>
                 <ThemedText style={[styles.marginText, margin > 20 ? styles.marginTextGood : margin < 10 ? styles.marginTextLow : styles.marginTextOk]}>
                   {margin > 20 ? '↑' : margin < 10 ? '↓' : '→'} {margin.toFixed(1)}%
@@ -272,15 +278,18 @@ export default function ProductListScreen() {
           <View style={styles.headerTop}>
             <View>
               <ThemedText style={styles.pageTitle}>Products</ThemedText>
-              <ThemedText style={styles.pageSubtitle}>Manage inventory & pricing</ThemedText>
+              <ThemedText style={styles.pageSubtitle}>
+                {totalCount > 0 ? `${totalCount} products in inventory` : 'Manage inventory & pricing'}
+              </ThemedText>
             </View>
-            <View style={styles.headerActions}>
+            <NotificationBell />
+          </View>
+          <View style={[styles.headerActions, { marginTop: Spacing.md }]}>
               <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/product/create' as any)}>
                 <Ionicons name="add" size={20} color={theme.bgSecondary} />
                 <ThemedText style={styles.primaryBtnText}>New</ThemedText>
               </TouchableOpacity>
             </View>
-          </View>
 
           {/* SEARCH BAR */}
           <View style={styles.searchRow}>
@@ -403,7 +412,7 @@ export default function ProductListScreen() {
             <View style={styles.actionHeader}>
               <ThemedText style={styles.actionTitle} numberOfLines={1}>{selectedProduct?.name}</ThemedText>
             </View>
-            <TouchableOpacity style={styles.actionItem} onPress={() => { setSelectedProduct(null); router.push(`/product/${selectedProduct?._id}` as any); }}>
+            <TouchableOpacity style={styles.actionItem} onPress={() => { setSelectedProduct(null); router.push(`/(tabs)/product/${selectedProduct?._id}/edit` as any); }}>
               <Ionicons name="create-outline" size={20} color={theme.textPrimary} />
               <ThemedText style={styles.actionItemText}>Edit Product</ThemedText>
             </TouchableOpacity>
@@ -498,6 +507,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
 
   financialRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   priceText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.success },
+  taxText: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: theme.textTertiary },
   marginBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   marginText: { fontFamily: theme.fonts?.mono, fontSize: 10, fontWeight: Typography.weight.bold },
   marginGood: { backgroundColor: '#EAF3DE' }, marginTextGood: { color: '#27500A' },
