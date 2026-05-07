@@ -276,20 +276,20 @@ export default function ProductListScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <View>
-              <ThemedText style={styles.pageTitle}>Products</ThemedText>
-              <ThemedText style={styles.pageSubtitle}>
-                {totalCount > 0 ? `${totalCount} products in inventory` : 'Manage inventory & pricing'}
+            <View style={{ flex: 1, paddingRight: Spacing.md }}>
+              <ThemedText style={styles.pageTitle} numberOfLines={1}>Products</ThemedText>
+              <ThemedText style={styles.pageSubtitle} numberOfLines={1}>
+                {totalCount > 0 ? `${totalCount} products` : 'Inventory'}
               </ThemedText>
             </View>
-            <NotificationBell />
-          </View>
-          <View style={[styles.headerActions, { marginTop: Spacing.md }]}>
+            <View style={styles.headerRightActions}>
               <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/product/create' as any)}>
                 <Ionicons name="add" size={20} color={theme.bgSecondary} />
                 <ThemedText style={styles.primaryBtnText}>New</ThemedText>
               </TouchableOpacity>
+              <NotificationBell />
             </View>
+          </View>
 
           {/* SEARCH BAR */}
           <View style={styles.searchRow}>
@@ -468,12 +468,12 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   
   // HEADER
   header: { backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, paddingBottom: Spacing.lg, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xl },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
   pageTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size['3xl'], fontWeight: Typography.weight.bold, color: theme.textPrimary, letterSpacing: -0.5 },
   pageSubtitle: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, color: theme.textSecondary, marginTop: 2 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.accentPrimary, paddingHorizontal: Spacing.lg, height: 44, borderRadius: UI.borderRadius.pill, gap: Spacing.xs, ...getElevation(1, theme) },
-  primaryBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, color: theme.bgSecondary },
+  headerRightActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flexShrink: 0, flexWrap: 'nowrap' },
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.accentPrimary, paddingHorizontal: Spacing.md, height: 38, borderRadius: UI.borderRadius.pill, gap: Spacing.xs, ...getElevation(1, theme) },
+  primaryBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: theme.bgSecondary },
   
   searchRow: { flexDirection: 'row', gap: Spacing.md },
   searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.bgSecondary, height: 48, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },

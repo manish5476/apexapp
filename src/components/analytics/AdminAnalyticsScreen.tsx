@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MasterDropdown } from '@/src/components/MasterDropdown';
 
 type Props = { slug: string };
 
@@ -187,13 +188,13 @@ export default function AdminAnalyticsScreen({ slug }: Props) {
         <ThemedView style={[styles.filterCard, { borderColor: theme.borderPrimary }]}>
           {config.branchFilter ? (
             <View style={styles.formGroup}>
-              <ThemedText style={styles.label}>Branch ID</ThemedText>
-              <TextInput
-                value={filters.branchId ?? ''}
-                onChangeText={(value) => setFilters((prev) => ({ ...prev, branchId: value }))}
-                placeholder="Optional branch id"
-                placeholderTextColor={theme.textTertiary}
-                style={[styles.input, { borderColor: theme.borderPrimary, color: theme.textPrimary, backgroundColor: theme.bgSecondary }]}
+              <ThemedText style={styles.label}>Branch</ThemedText>
+              <MasterDropdown
+                endpoint="branches"
+                value={filters.branchId}
+                onChange={(val) => setFilters((prev) => ({ ...prev, branchId: val || undefined }))}
+                placeholder="Select Branch (All)"
+                themeVariant={theme.name.toLowerCase().includes('dark') ? 'dark' : 'light'}
               />
             </View>
           ) : null}

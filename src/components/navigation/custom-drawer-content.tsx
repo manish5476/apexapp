@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
+import { DrawerContentScrollView, DrawerItemList, useDrawerStatus } from '@react-navigation/drawer';
+import { Drawer } from 'expo-router/drawer';
 import { router } from 'expo-router';
 import React from 'react';
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -10,9 +11,23 @@ import { useAuthStore } from '../../store/auth.store';
 import { IconSymbol } from '../ui/icon-symbol';
 
 export function CustomDrawerContent(props: any) {
+  const { setDrawerNav, setIsDrawerOpen } = props;
   const { user, logout } = useAuthStore();
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const drawerStatus = useDrawerStatus();
+
+  React.useEffect(() => {
+    if (setDrawerNav && props.navigation) {
+      setDrawerNav(props.navigation);
+    }
+  }, [props.navigation, setDrawerNav]);
+
+  React.useEffect(() => {
+    if (setIsDrawerOpen) {
+      setIsDrawerOpen(drawerStatus === 'open');
+    }
+  }, [drawerStatus, setIsDrawerOpen]);
 
   const handleLogout = () => {
     Alert.alert(

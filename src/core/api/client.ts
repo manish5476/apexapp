@@ -13,12 +13,25 @@ const api = axios.create({
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await getAuthToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  
+  if (__DEV__) {
+    console.log(`📡 [API Request] ${config.method?.toUpperCase()} ${config.url}`, config.data || '');
+  }
+  
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    if (__DEV__) {
+      console.log(`✅ [API Response] ${response.config.method?.toUpperCase()} ${response.config.url} [${response.status}]`);
+    }
+    return response.data;
+  },
   async (error: AxiosError) => {
+    if (__DEV__) {
+      console.warn(`❌ [API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url} [${error.response?.status || 'Network Error'}]`, error.response?.data || error.message);
+    }
     if (error.response?.status === 401) {
       await clearAuthSession();
     }

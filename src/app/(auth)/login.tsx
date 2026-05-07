@@ -28,7 +28,9 @@ import { useAppTheme } from '@/src/hooks/use-app-theme';
 
 const { width, height } = Dimensions.get('window');
 
-const ALLOWED_DOMAINS = ['gmail.com', 'outlook.com', 'proton.me', 'protonmail.me', 'yahoo.com', 'icloud.com', 'hotmail.com'];
+// Domain restriction removed for better flexibility in development
+// const ALLOWED_DOMAINS = ['gmail.com', 'outlook.com', 'proton.me', 'protonmail.me', 'yahoo.com', 'icloud.com', 'hotmail.com'];
+
 
 const loginSchema = z.object({
   email: z.string()
@@ -36,12 +38,8 @@ const loginSchema = z.object({
     .refine((val) => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const phoneRegex = /^\+?[0-9]{7,15}$/;
-      if (emailRegex.test(val)) {
-        const domain = val.split('@')[1]?.toLowerCase();
-        return ALLOWED_DOMAINS.includes(domain);
-      }
-      return phoneRegex.test(val);
-    }, { message: 'Invalid email domain or phone number' }),
+      return emailRegex.test(val) || phoneRegex.test(val);
+    }, { message: 'Invalid email or phone number' }),
   uniqueShopId: z.string().min(1, 'Shop ID is required'),
   password: z.string().min(1, 'Password is required'),
   remember: z.boolean(),
@@ -99,7 +97,12 @@ export default function LoginScreen() {
     setIsLoading(true);
     setShowConcurrencyModal(false);
     try {
-      const response = await authService.login({ ...data, forceLogout });
+      const sanitizedData = {
+        ...data,
+        email: data.email.trim(),
+        uniqueShopId: data.uniqueShopId.trim()
+      };
+      const response = await authService.login({ ...sanitizedData, forceLogout });
       await setAuth(response.token, response.data.user, response.data.organization, response.data.session);
       router.replace('/');
     } catch (err: any) {

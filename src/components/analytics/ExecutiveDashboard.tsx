@@ -17,28 +17,28 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MasterDropdown } from '@/src/components/MasterDropdown';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ExecutiveData {
   period: { start: string; end: string; days: number };
   financial: {
-    totalRevenue?: number;
-    totalExpense?: number;
-    netProfit?: number;
+    totalRevenue?: { value: number };
+    totalExpense?: { value: number };
+    netProfit?: { value: number };
     grossMargin?: number;
     totalInvoices?: number;
     paidInvoices?: number;
   };
-  trends?: Array<{ label: string; revenue?: number; profit?: number; expense?: number }>;
-  customers?: { segmentation?: Array<{ segment: string; count: number }> };
+  trends?: { timeline: Array<{ date: string; income?: number; profit?: number; expense?: number }> };
+  customers?: { segmentation?: Array<{ _id: string; count: number }> };
   inventory?: { lowStockItems?: number; totalItems?: number };
   alerts?: { total?: number };
-  insights?: string[];
+  insights?: { insights: Array<{ title: string; message: string }> };
 }
 
 // ─── Helper: formatCurrency ────────────────────────────────────────────────────
@@ -90,7 +90,10 @@ function getPreset(preset: 'today' | '7d' | '30d' | 'month') {
 
 export default function ExecutiveDashboard() {
   const theme = useAppTheme();
-  const [filters, setFilters] = useState(getPreset('30d'));
+  const [filters, setFilters] = useState<{ startDate: string; endDate: string; branchId?: string }>({
+    ...getPreset('30d'),
+    branchId: undefined,
+  });
   const [data, setData] = useState<ExecutiveData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -133,7 +136,7 @@ export default function ExecutiveDashboard() {
 
   const segmentPie: ChartDataPoint[] = (data?.customers?.segmentation ?? []).map((s) => ({
     value: s.count,
-    label: s.segment,
+    label: s._id,
   }));
 
   const f = data?.financial;
@@ -181,12 +184,16 @@ export default function ExecutiveDashboard() {
         </View>
 
         {/* Branch Filter */}
-        <TextInput
-          placeholder="Filter by Branch ID (optional)"
-          placeholderTextColor={theme.textTertiary}
-          onEndEditing={(e) => setFilters((prev) => ({ ...prev, branchId: e.nativeEvent.text || undefined } as any))}
-          style={[styles.input, { borderColor: theme.borderPrimary, color: theme.textPrimary, backgroundColor: theme.bgSecondary }]}
-        />
+        <View style={styles.dropdownContainer}>
+          <ThemedText style={styles.label}>Filter by Branch</ThemedText>
+          <MasterDropdown
+            endpoint="branches"
+            value={filters.branchId}
+            onChange={(val) => setFilters((prev) => ({ ...prev, branchId: val || undefined } as any))}
+            placeholder="Select Branch (All)"
+            themeVariant={theme.name.toLowerCase().includes('dark') ? 'dark' : 'light'}
+          />
+        </View>
 
         {/* Loading or Error */}
         {loading && !data ? (
@@ -205,20 +212,20 @@ export default function ExecutiveDashboard() {
         ) : (
           <>
             {/* KPI Grid */}
-            <View style={styles.kpiGrid}>
-              <View style={styles.kpiRow}>
-                <KpiCard label="Revenue" value={fmt(f?.totalRevenue)} icon="trending-up-outline" color={theme.success} />
-                <KpiCard label="Expenses" value={fmt(f?.totalExpense)} icon="trending-down-outline" color={theme.error} />
+              <View style={styles.kpiGrid}>
+                <View style={styles.kpiRow}>
+                  <KpiCard label="Revenue" value={fmt(f?.totalRevenue?.value)} icon="trending-up-outline" color={theme.success} />
+                  <KpiCard label="Expenses" value={fmt(f?.totalExpense?.value)} icon="trending-down-outline" color={theme.error} />
+                </View>
+                <View style={styles.kpiRow}>
+                  <KpiCard label="Net Profit" value={fmt(f?.netProfit?.value)} icon="stats-chart-outline" color={theme.accentPrimary} />
+                  <KpiCard label="Gross Margin" value={f?.grossMargin !== undefined ? `${f.grossMargin.toFixed(1)}%` : '—'} icon="pie-chart-outline" color={theme.warning} />
+                </View>
+                <View style={styles.kpiRow}>
+                  <KpiCard label="Total Invoices" value={String(f?.totalInvoices ?? '—')} icon="document-text-outline" color={theme.info} />
+                  <KpiCard label="Alerts" value={String(data?.alerts?.total ?? '0')} icon="notifications-outline" color={theme.error} />
+                </View>
               </View>
-              <View style={styles.kpiRow}>
-                <KpiCard label="Net Profit" value={fmt(f?.netProfit)} icon="stats-chart-outline" color={theme.accentPrimary} />
-                <KpiCard label="Gross Margin" value={f?.grossMargin !== undefined ? `${f.grossMargin.toFixed(1)}%` : '—'} icon="pie-chart-outline" color={theme.warning} />
-              </View>
-              <View style={styles.kpiRow}>
-                <KpiCard label="Total Invoices" value={String(f?.totalInvoices ?? '—')} icon="document-text-outline" color={theme.info} />
-                <KpiCard label="Alerts" value={String(data?.alerts?.total ?? '0')} icon="notifications-outline" color={theme.error} />
-              </View>
-            </View>
 
             {/* Revenue Trend Chart */}
             <AppChart
@@ -261,16 +268,19 @@ export default function ExecutiveDashboard() {
             )}
 
             {/* Insights */}
-            {(data?.insights ?? []).length > 0 && (
+            {(data?.insights?.insights ?? []).length > 0 && (
               <View style={[styles.insightCard, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
                 <View style={styles.insightHeader}>
                   <Ionicons name="bulb-outline" size={18} color={theme.warning} />
                   <Text style={[styles.insightTitle, { color: theme.textPrimary }]}>AI Insights</Text>
                 </View>
-                {(data?.insights ?? []).map((insight, i) => (
+                {(data?.insights?.insights ?? []).map((insight, i) => (
                   <View key={i} style={styles.insightRow}>
                     <View style={[styles.insightDot, { backgroundColor: theme.accentPrimary }]} />
-                    <Text style={[styles.insightText, { color: theme.textSecondary }]}>{insight}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.insightTitleText, { color: theme.textPrimary }]}>{insight.title}</Text>
+                      <Text style={[styles.insightText, { color: theme.textSecondary }]}>{insight.message}</Text>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -295,12 +305,15 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 8 },
   errorCard: { borderWidth: 1, borderRadius: 14, padding: Spacing.md, alignItems: 'center', gap: 8 },
   retryBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 7, marginTop: 4 },
+  dropdownContainer: { marginBottom: Spacing.sm },
+  label: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', color: '#888', marginBottom: 4, marginLeft: 4 },
   kpiGrid: { gap: Spacing.sm },
   kpiRow: { flexDirection: 'row', gap: Spacing.sm },
   insightCard: { borderWidth: 1, borderRadius: 14, padding: Spacing.md, gap: Spacing.sm },
   insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   insightTitle: { fontSize: Typography.size.md, fontWeight: '700' },
   insightRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  insightDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
-  insightText: { flex: 1, fontSize: Typography.size.sm, lineHeight: 20 },
+  insightDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
+  insightTitleText: { fontSize: Typography.size.sm, fontWeight: '700', marginBottom: 2 },
+  insightText: { flex: 1, fontSize: Typography.size.xs, lineHeight: 18 },
 });

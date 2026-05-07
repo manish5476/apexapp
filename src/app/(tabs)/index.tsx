@@ -141,9 +141,9 @@ export default function HomeScreen() {
             {kpiLoading && <ActivityIndicator size="small" color={currentTheme.accentPrimary} />}
           </View>
           <View style={styles.kpiRow}>
-            <MiniKpi label="Revenue" value={fmt(f?.totalRevenue)} icon="trending-up-outline" color={currentTheme.success} theme={currentTheme} />
-            <MiniKpi label="Expenses" value={fmt(f?.totalExpense)} icon="trending-down-outline" color={currentTheme.error} theme={currentTheme} />
-            <MiniKpi label="Profit" value={fmt(f?.netProfit)} icon="stats-chart-outline" color={currentTheme.accentPrimary} theme={currentTheme} />
+            <MiniKpi label="Revenue" value={fmt(f?.totalRevenue?.value)} icon="trending-up-outline" color={currentTheme.success} theme={currentTheme} />
+            <MiniKpi label="Expenses" value={fmt(f?.totalExpense?.value)} icon="trending-down-outline" color={currentTheme.error} theme={currentTheme} />
+            <MiniKpi label="Profit" value={fmt(f?.netProfit?.value)} icon="stats-chart-outline" color={currentTheme.accentPrimary} theme={currentTheme} />
           </View>
 
           {/* Quick Actions */}

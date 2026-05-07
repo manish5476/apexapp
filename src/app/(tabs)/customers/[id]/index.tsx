@@ -27,7 +27,7 @@ const { width } = Dimensions.get('window');
 
 type TabType = 'ledger' | 'invoices' | 'payments' | 'feed';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const getInitials = (name = '') =>
   name
@@ -46,15 +46,15 @@ const formatCurrency = (val: number) => {
   const abs = Math.abs(val);
   const formatted =
     abs >= 100000
-      ? `₹${(abs / 100000).toFixed(1)}L`
+      ? `â‚¹${(abs / 100000).toFixed(1)}L`
       : abs >= 1000
-      ? `₹${(abs / 1000).toFixed(1)}K`
-      : `₹${abs.toLocaleString('en-IN')}`;
+      ? `â‚¹${(abs / 1000).toFixed(1)}K`
+      : `â‚¹${abs.toLocaleString('en-IN')}`;
   return val < 0 ? `-${formatted}` : formatted;
 };
 
 const formatDate = (iso?: string) => {
-  if (!iso) return '—';
+  if (!iso) return 'â€”';
   return new Date(iso).toLocaleDateString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',
   });
@@ -78,7 +78,7 @@ const formatAddress = (addr: any) => {
     .join(', ');
 };
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const InfoRow = ({
   icon,
@@ -112,7 +112,7 @@ const SectionHeader = ({ title, styles }: { title: string; styles: any }) => (
   <ThemedText style={styles.sectionHeader}>{title}</ThemedText>
 );
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function CustomerDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -149,6 +149,7 @@ export default function CustomerDetailsScreen() {
   const fetchProfile = async () => {
     try {
       setLoadingProfile(true);
+      setCustomer(null); // Clear existing data
       const res = (await CustomerService.getCustomerDataWithId(customerId)) as any;
       const data = res.data?.data || res.data || res;
       setCustomer(data);
@@ -163,6 +164,12 @@ export default function CustomerDetailsScreen() {
   const fetchTabData = async (tab: TabType, isReset = false) => {
     if (tabLoading[tab] || (!isReset && !pagination[tab].hasMore)) return;
     const targetPage = isReset ? 1 : pagination[tab].page;
+    
+    // Clear data before API call if it's a reset
+    if (isReset) {
+      setTabData((p) => ({ ...p, [tab]: [] }));
+    }
+    
     setTabLoading((p) => ({ ...p, [tab]: true }));
 
     try {
@@ -171,23 +178,25 @@ export default function CustomerDetailsScreen() {
 
       if (tab === 'ledger') {
         response = await FinancialService.getCustomerLedger(customerId, params) as any;
-        const history = response.history || [];
+        const history = response.data?.history || response.history || [];
         setTabData((p) => ({ ...p, ledger: isReset ? history : [...p.ledger, ...history] }));
         setPagination((p) => ({ ...p, ledger: { page: targetPage + 1, hasMore: history.length === 20 } }));
-        if (isReset) setClosingBalance(response.closingBalance || 0);
+        if (isReset) setClosingBalance(response.data?.closingBalance || response.closingBalance || 0);
       } else if (tab === 'invoices') {
         response = await InvoiceService.getInvoicesByCustomer(customerId, params) as any;
-        const invoices = response.invoices || response.data?.invoices || (Array.isArray(response) ? response : []);
+        const invoices = response.data?.invoices || response.invoices || (Array.isArray(response.data) ? response.data : Array.isArray(response) ? response : []);
         setTabData((p) => ({ ...p, invoices: isReset ? invoices : [...p.invoices, ...invoices] }));
         setPagination((p) => ({ ...p, invoices: { page: targetPage + 1, hasMore: invoices.length === 20 } }));
       } else if (tab === 'payments') {
         response = await PaymentService.getPaymentsByCustomer(customerId, params) as any;
-        const payments = response.payments || response.data?.payments || (Array.isArray(response) ? response : []);
+        const payments = response.data?.payments || response.payments || (Array.isArray(response.data) ? response.data : Array.isArray(response) ? response : []);
         setTabData((p) => ({ ...p, payments: isReset ? payments : [...p.payments, ...payments] }));
         setPagination((p) => ({ ...p, payments: { page: targetPage + 1, hasMore: payments.length === 20 } }));
       } else if (tab === 'feed') {
         response = await CustomerService.getCustomerFeed(customerId) as any;
-        const activities = response.data?.activities || response.activities || (Array.isArray(response) ? response : []);
+        // The user's JSON has { data: { feed: [...] } }
+        // We check response.data?.feed (Axios result) or response.feed (already unwrapped result)
+        const activities = response.data?.feed || response.feed || response.data?.activities || response.activities || [];
         setTabData((p) => ({ ...p, feed: isReset ? activities : [...p.feed, ...activities] }));
         setPagination((p) => ({ ...p, feed: { page: 1, hasMore: false } }));
       }
@@ -231,7 +240,7 @@ export default function CustomerDetailsScreen() {
     );
   };
 
-  // ── Profile Header (rendered inside FlatList ListHeaderComponent) ──────────
+  // â”€â”€ Profile Header (rendered inside FlatList ListHeaderComponent) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const renderProfileHeader = () => {
     if (!customer) return null;
@@ -255,7 +264,7 @@ export default function CustomerDetailsScreen() {
 
     return (
       <View>
-        {/* ── Hero ── */}
+        {/* â”€â”€ Hero â”€â”€ */}
         <View style={styles.heroSection}>
           {customer.avatar ? (
             <Image source={{ uri: customer.avatar }} style={styles.avatar} />
@@ -305,7 +314,7 @@ export default function CustomerDetailsScreen() {
           </View>
         </View>
 
-        {/* ── Financial Stats Strip ── */}
+        {/* â”€â”€ Financial Stats Strip â”€â”€ */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -335,7 +344,7 @@ export default function CustomerDetailsScreen() {
           <View style={[styles.statCard, { borderLeftColor: currentTheme.success }]}>
             <ThemedText style={styles.statLabel}>LAST INVOICE</ThemedText>
             <ThemedText style={[styles.statValue, { color: currentTheme.success }]}>
-              {customer.lastInvoiceAmount > 0 ? formatCurrency(customer.lastInvoiceAmount) : '—'}
+              {customer.lastInvoiceAmount > 0 ? formatCurrency(customer.lastInvoiceAmount) : 'â€”'}
             </ThemedText>
           </View>
 
@@ -347,7 +356,7 @@ export default function CustomerDetailsScreen() {
           </View>
         </ScrollView>
 
-        {/* ── Info Cards ── */}
+        {/* â”€â”€ Info Cards â”€â”€ */}
         <View style={styles.infoSection}>
 
           {/* Contact */}
@@ -454,7 +463,7 @@ export default function CustomerDetailsScreen() {
           )}
         </View>
 
-        {/* ── Tab Bar ── */}
+        {/* â”€â”€ Tab Bar â”€â”€ */}
         <View style={styles.tabBar}>
           {(['ledger', 'invoices', 'payments', 'feed'] as TabType[]).map((tab) => (
             <TouchableOpacity
@@ -472,7 +481,7 @@ export default function CustomerDetailsScreen() {
     );
   };
 
-  // ── Tab Row Renderers ──────────────────────────────────────────────────────
+  // â”€â”€ Tab Row Renderers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const renderItem = ({ item }: { item: any }) => {
     if (activeTab === 'ledger') {
@@ -566,7 +575,7 @@ export default function CustomerDetailsScreen() {
               <ThemedText style={styles.itemTitle}>{item.referenceNumber || 'Payment Receipt'}</ThemedText>
               <ThemedText style={styles.itemSubtitle}>
                 {formatDate(item.paymentDate)}
-                {item.paymentMethod ? ` • ${item.paymentMethod.toUpperCase()}` : ''}
+                {item.paymentMethod ? ` â€¢ ${item.paymentMethod.toUpperCase()}` : ''}
               </ThemedText>
             </View>
             <ThemedText style={[styles.itemAmount, { color: currentTheme.success }]}>
@@ -577,28 +586,33 @@ export default function CustomerDetailsScreen() {
       );
     }
 
-    if (activeTab === 'feed') {
-      const iconMap: Record<string, string> = {
-        created: 'person-add-outline',
-        updated: 'create-outline',
-        invoice_created: 'document-text-outline',
-        payment_received: 'cash-outline',
-        photo_updated: 'camera-outline',
-      };
+    if (activeTab === "feed") {
+      const isInvoice = item.type === "invoice";
+      const isPayment = item.type === "payment";
+      const accentColor = isInvoice ? currentTheme.info : isPayment ? currentTheme.success : currentTheme.accentPrimary;
+      
       return (
-        <View style={styles.listItem}>
-          <View style={styles.listRow}>
-            <View style={[styles.txnIconWrap, { backgroundColor: `${currentTheme.accentPrimary}12` }]}>
-              <Ionicons
-                name={(iconMap[item.type] || 'ellipse-outline') as any}
-                size={16}
-                color={currentTheme.accentPrimary}
-              />
+        <View style={styles.feedItem}>
+          <View style={styles.timelineContainer}>
+            <View style={[styles.timelineLine, { backgroundColor: currentTheme.borderPrimary }]} />
+            <View style={[styles.timelineDot, { backgroundColor: accentColor, borderColor: currentTheme.bgPrimary }]} />
+          </View>
+
+          <View style={styles.feedContent}>
+            <View style={styles.feedHeader}>
+              <ThemedText style={styles.feedTitle}>{item.title || item.message}</ThemedText>
+              <ThemedText style={styles.feedTime}>{timeAgo(item.date || item.createdAt)}</ThemedText>
             </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText style={styles.itemTitle}>{item.message}</ThemedText>
-              <ThemedText style={styles.itemSubtitle}>{timeAgo(item.createdAt)} • {formatDate(item.createdAt)}</ThemedText>
-            </View>
+            
+            <ThemedText style={styles.feedSubtitle}>{item.subtitle || item.description}</ThemedText>
+            
+            {item.status && (
+              <View style={[styles.statusBadge, { backgroundColor: `${accentColor}12`, marginTop: 6, alignSelf: "flex-start" }]}>
+                <ThemedText style={[styles.statusBadgeText, { color: accentColor }]}>
+                  {item.status.replace("_", " ").toUpperCase()}
+                </ThemedText>
+              </View>
+            )}
           </View>
         </View>
       );
@@ -607,7 +621,7 @@ export default function CustomerDetailsScreen() {
     return null;
   };
 
-  // ── Loading ────────────────────────────────────────────────────────────────
+  // â”€â”€ Loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   if (loadingProfile) {
     return (
@@ -617,7 +631,7 @@ export default function CustomerDetailsScreen() {
     );
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
     <ThemedView style={styles.container}>
@@ -699,7 +713,7 @@ export default function CustomerDetailsScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const createStyles = (theme: ThemeColors) =>
   StyleSheet.create({
@@ -993,6 +1007,59 @@ const createStyles = (theme: ThemeColors) =>
       color: theme.textTertiary,
     },
 
+    // Feed / Activity Timeline
+    feedItem: {
+      flexDirection: 'row',
+      paddingHorizontal: Spacing['2xl'],
+      gap: Spacing.xl,
+    },
+    timelineContainer: {
+      alignItems: 'center',
+      width: 16,
+    },
+    timelineLine: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      width: 1,
+    },
+    timelineDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      borderWidth: 2,
+      marginTop: 22,
+      zIndex: 1,
+    },
+    feedContent: {
+      flex: 1,
+      paddingBottom: Spacing['3xl'],
+      paddingTop: Spacing.lg,
+    },
+    feedHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    feedTitle: {
+      fontFamily: theme.fonts.heading,
+      fontSize: Typography.size.md,
+      fontWeight: Typography.weight.semibold,
+      color: theme.textPrimary,
+      flex: 1,
+    },
+    feedTime: {
+      fontFamily: theme.fonts.body,
+      fontSize: 10,
+      color: theme.textTertiary,
+    },
+    feedSubtitle: {
+      fontFamily: theme.fonts.body,
+      fontSize: Typography.size.sm,
+      color: theme.textSecondary,
+    },
+
     // FAB
     fab: {
       position: 'absolute',
@@ -1254,11 +1321,11 @@ const createStyles = (theme: ThemeColors) =>
 //               <ThemedText style={styles.itemSubtitle}>{new Date(item.date).toLocaleDateString()}</ThemedText>
 //             </View>
 //             <ThemedText style={[styles.itemAmount, { color: isDebit ? currentTheme.error : currentTheme.success }]}>
-//               {isDebit ? `-₹${item.debit.toLocaleString()}` : `+₹${item.credit.toLocaleString()}`}
+//               {isDebit ? `-â‚¹${item.debit.toLocaleString()}` : `+â‚¹${item.credit.toLocaleString()}`}
 //             </ThemedText>
 //           </View>
 //           <View style={styles.listItemFooter}>
-//             <ThemedText style={styles.balanceLabel}>Running Balance: ₹{item.balance.toLocaleString()}</ThemedText>
+//             <ThemedText style={styles.balanceLabel}>Running Balance: â‚¹{item.balance.toLocaleString()}</ThemedText>
 //           </View>
 //         </View>
 //       );
@@ -1273,7 +1340,7 @@ const createStyles = (theme: ThemeColors) =>
 //               <ThemedText style={styles.itemSubtitle}>{new Date(item.invoiceDate).toLocaleDateString()}</ThemedText>
 //             </View>
 //             <View style={styles.rightGroup}>
-//               <ThemedText style={styles.itemAmount}>₹{item.grandTotal.toLocaleString()}</ThemedText>
+//               <ThemedText style={styles.itemAmount}>â‚¹{item.grandTotal.toLocaleString()}</ThemedText>
 //               <View style={[
 //                 styles.miniBadge,
 //                 { backgroundColor: isPaid ? `${currentTheme.success}20` : `${currentTheme.warning}20` }
@@ -1296,10 +1363,10 @@ const createStyles = (theme: ThemeColors) =>
 //           <View style={styles.listItemHeader}>
 //             <View>
 //               <ThemedText style={styles.itemTitle}>{item.referenceNumber || 'Receipt'}</ThemedText>
-//               <ThemedText style={styles.itemSubtitle}>{new Date(item.paymentDate).toLocaleDateString()} • {item.paymentMethod?.toUpperCase()}</ThemedText>
+//               <ThemedText style={styles.itemSubtitle}>{new Date(item.paymentDate).toLocaleDateString()} â€¢ {item.paymentMethod?.toUpperCase()}</ThemedText>
 //             </View>
 //             <ThemedText style={[styles.itemAmount, { color: currentTheme.success }]}>
-//               +₹{item.amount.toLocaleString()}
+//               +â‚¹{item.amount.toLocaleString()}
 //             </ThemedText>
 //           </View>
 //         </TouchableOpacity>
@@ -1852,11 +1919,11 @@ const createStyles = (theme: ThemeColors) =>
 // //               <ThemedText style={styles.itemSubtitle}>{new Date(item.date).toLocaleDateString()}</ThemedText>
 // //             </View>
 // //             <ThemedText style={[styles.itemAmount, { color: item.debit > 0 ? '#DC2626' : '#059669' }]}>
-// //               {item.debit > 0 ? `-₹${item.debit.toLocaleString()}` : `+₹${item.credit.toLocaleString()}`}
+// //               {item.debit > 0 ? `-â‚¹${item.debit.toLocaleString()}` : `+â‚¹${item.credit.toLocaleString()}`}
 // //             </ThemedText>
 // //           </View>
 // //           <View style={styles.listItemFooter}>
-// //             <ThemedText style={styles.balanceLabel}>Running Balance: ₹{item.balance.toLocaleString()}</ThemedText>
+// //             <ThemedText style={styles.balanceLabel}>Running Balance: â‚¹{item.balance.toLocaleString()}</ThemedText>
 // //           </View>
 // //         </View>
 // //       );
@@ -1870,7 +1937,7 @@ const createStyles = (theme: ThemeColors) =>
 // //               <ThemedText style={styles.itemSubtitle}>{new Date(item.invoiceDate).toLocaleDateString()}</ThemedText>
 // //             </View>
 // //             <View style={styles.rightGroup}>
-// //               <ThemedText style={styles.itemAmount}>₹{item.grandTotal.toLocaleString()}</ThemedText>
+// //               <ThemedText style={styles.itemAmount}>â‚¹{item.grandTotal.toLocaleString()}</ThemedText>
 // //               <View style={[styles.miniBadge, { backgroundColor: item.status === 'paid' ? '#D1FAE5' : '#FEF3C7' }]}>
 // //                 <ThemedText style={[styles.miniBadgeText, { color: item.status === 'paid' ? '#065F46' : '#92400E' }]}>
 // //                   {item.status.toUpperCase()}
@@ -1887,10 +1954,10 @@ const createStyles = (theme: ThemeColors) =>
 // //           <View style={styles.listItemHeader}>
 // //             <View>
 // //               <ThemedText style={styles.itemTitle}>{item.referenceNumber || 'Receipt'}</ThemedText>
-// //               <ThemedText style={styles.itemSubtitle}>{new Date(item.paymentDate).toLocaleDateString()} • {item.paymentMethod?.toUpperCase()}</ThemedText>
+// //               <ThemedText style={styles.itemSubtitle}>{new Date(item.paymentDate).toLocaleDateString()} â€¢ {item.paymentMethod?.toUpperCase()}</ThemedText>
 // //             </View>
 // //             <ThemedText style={[styles.itemAmount, { color: '#059669' }]}>
-// //               +₹{item.amount.toLocaleString()}
+// //               +â‚¹{item.amount.toLocaleString()}
 // //             </ThemedText>
 // //           </View>
 // //         </TouchableOpacity>

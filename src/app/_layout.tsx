@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { router, Stack, useSegments } from 'expo-router';
+import { router, Stack, useSegments, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo } from 'react';
 import { useAppTheme } from '../hooks/use-app-theme';
@@ -9,9 +10,15 @@ import { useAuthStore } from '../store/auth.store';
 // Prevent the splash screen from auto-hiding before auth is checked
 SplashScreen.preventAutoHideAsync();
 
+import { env } from '../core/config/env';
+console.log('🌐 [Connectivity] API URL:', env.apiUrl);
+console.log('📱 [Connectivity] Ensure your phone is on the same WiFi as your computer.');
+
+
 export default function RootLayout() {
   const { initialize, isHydrated, isAuthenticated } = useAuthStore();
   const segments = useSegments();
+  const pathname = usePathname();
   const theme = useAppTheme();
 
   useEffect(() => {
@@ -34,7 +41,7 @@ export default function RootLayout() {
     // segments[0] is '' when on the root index route — treat that as needing redirect too
     const inAuthGroup = segments[0] === '(auth)';
     const inTabsGroup = segments[0] === '(tabs)';
-    const onRootIndex = !segments[0] || segments[0] === '';
+    const onRootIndex = pathname === '/' || pathname === '/index';
 
     if (isAuthenticated && (inAuthGroup || onRootIndex)) {
       // Logged in while in auth group or root? Send them to home.
