@@ -270,6 +270,14 @@ export default function DrawerLayout() {
           }}
         />
 
+        <Drawer.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            drawerIcon: ({ color }) => <Ionicons name="settings-outline" size={20} color={color} />,
+          }}
+        />
+
         <Drawer.Screen name="explore" options={{ drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="profile" options={{ drawerItemStyle: { display: 'none' } }} />
       </Drawer>

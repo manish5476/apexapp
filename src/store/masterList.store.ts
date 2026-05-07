@@ -76,7 +76,7 @@ const persistenceStorage = {
     return await Storage.getItemAsync(name);
   },
   setItem: async (name: string, value: string): Promise<void> => {
-    await Storage.setItemAsync(name, value);
+    await Storage.setItem(name, value);
   },
   removeItem: async (name: string): Promise<void> => {
     await Storage.deleteItemAsync(name);

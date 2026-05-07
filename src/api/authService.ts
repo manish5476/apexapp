@@ -34,11 +34,11 @@ export const AuthService = {
     const response = await apiClient.post<any, LoginResponse>('/v1/auth/login', credentials);
     
     if (response.token) {
-      await Storage.setItemAsync('apex_auth_token', response.token);
-      await Storage.setItemAsync('apex_current_user', JSON.stringify(response.data.user));
-      await Storage.setItemAsync('apex_organization', JSON.stringify(response.data.organization));
+      await Storage.setSecureItem('apex_auth_token', response.token);
+      await Storage.setItem('apex_current_user', JSON.stringify(response.data.user));
+      await Storage.setItem('apex_organization', JSON.stringify(response.data.organization));
       if (response.data.session) {
-        await Storage.setItemAsync('apex_session', JSON.stringify(response.data.session));
+        await Storage.setItem('apex_session', JSON.stringify(response.data.session));
       }
     }
     
@@ -77,7 +77,7 @@ export const AuthService = {
     const response = await apiClient.post<any, RefreshResponse>('/v1/auth/refresh-token', {});
     
     if (response.token) {
-      await Storage.setItemAsync('apex_auth_token', response.token);
+      await Storage.setSecureItem('apex_auth_token', response.token);
     }
     return response;
   },

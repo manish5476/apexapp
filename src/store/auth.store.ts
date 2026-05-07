@@ -24,10 +24,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initialize: async () => {
     try {
-      const token = await Storage.getItemAsync('apex_auth_token');
-      const userStr = await Storage.getItemAsync('apex_current_user');
-      const orgStr = await Storage.getItemAsync('apex_organization');
-      const sessionStr = await Storage.getItemAsync('apex_session');
+      // Token is secure
+      const token = await Storage.getSecureItem('apex_auth_token');
+      
+      // Other data is standard (to allow >2048 bytes)
+      const userStr = await Storage.getItem('apex_current_user');
+      const orgStr = await Storage.getItem('apex_organization');
+      const sessionStr = await Storage.getItem('apex_session');
 
       if (token && userStr) {
         set({
@@ -49,10 +52,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setAuth: async (token, user, organization, session) => {
     try {
-      await Storage.setItemAsync('apex_auth_token', token);
-      await Storage.setItemAsync('apex_current_user', JSON.stringify(user));
-      if (organization) await Storage.setItemAsync('apex_organization', JSON.stringify(organization));
-      if (session) await Storage.setItemAsync('apex_session', JSON.stringify(session));
+      await Storage.setSecureItem('apex_auth_token', token);
+      await Storage.setItem('apex_current_user', JSON.stringify(user));
+      if (organization) await Storage.setItem('apex_organization', JSON.stringify(organization));
+      if (session) await Storage.setItem('apex_session', JSON.stringify(session));
       
       set({ isAuthenticated: true, token, user, organization, session });
     } catch (error) {
@@ -66,10 +69,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     try {
-      await Storage.deleteItemAsync('apex_auth_token');
-      await Storage.deleteItemAsync('apex_current_user');
-      await Storage.deleteItemAsync('apex_organization');
-      await Storage.deleteItemAsync('apex_session');
+      await Storage.deleteSecureItem('apex_auth_token');
+      await Storage.removeItem('apex_current_user');
+      await Storage.removeItem('apex_organization');
+      await Storage.removeItem('apex_session');
       set({ isAuthenticated: false, token: null, user: null, organization: null, session: null });
     } catch (error) {
       console.error("Logout failed", error);

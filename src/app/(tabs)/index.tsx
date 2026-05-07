@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '../../components/themed-text';
 import { ThemedView } from '../../components/themed-view';
 import { useAuthStore } from '../../store/auth.store';
+import { useScrollHide } from '@/src/hooks/use-scroll-hide';
 
 // ─── KPI Mini Card ─────────────────────────────────────────────────────────────
 
@@ -69,6 +70,9 @@ export default function HomeScreen() {
 
   const [kpiData, setKpiData] = useState<any>(null);
   const [kpiLoading, setKpiLoading] = useState(true);
+  
+  // Navigation auto-hide on scroll
+  const { handleScroll } = useScrollHide(10);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -111,7 +115,12 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
 
           {/* Header */}
           <View style={styles.header}>

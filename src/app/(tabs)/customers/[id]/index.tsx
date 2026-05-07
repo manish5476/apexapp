@@ -1,5 +1,6 @@
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
+import { useScrollHide } from '@/src/hooks/use-scroll-hide';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -118,6 +119,7 @@ export default function CustomerDetailsScreen() {
   const { id } = useLocalSearchParams();
   const customerId = id as string;
   const currentTheme = useAppTheme();
+  const { onScroll } = useScrollHide();
   const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
 
   const [customer, setCustomer] = useState<any>(null);
@@ -670,6 +672,8 @@ export default function CustomerDetailsScreen() {
           renderItem={renderItem}
           ListHeaderComponent={renderProfileHeader}
           contentContainerStyle={styles.listContent}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           onEndReached={() => fetchTabData(activeTab)}
           onEndReachedThreshold={0.4}
           refreshControl={

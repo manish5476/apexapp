@@ -23,6 +23,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useScrollHide } from '@/src/hooks/use-scroll-hide';
 
 
 
@@ -31,6 +32,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function ProductListScreen() {
   const theme = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { handleScroll } = useScrollHide(10);
 
   // --- STATE ---
   const [products, setProducts] = useState<any[]>([]);
@@ -338,6 +340,8 @@ export default function ProductListScreen() {
             renderItem={renderProductCard}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.accentPrimary} />}
             onEndReached={() => {
               if (hasNextPage && !isLoading && !isRefreshing) fetchProducts(page + 1);

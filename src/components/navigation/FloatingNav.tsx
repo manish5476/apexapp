@@ -19,18 +19,51 @@ interface NavItem {
   label: string;
 }
 
+import { useUIStore } from '@/src/store/ui.store';
+
 export function FloatingNav({ onOpenDrawer, isDrawerOpen }: { onOpenDrawer: () => void; isDrawerOpen: boolean }) {
   const theme = useAppTheme();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { isNavVisible, setNavVisible } = useUIStore();
+  
+  const [isIdle, setIsIdle] = React.useState(false);
+  const idleTimer = React.useRef<any>(null);
+
+  // Auto-hide after 4 seconds of idle time
+  const resetIdleTimer = React.useCallback(() => {
+    setIsIdle(false);
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    
+    // Only start idle timer if nav is visible and drawer is closed
+    if (isNavVisible && !isDrawerOpen) {
+      idleTimer.current = setTimeout(() => {
+        setIsIdle(true);
+      }, 4000); 
+    }
+  }, [isNavVisible, isDrawerOpen]);
+
+  // Reset visibility and timer on any navigation or state change
+  React.useEffect(() => {
+    // If we navigate to a new screen, always show the nav initially
+    setNavVisible(true);
+    resetIdleTimer();
+    
+    return () => {
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+    };
+  }, [pathname, isDrawerOpen, resetIdleTimer, setNavVisible]);
+
+  // Combined visibility state
+  const shouldHide = !isNavVisible || isDrawerOpen || isIdle;
 
   // Animation for sliding down
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { translateY: withSpring(isDrawerOpen ? 150 : 0, { damping: 15, stiffness: 100 }) }
+        { translateY: withSpring(shouldHide ? 150 : 0, { damping: 15, stiffness: 100 }) }
       ],
-      opacity: withSpring(isDrawerOpen ? 0 : 1),
+      opacity: withSpring(shouldHide ? 0 : 1),
     };
   });
 
@@ -63,7 +96,10 @@ export function FloatingNav({ onOpenDrawer, isDrawerOpen }: { onOpenDrawer: () =
               <TouchableOpacity
                 key={item.name}
                 style={styles.navBtn}
-                onPress={() => router.push(item.path as any)}
+                onPress={() => {
+                  resetIdleTimer();
+                  router.push(item.path as any);
+                }}
                 activeOpacity={0.7}
               >
                 <Ionicons 
@@ -80,7 +116,10 @@ export function FloatingNav({ onOpenDrawer, isDrawerOpen }: { onOpenDrawer: () =
           
           <TouchableOpacity
             style={styles.menuBtn}
-            onPress={handleOpenDrawer}
+            onPress={() => {
+              resetIdleTimer();
+              handleOpenDrawer();
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.menuIconBox, { backgroundColor: theme.textPrimary }]}>
