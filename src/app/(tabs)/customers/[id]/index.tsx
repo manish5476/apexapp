@@ -119,7 +119,7 @@ export default function CustomerDetailsScreen() {
   const { id } = useLocalSearchParams();
   const customerId = id as string;
   const currentTheme = useAppTheme();
-  const { onScroll } = useScrollHide();
+  const { handleScroll } = useScrollHide();
   const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
 
   const [customer, setCustomer] = useState<any>(null);
@@ -672,7 +672,7 @@ export default function CustomerDetailsScreen() {
           renderItem={renderItem}
           ListHeaderComponent={renderProfileHeader}
           contentContainerStyle={styles.listContent}
-          onScroll={onScroll}
+          onScroll={handleScroll}
           scrollEventThrottle={16}
           onEndReached={() => fetchTabData(activeTab)}
           onEndReachedThreshold={0.4}
