@@ -36,7 +36,7 @@ const contactSchema = z.object({
 
 const supplierSchema = z.object({
     companyName: z.string().min(1, 'Company Name is required'),
-    category: z.string().optional(),
+    categoryId: z.string().optional(),
     tags: z.array(z.string()).optional(),
     email: z.string().email('Invalid email').optional().or(z.literal('')),
     phone: z.string().optional(),
@@ -79,7 +79,9 @@ export default function SupplierFormScreen() {
     // Custom Inputs State
     const [tagInput, setTagInput] = useState('');
     const [branches, setBranches] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
     const [showBranchModal, setShowBranchModal] = useState(false);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
 
     const { control, handleSubmit, setValue, getValues, reset, watch, formState: { errors } } = useForm<SupplierFormData>({
         resolver: zodResolver(supplierSchema) as any,
@@ -109,6 +111,10 @@ export default function SupplierFormScreen() {
                 const bRes = await BranchService.getAllBranches() as any;
                 setBranches(bRes?.data?.data || bRes?.data || []);
 
+                // Fetch Supplier Categories
+                const cRes = await MasterDropdownService.getDropdownData('supplier-categories');
+                setCategories(cRes.data || []);
+
                 if (isEditMode) {
                     const res = await SupplierService.getSupplierById(id as string) as any;
                     const s = res?.data?.data || res?.data;
@@ -121,6 +127,7 @@ export default function SupplierFormScreen() {
 
                         reset({
                             ...s,
+                            categoryId: s.categoryId || undefined,
                             branchesSupplied: mappedBranches,
                         });
                     }
@@ -228,9 +235,17 @@ export default function SupplierFormScreen() {
                             <View style={styles.row}>
                                 <View style={[styles.formGroup, { flex: 1, marginRight: Spacing.md }]}>
                                     <ThemedText style={styles.label}>Category</ThemedText>
-                                    <Controller control={control} name="category" render={({ field: { onChange, value } }) => (
-                                        <TextInput style={styles.input} placeholder="e.g., Hardware" placeholderTextColor={theme.textTertiary} value={value} onChangeText={onChange} />
-                                    )} />
+                                    <TouchableOpacity style={styles.dropdownSim} onPress={() => setShowCategoryModal(true)}>
+                                        <Controller control={control} name="categoryId" render={({ field: { value } }) => {
+                                            const selectedCat = categories.find(c => c.value === value);
+                                            return (
+                                                <ThemedText style={{ color: value ? theme.textPrimary : theme.textTertiary }}>
+                                                    {selectedCat ? selectedCat.label : 'Select Category'}
+                                                </ThemedText>
+                                            )
+                                        }} />
+                                        <Ionicons name="chevron-down" size={20} color={theme.textTertiary} />
+                                    </TouchableOpacity>
                                 </View>
                                 <View style={[styles.formGroup, { flex: 1 }]}>
                                     <ThemedText style={styles.label}>Primary Phone</ThemedText>
@@ -514,6 +529,44 @@ export default function SupplierFormScreen() {
                                             {branch.name}
                                         </ThemedText>
                                         <Ionicons name={isSelected ? "checkbox" : "square-outline"} size={24} color={isSelected ? theme.accentPrimary : theme.textTertiary} />
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* CATEGORY MODAL */}
+            <Modal visible={showCategoryModal} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowCategoryModal(false)} />
+                    <View style={[styles.bottomSheet, { paddingBottom: Math.max(insets.bottom, Spacing.xl) }]}>
+                        <View style={styles.sheetHeader}>
+                            <ThemedText style={styles.sheetTitle}>Select Category</ThemedText>
+                            <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+                                <Ionicons name="close" size={24} color={theme.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
+                            <TouchableOpacity
+                                style={styles.branchItem}
+                                onPress={() => { setValue('categoryId', undefined); setShowCategoryModal(false); }}
+                            >
+                                <ThemedText style={styles.branchItemText}>Clear Selection</ThemedText>
+                            </TouchableOpacity>
+                            {categories.map(cat => {
+                                const isSelected = watch('categoryId') === cat.value;
+                                return (
+                                    <TouchableOpacity
+                                        key={cat.value}
+                                        style={[styles.branchItem, isSelected && { backgroundColor: `${theme.accentPrimary}05` }]}
+                                        onPress={() => { setValue('categoryId', cat.value); setShowCategoryModal(false); }}
+                                    >
+                                        <ThemedText style={[styles.branchItemText, isSelected && { color: theme.accentPrimary, fontWeight: 'bold' }]}>
+                                            {cat.label}
+                                        </ThemedText>
+                                        {isSelected && <Ionicons name="checkmark" size={24} color={theme.accentPrimary} />}
                                     </TouchableOpacity>
                                 );
                             })}

@@ -100,7 +100,7 @@ export type DropdownEndpoint =
   | 'accounts' | 'invoices' | 'payments' | 'emis'
   | 'departments' | 'designations' | 'shifts' | 'shift-assignments'
   | 'holidays' | 'geofencing' | 'attendance-machines' | 'attendance-requests' | 'leave-requests'
-  | 'meetings';
+  | 'meetings' | 'supplier-categories';
 
 const cache = new Map<string, DropdownResponse>();
 
