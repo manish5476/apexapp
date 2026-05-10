@@ -1,4 +1,5 @@
 import { Themes } from '@/src/constants/theme';
+import { FilterBottomSheet, FilterFormRenderer, HeaderSearchAction } from '@/src/components/filters';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -10,7 +11,6 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -246,6 +246,16 @@ export default function SessionManagementScreen() {
             <Text style={styles.pageTitle}>Sessions</Text>
             <Text style={styles.pageSubtitle}>Monitor active devices</Text>
           </View>
+          <HeaderSearchAction
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmit={() => fetchSessions(true)}
+            onOpenFilters={() => setShowFilters(true)}
+            filterActive={Boolean(activeFilters.os || activeFilters.browser)}
+            filterCount={[activeFilters.os, activeFilters.browser].filter(Boolean).length}
+            placeholder="Name or email"
+            theme={theme}
+          />
         </View>
 
         {/* TOGGLES & GLOBAL ACTIONS */}
@@ -262,30 +272,6 @@ export default function SessionManagementScreen() {
           <TouchableOpacity style={styles.revokeOthersBtn} onPress={handleRevokeOthers}>
             <Ionicons name="ban" size={14} color={theme.warning} />
             <Text style={styles.revokeOthersText}>Revoke Others</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* SEARCH & BULK ACTIONS */}
-        <View style={styles.searchRow}>
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color={DARK_BLUE_ACCENT} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search Name or Email..."
-              placeholderTextColor={theme.textLabel}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={() => fetchSessions(true)}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => { setSearchQuery(''); setTimeout(() => fetchSessions(true), 0); }}>
-                <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity style={styles.filterBtn} onPress={() => setShowFilters(true)}>
-            <Ionicons name="options-outline" size={22} color={DARK_BLUE_ACCENT} />
           </TouchableOpacity>
         </View>
 
@@ -413,46 +399,28 @@ export default function SessionManagementScreen() {
         </View>
       </Modal>
 
-      {/* FILTER BOTTOM SHEET */}
-      <Modal visible={showFilters} animationType="slide" transparent={true} onRequestClose={() => setShowFilters(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Filter Sessions</Text>
-              <TouchableOpacity onPress={() => setShowFilters(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color={theme.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.filterGroupLabel}>Operating System</Text>
-            <View style={styles.chipRow}>
-              {['Windows', 'macOS', 'Linux', 'iOS', 'Android'].map(os => (
-                <TouchableOpacity key={os} style={[styles.chip, activeFilters.os === os && styles.chipActive]} onPress={() => setActiveFilters({ ...activeFilters, os: activeFilters.os === os ? '' : os })}>
-                  <Text style={[styles.chipText, activeFilters.os === os && styles.chipTextActive]}>{os}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={styles.filterGroupLabel}>Browser</Text>
-            <View style={styles.chipRow}>
-              {['Chrome', 'Safari', 'Firefox', 'Edge'].map(browser => (
-                <TouchableOpacity key={browser} style={[styles.chip, activeFilters.browser === browser && styles.chipActive]} onPress={() => setActiveFilters({ ...activeFilters, browser: activeFilters.browser === browser ? '' : browser })}>
-                  <Text style={[styles.chipText, activeFilters.browser === browser && styles.chipTextActive]}>{browser}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.modalFooterActions}>
-              <TouchableOpacity style={styles.modalClearBtn} onPress={() => { setActiveFilters({ os: '', browser: '' }); setShowFilters(false); fetchSessions(true); }}>
-                <Text style={styles.modalClearBtnText}>Reset</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalApplyBtn} onPress={() => { setShowFilters(false); fetchSessions(true); }}>
-                <Text style={styles.modalApplyBtnText}>Apply Filter</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <FilterBottomSheet
+        visible={showFilters}
+        title="Filter Sessions"
+        theme={theme}
+        onClose={() => setShowFilters(false)}
+        onApply={() => { setShowFilters(false); fetchSessions(true); }}
+        onReset={() => setActiveFilters({ os: '', browser: '' })}
+      >
+        <FilterFormRenderer
+          theme={theme}
+          values={activeFilters}
+          onChange={(key, value) => setActiveFilters(prev => ({ ...prev, [key]: value || '' }))}
+          fields={[
+            { type: 'chips', key: 'os', label: 'Operating System', options: [
+              { label: 'All', value: '' }, { label: 'Windows', value: 'Windows' }, { label: 'macOS', value: 'macOS' }, { label: 'Linux', value: 'Linux' }, { label: 'iOS', value: 'iOS' }, { label: 'Android', value: 'Android' },
+            ] },
+            { type: 'chips', key: 'browser', label: 'Browser', options: [
+              { label: 'All', value: '' }, { label: 'Chrome', value: 'Chrome' }, { label: 'Safari', value: 'Safari' }, { label: 'Firefox', value: 'Firefox' }, { label: 'Edge', value: 'Edge' },
+            ] },
+          ]}
+        />
+      </FilterBottomSheet>
 
     </SafeAreaView>
   );

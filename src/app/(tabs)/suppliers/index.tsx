@@ -1,4 +1,5 @@
 import { SupplierService } from '@/src/api/supplierService';
+import { FilterBottomSheet, FilterFormRenderer, HeaderSearchAction } from '@/src/components/filters';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
@@ -10,10 +11,8 @@ import {
     ActivityIndicator,
     FlatList,
     Image,
-    Modal,
     RefreshControl,
     StyleSheet,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -205,35 +204,18 @@ export default function SupplierListScreen() {
                         <ThemedText style={styles.headerTitle}>Suppliers</ThemedText>
                         <ThemedText style={styles.headerSubtitle}>{totalCount} Total Vendors</ThemedText>
                     </View>
+                    <HeaderSearchAction
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        onOpenFilters={() => setShowFilterModal(true)}
+                        filterActive={Boolean(phoneFilter)}
+                        filterCount={phoneFilter ? 1 : 0}
+                        placeholder="Company"
+                        theme={theme}
+                    />
                     <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/(tabs)/suppliers/create' as any)}>
                         <Ionicons name="add" size={20} color={theme.bgSecondary} />
                         <ThemedText style={styles.addBtnText}>New Supplier</ThemedText>
-                    </TouchableOpacity>
-                </View>
-
-                {/* SEARCH & FILTER BAR */}
-                <View style={styles.searchContainer}>
-                    <View style={styles.searchBar}>
-                        <Ionicons name="search" size={20} color={theme.textTertiary} />
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search by company name..."
-                            placeholderTextColor={theme.textTertiary}
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            autoCorrect={false}
-                        />
-                        {searchQuery.length > 0 && (
-                            <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                    <TouchableOpacity
-                        style={[styles.filterBtn, phoneFilter && styles.filterBtnActive]}
-                        onPress={() => setShowFilterModal(true)}
-                    >
-                        <Ionicons name="options" size={20} color={phoneFilter ? theme.accentPrimary : theme.textSecondary} />
                     </TouchableOpacity>
                 </View>
 
@@ -273,41 +255,23 @@ export default function SupplierListScreen() {
 
             </SafeAreaView>
 
-            {/* FILTER BOTTOM SHEET */}
-            <Modal visible={showFilterModal} transparent animationType="fade">
-                <View style={styles.modalOverlay}>
-                    <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowFilterModal(false)} />
-                    <View style={styles.bottomSheet}>
-                        <View style={styles.sheetHeader}>
-                            <ThemedText style={styles.sheetTitle}>Filter Suppliers</ThemedText>
-                            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                                <Ionicons name="close" size={24} color={theme.textPrimary} />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.sheetBody}>
-                            <ThemedText style={styles.label}>Phone Number</ThemedText>
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder="Filter by phone..."
-                                placeholderTextColor={theme.textTertiary}
-                                keyboardType="phone-pad"
-                                value={phoneFilter}
-                                onChangeText={setPhoneFilter}
-                            />
-
-                            <View style={styles.sheetActions}>
-                                <TouchableOpacity style={styles.clearBtn} onPress={clearFilters}>
-                                    <ThemedText style={styles.clearBtnText}>Clear All</ThemedText>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
-                                    <ThemedText style={styles.applyBtnText}>Apply Filters</ThemedText>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+            <FilterBottomSheet
+                visible={showFilterModal}
+                title="Filter Suppliers"
+                theme={theme}
+                onClose={() => setShowFilterModal(false)}
+                onApply={applyFilters}
+                onReset={clearFilters}
+            >
+                <FilterFormRenderer
+                    theme={theme}
+                    values={{ phone: phoneFilter }}
+                    onChange={(_, value) => setPhoneFilter(value || '')}
+                    fields={[
+                        { type: 'text', key: 'phone', label: 'Phone Number', placeholder: 'Filter by phone', keyboardType: 'phone-pad' },
+                    ]}
+                />
+            </FilterBottomSheet>
 
         </ThemedView>
     );

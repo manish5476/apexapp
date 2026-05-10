@@ -2,6 +2,7 @@ import { productService } from '@/src/features/product/services/product.service'
 import { extractProductList, extractProductPagination } from '@/src/api/productService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
+import { FilterBottomSheet, HeaderSearchAction } from '@/src/components/filters';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { useMasterDropdown } from '@/src/hooks/use-master-dropdown';
@@ -18,7 +19,6 @@ import {
     Modal,
     RefreshControl,
     StyleSheet,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -88,6 +88,11 @@ export default function ProductListScreen() {
   useEffect(() => {
     fetchProducts(1);
   }, [activeFilters]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchProducts(1, true), 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // --- HANDLERS ---
   const onRefresh = useCallback(() => {
@@ -285,46 +290,22 @@ export default function ProductListScreen() {
               </ThemedText>
             </View>
             <View style={styles.headerRightActions}>
+              <HeaderSearchAction
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmit={handleSearchSubmit}
+                onOpenFilters={() => setShowFilters(true)}
+                filterActive={Boolean(activeFilters.brandId || activeFilters.categoryId)}
+                filterCount={[activeFilters.brandId, activeFilters.categoryId].filter(Boolean).length}
+                placeholder="Name or SKU"
+                theme={theme}
+              />
               <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/product/create' as any)}>
                 <Ionicons name="add" size={20} color={theme.bgSecondary} />
                 <ThemedText style={styles.primaryBtnText}>New</ThemedText>
               </TouchableOpacity>
               <NotificationBell />
             </View>
-          </View>
-
-          {/* SEARCH BAR */}
-          <View style={styles.searchRow}>
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={20} color={theme.textTertiary} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search name or SKU..."
-                placeholderTextColor={theme.textLabel}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearchSubmit}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => { setSearchQuery(''); fetchProducts(1, true); }}>
-                  <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
-                </TouchableOpacity>
-              )}
-            </View>
-            <TouchableOpacity
-              style={[
-                styles.filterBtn,
-                (activeFilters.brandId || activeFilters.categoryId) && styles.filterBtnActive
-              ]}
-              onPress={() => setShowFilters(true)}
-            >
-              <Ionicons
-                name="filter"
-                size={20}
-                color={(activeFilters.brandId || activeFilters.categoryId) ? theme.bgSecondary : theme.textPrimary}
-              />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -366,48 +347,35 @@ export default function ProductListScreen() {
 
       </SafeAreaView>
 
-      {/* FILTER MODAL */}
-      <Modal visible={showFilters} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>Filters</ThemedText>
-              <TouchableOpacity onPress={() => setShowFilters(false)}>
-                <Ionicons name="close" size={24} color={theme.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.filterSection}>
-              <ThemedText style={styles.filterGroupLabel}>Brand</ThemedText>
-              <FilterDropdown 
-                endpoint="brands" 
-                value={activeFilters.brandId} 
-                onChange={(val:any) => setActiveFilters(p => ({ ...p, brandId: val }))} 
-                placeholder="Select Brand" 
-              />
-            </View>
-
-            <View style={styles.filterSection}>
-              <ThemedText style={styles.filterGroupLabel}>Category</ThemedText>
-              <FilterDropdown 
-                endpoint="categories" 
-                value={activeFilters.categoryId} 
-                onChange={(val:any) => setActiveFilters(p => ({ ...p, categoryId: val }))} 
-                placeholder="Select Category" 
-              />
-            </View>
-
-            <View style={styles.modalFooterActions}>
-              <TouchableOpacity style={styles.modalResetBtn} onPress={resetFilters}>
-                <ThemedText style={styles.modalResetBtnText}>Reset</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalApplyBtn} onPress={applyFilters}>
-                <ThemedText style={styles.modalApplyBtnText}>View Results</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
+      <FilterBottomSheet
+        visible={showFilters}
+        title="Filter Products"
+        theme={theme}
+        onClose={() => setShowFilters(false)}
+        onApply={applyFilters}
+        onReset={resetFilters}
+        applyLabel="View Results"
+      >
+        <View style={styles.filterSection}>
+          <ThemedText style={styles.filterGroupLabel}>Brand</ThemedText>
+          <FilterDropdown
+            endpoint="brands"
+            value={activeFilters.brandId}
+            onChange={(val:any) => setActiveFilters(p => ({ ...p, brandId: val }))}
+            placeholder="Select Brand"
+          />
         </View>
-      </Modal>
+
+        <View style={styles.filterSection}>
+          <ThemedText style={styles.filterGroupLabel}>Category</ThemedText>
+          <FilterDropdown
+            endpoint="categories"
+            value={activeFilters.categoryId}
+            onChange={(val:any) => setActiveFilters(p => ({ ...p, categoryId: val }))}
+            placeholder="Select Category"
+          />
+        </View>
+      </FilterBottomSheet>
 
       {/* ACTION MENU MODAL (Long Press) */}
       <Modal visible={!!selectedProduct} transparent animationType="fade">

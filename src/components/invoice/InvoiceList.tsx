@@ -1,15 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { FilterBottomSheet, FilterFormRenderer, HeaderSearchAction } from '@/src/components/filters';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Keyboard,
-  Modal,
   RefreshControl,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -202,9 +200,13 @@ export default function InvoiceListScreen() {
     fetchInvoices(1, true);
   }, [activeFilters]); // We don't include searchQuery here so it doesn't fetch on every keystroke
 
+  useEffect(() => {
+    const timer = setTimeout(() => fetchInvoices(1, true), 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // --- HANDLERS ---
   const handleSearchSubmit = () => {
-    Keyboard.dismiss();
     fetchInvoices(1, true);
   };
 
@@ -227,8 +229,8 @@ export default function InvoiceListScreen() {
     }
   };
 
-  const applyFilter = (key: string, value: string) => {
-    setActiveFilters((prev:any) => ({ ...prev, [key]: prev[key] === value ? '' : value })); // Toggle off if already selected
+  const applyFilter = (key: string, value: string | null) => {
+    setActiveFilters((prev:any) => ({ ...prev, [key]: value || '' }));
   };
 
   // --- RENDERERS ---
@@ -250,6 +252,16 @@ export default function InvoiceListScreen() {
               <ThemedText style={styles.pageSubtitle}>Manage billing & track payments</ThemedText>
             </View>
             <View style={styles.headerActions}>
+              <HeaderSearchAction
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmit={handleSearchSubmit}
+                onOpenFilters={() => setShowFilters(true)}
+                filterActive={activeFilterCount > 0}
+                filterCount={activeFilterCount}
+                placeholder="Invoice no"
+                theme={theme}
+              />
               <TouchableOpacity style={styles.iconBtn} onPress={handleExport} disabled={isExporting}>
                 {isExporting ? <ActivityIndicator size="small" color={theme.accentPrimary} /> : <Ionicons name="cloud-download-outline" size={22} color={theme.textPrimary} />}
               </TouchableOpacity>
@@ -258,40 +270,6 @@ export default function InvoiceListScreen() {
                 <ThemedText style={styles.primaryBtnText}>New</ThemedText>
               </TouchableOpacity>
             </View>
-          </View>
-
-          {/* SEARCH BAR */}
-          <View style={styles.searchRow}>
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={20} color={theme.textTertiary} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search by invoice number..."
-                placeholderTextColor={theme.textLabel}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearchSubmit}
-                returnKeyType="search"
-                autoCapitalize="none"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={handleClearSearch} style={{ padding: Spacing.xs }}>
-                  <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
-                </TouchableOpacity>
-              )}
-            </View>
-            
-            <TouchableOpacity 
-              style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]} 
-              onPress={() => setShowFilters(true)}
-            >
-              <Ionicons name="options-outline" size={22} color={activeFilterCount > 0 ? theme.bgPrimary : theme.textPrimary} />
-              {activeFilterCount > 0 && (
-                <View style={styles.filterBadgeIndicator}>
-                  <ThemedText style={styles.filterBadgeIndicatorText}>{activeFilterCount}</ThemedText>
-                </View>
-              )}
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -333,49 +311,28 @@ export default function InvoiceListScreen() {
 
       </SafeAreaView>
 
-      {/* FILTER MODAL */}
-      <Modal visible={showFilters} animationType="slide" transparent={true} onRequestClose={() => setShowFilters(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>Filter Invoices</ThemedText>
-              <TouchableOpacity onPress={() => setShowFilters(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color={theme.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            
-            <ThemedText style={styles.filterGroupLabel}>Invoice Status</ThemedText>
-            <View style={styles.chipRow}>
-              {['draft', 'issued', 'paid', 'cancelled'].map(status => (
-                <TouchableOpacity key={status} style={[styles.chip, activeFilters.status === status && styles.chipActive]} onPress={() => applyFilter('status', status)}>
-                  <ThemedText style={[styles.chipText, activeFilters.status === status && styles.chipTextActive]}>{status}</ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <ThemedText style={styles.filterGroupLabel}>Payment Status</ThemedText>
-            <View style={styles.chipRow}>
-              {['unpaid', 'partial', 'paid'].map(pStatus => (
-                <TouchableOpacity key={pStatus} style={[styles.chip, activeFilters.paymentStatus === pStatus && styles.chipActive]} onPress={() => applyFilter('paymentStatus', pStatus)}>
-                  <ThemedText style={[styles.chipText, activeFilters.paymentStatus === pStatus && styles.chipTextActive]}>{pStatus}</ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.modalFooterActions}>
-              <TouchableOpacity 
-                style={styles.modalClearBtn} 
-                onPress={() => { setActiveFilters({ status: '', paymentStatus: '' }); setShowFilters(false); }}
-              >
-                <ThemedText style={styles.modalClearBtnText}>Clear All</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalApplyBtn} onPress={() => setShowFilters(false)}>
-                <ThemedText style={styles.modalApplyBtnText}>Apply Filters</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <FilterBottomSheet
+        visible={showFilters}
+        title="Filter Invoices"
+        theme={theme}
+        onClose={() => setShowFilters(false)}
+        onApply={() => setShowFilters(false)}
+        onReset={() => setActiveFilters({ status: '', paymentStatus: '' })}
+      >
+        <FilterFormRenderer
+          theme={theme}
+          values={activeFilters}
+          onChange={applyFilter}
+          fields={[
+            { type: 'chips', key: 'status', label: 'Invoice Status', options: [
+              { label: 'All', value: '' }, { label: 'Draft', value: 'draft' }, { label: 'Issued', value: 'issued' }, { label: 'Paid', value: 'paid' }, { label: 'Cancelled', value: 'cancelled' },
+            ] },
+            { type: 'chips', key: 'paymentStatus', label: 'Payment Status', options: [
+              { label: 'All', value: '' }, { label: 'Unpaid', value: 'unpaid' }, { label: 'Partial', value: 'partial' }, { label: 'Paid', value: 'paid' },
+            ] },
+          ]}
+        />
+      </FilterBottomSheet>
 
     </ThemedView>
   );

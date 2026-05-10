@@ -1,4 +1,5 @@
 import { Themes } from '@/src/constants/theme';
+import { HeaderSearchAction } from '@/src/components/filters';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -249,27 +250,16 @@ export default function RoleManagementScreen() {
             <Text style={styles.pageTitle}>Role Management</Text>
             <Text style={styles.pageSubtitle}>Define access controls & permissions</Text>
           </View>
+          <HeaderSearchAction
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Roles"
+            theme={theme}
+          />
           <TouchableOpacity style={styles.primaryBtn} onPress={openNewRoleModal}>
             <Ionicons name="add" size={20} color={theme.bgPrimary} />
             <Text style={styles.primaryBtnText}>New Role</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* SEARCH BAR */}
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={DARK_BLUE_ACCENT} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search roles..."
-            placeholderTextColor={theme.textLabel}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: Spacing.xs }}>
-              <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 

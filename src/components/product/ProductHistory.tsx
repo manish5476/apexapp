@@ -1,6 +1,7 @@
 import { ProductService } from '@/src/api/productService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
+import { FilterBottomSheet, FilterFormRenderer } from '@/src/components/filters';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   RefreshControl,
   StyleSheet,
   TouchableOpacity,
@@ -139,10 +139,8 @@ export default function ProductHistoryScreen() {
     loadHistory(true, activeFilter);
   }, [id, activeFilter]);
 
-  const applyFilter = (mode: DateFilter) => {
-    setActiveFilter(mode);
-    setShowFilterModal(false);
-    loadHistory(false, mode);
+  const applyFilter = (_key: string, mode: DateFilter | null) => {
+    setActiveFilter(mode || 'all');
   };
 
   // --- RENDER ITEM ---
@@ -237,37 +235,31 @@ export default function ProductHistoryScreen() {
 
       </SafeAreaView>
 
-      {/* FILTER BOTTOM SHEET */}
-      <Modal visible={showFilterModal} transparent animationType="fade">
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowFilterModal(false)}>
-          <View style={styles.bottomSheet}>
-            <View style={styles.sheetHeader}>
-              <ThemedText style={styles.sheetTitle}>Filter by Date</ThemedText>
-              <TouchableOpacity onPress={() => setShowFilterModal(false)}><Ionicons name="close" size={24} color={theme.textPrimary} /></TouchableOpacity>
-            </View>
-
-            <TouchableOpacity style={[styles.filterOption, activeFilter === '7days' && styles.filterOptionActive]} onPress={() => applyFilter('7days')}>
-              <ThemedText style={[styles.filterOptionText, activeFilter === '7days' && styles.filterOptionTextActive]}>Last 7 Days</ThemedText>
-              {activeFilter === '7days' && <Ionicons name="checkmark" size={20} color={theme.accentPrimary} />}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.filterOption, activeFilter === '30days' && styles.filterOptionActive]} onPress={() => applyFilter('30days')}>
-              <ThemedText style={[styles.filterOptionText, activeFilter === '30days' && styles.filterOptionTextActive]}>Last 30 Days</ThemedText>
-              {activeFilter === '30days' && <Ionicons name="checkmark" size={20} color={theme.accentPrimary} />}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.filterOption, activeFilter === 'month' && styles.filterOptionActive]} onPress={() => applyFilter('month')}>
-              <ThemedText style={[styles.filterOptionText, activeFilter === 'month' && styles.filterOptionTextActive]}>This Month</ThemedText>
-              {activeFilter === 'month' && <Ionicons name="checkmark" size={20} color={theme.accentPrimary} />}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.filterOption, activeFilter === 'all' && styles.filterOptionActive]} onPress={() => applyFilter('all')}>
-              <ThemedText style={[styles.filterOptionText, activeFilter === 'all' && styles.filterOptionTextActive]}>All Time</ThemedText>
-              {activeFilter === 'all' && <Ionicons name="checkmark" size={20} color={theme.accentPrimary} />}
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <FilterBottomSheet
+        visible={showFilterModal}
+        title="Filter by Date"
+        theme={theme}
+        onClose={() => setShowFilterModal(false)}
+        onApply={() => {
+          setShowFilterModal(false);
+          loadHistory(false, activeFilter);
+        }}
+        onReset={() => setActiveFilter('all')}
+      >
+        <FilterFormRenderer
+          theme={theme}
+          values={{ date: activeFilter }}
+          onChange={applyFilter}
+          fields={[
+            { type: 'chips', key: 'date', label: 'Date Range', options: [
+              { label: 'All Time', value: 'all' },
+              { label: 'Last 7 Days', value: '7days' },
+              { label: 'Last 30 Days', value: '30days' },
+              { label: 'This Month', value: 'month' },
+            ] },
+          ]}
+        />
+      </FilterBottomSheet>
 
     </ThemedView>
   );

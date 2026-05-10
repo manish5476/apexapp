@@ -1,5 +1,6 @@
 import { extractCustomerList, extractCustomerPagination } from '@/src/api/customerService';
 import { AppLoader } from '@/src/components/AppLoader';
+import { HeaderSearchAction } from '@/src/components/filters';
 import { NotificationBell } from '@/src/components/navigation/notification-bell';
 import { PERMISSIONS } from '@/src/constants/permissions';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
@@ -16,7 +17,6 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -37,12 +37,12 @@ const getInitials = (name: string = '') =>
 
 const formatCurrency = (value: number) =>
   value >= 10000000
-    ? `₹${(value / 10000000).toFixed(1)}Cr`
+    ? `Rs. ${(value / 10000000).toFixed(1)}Cr`
     : value >= 100000
-      ? `₹${(value / 100000).toFixed(1)}L`
+      ? `Rs. ${(value / 100000).toFixed(1)}L`
       : value >= 1000
-        ? `₹${(value / 1000).toFixed(1)}K`
-        : `₹${value.toLocaleString('en-IN')}`;
+        ? `Rs. ${(value / 1000).toFixed(1)}K`
+        : `Rs. ${value.toLocaleString('en-IN')}`;
 
 // Distinct palette — each entry is [accentColor, darkShade]
 const AVATAR_PALETTE: [string, string][] = [
@@ -285,7 +285,7 @@ const CustomerCard = React.memo(
                     },
                   ]}
                 >
-                  {(item.creditLimit || 0) > 0 ? formatCurrency(item.creditLimit) : '—'}
+                  {(item.creditLimit || 0) > 0 ? formatCurrency(item.creditLimit) : '-'}
                 </ThemedText>
               </View>
 
@@ -303,7 +303,7 @@ const CustomerCard = React.memo(
                     },
                   ]}
                 >
-                  {(item.totalPurchases || 0) > 0 ? formatCurrency(item.totalPurchases) : '₹0'}
+                  {(item.totalPurchases || 0) > 0 ? formatCurrency(item.totalPurchases) : 'Rs. 0'}
                 </ThemedText>
               </View>
             </View>
@@ -473,11 +473,17 @@ export default function CustomerListScreen() {
             <ThemedText style={styles.pageTitle}>Customers</ThemedText>
             <ThemedText style={styles.pageSubtitle}>
               {totalCount > 0
-                ? `${totalCount.toLocaleString()} total · ${outstandingCount} with outstanding`
+                ? `${totalCount.toLocaleString()} total - ${outstandingCount} with outstanding`
                 : 'Search, review and manage your customer base'}
             </ThemedText>
           </View>
           <View style={styles.pageHeaderRight}>
+            <HeaderSearchAction
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="Name or phone"
+              theme={theme}
+            />
             {canReadNotifications && <NotificationBell />}
             <TouchableOpacity
               style={styles.addBtn}
@@ -490,26 +496,6 @@ export default function CustomerListScreen() {
         </View>
 
         {/* ── Search bar ────────────────────────────────────────────── */}
-        <View style={styles.searchOuter}>
-          <View style={[styles.searchInner, { borderColor: theme.borderPrimary }]}>
-            <Ionicons name="search-outline" size={17} color={theme.textTertiary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search name, phone, city, GST…"
-              placeholderTextColor={theme.textLabel}
-              value={searchText}
-              onChangeText={setSearchText}
-              returnKeyType="search"
-              clearButtonMode="while-editing"
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close-circle" size={17} color={theme.borderSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
         {/* ── Summary chips ─────────────────────────────────────────── */}
         <View style={styles.summaryRow}>
           <View style={[styles.summaryChip, { borderColor: theme.borderPrimary }]}>
@@ -610,7 +596,7 @@ export default function CustomerListScreen() {
         />
 
         {isLoading && data.length === 0 && !isRefreshing && (
-          <AppLoader overlay text="Loading customers…" />
+          <AppLoader overlay text="Loading customers..." />
         )}
       </SafeAreaView>
     </ThemedView>

@@ -1,4 +1,5 @@
 import { InvoiceService } from '@/src/api/invoiceService';
+import { FilterBottomSheet, FilterFormRenderer } from '@/src/components/filters';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
@@ -9,7 +10,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
-    Modal,
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -375,43 +375,28 @@ export default function AdvancedProfitAnalysisScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* FILTER BOTTOM SHEET */}
-      <Modal visible={showFilters} transparent animationType="fade">
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowFilters(false)}>
-          <View style={styles.bottomSheet}>
-            <View style={styles.sheetHeader}>
-              <ThemedText style={styles.sheetTitle}>Report Filters</ThemedText>
-              <TouchableOpacity onPress={() => setShowFilters(false)}><Ionicons name="close" size={24} color={theme.textPrimary} /></TouchableOpacity>
-            </View>
-
-            <View style={styles.filterSection}>
-              <ThemedText style={styles.filterGroupLabel}>Group Data By</ThemedText>
-              <View style={styles.chipRow}>
-                {['day', 'week', 'month'].map(opt => (
-                  <TouchableOpacity key={opt} style={[styles.chip, filters.groupBy === opt && styles.chipActive]} onPress={() => setFilters(p => ({ ...p, groupBy: opt }))}>
-                    <ThemedText style={[styles.chipText, filters.groupBy === opt && styles.chipTextActive]}>{opt.toUpperCase()}</ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.filterSection}>
-              <ThemedText style={styles.filterGroupLabel}>Compare With</ThemedText>
-              <View style={styles.chipRow}>
-                {[{l: 'Prev. Period', v: 'previous_period'}, {l: 'Last Year', v: 'same_period_last_year'}, {l: 'None', v: 'none'}].map(opt => (
-                  <TouchableOpacity key={opt.v} style={[styles.chip, filters.compareWith === opt.v && styles.chipActive]} onPress={() => setFilters(p => ({ ...p, compareWith: opt.v }))}>
-                    <ThemedText style={[styles.chipText, filters.compareWith === opt.v && styles.chipTextActive]}>{opt.l}</ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.applyFilterBtn} onPress={() => setShowFilters(false)}>
-              <ThemedText style={styles.applyFilterBtnText}>Apply Filters</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <FilterBottomSheet
+        visible={showFilters}
+        title="Report Filters"
+        theme={theme}
+        onClose={() => setShowFilters(false)}
+        onApply={() => setShowFilters(false)}
+        onReset={() => setFilters({ groupBy: 'day', compareWith: 'previous_period' })}
+      >
+        <FilterFormRenderer
+          theme={theme}
+          values={filters}
+          onChange={(key, value) => setFilters(prev => ({ ...prev, [key]: value }))}
+          fields={[
+            { type: 'chips', key: 'groupBy', label: 'Group Data By', options: [
+              { label: 'Day', value: 'day' }, { label: 'Week', value: 'week' }, { label: 'Month', value: 'month' },
+            ] },
+            { type: 'chips', key: 'compareWith', label: 'Compare With', options: [
+              { label: 'Prev. Period', value: 'previous_period' }, { label: 'Last Year', value: 'same_period_last_year' }, { label: 'None', value: 'none' },
+            ] },
+          ]}
+        />
+      </FilterBottomSheet>
 
     </ThemedView>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, FlatList, View, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { StyleSheet, FlatList, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { UserService, User } from '../../../api/userService';
 import { MasterService } from '../../../api/masterService';
 import { Spacing, UI } from '../../../constants/theme';
 import { useAppTheme } from '../../../hooks/use-app-theme';
+import { FilterBottomSheet, FilterFormRenderer, HeaderSearchAction } from '../../../components/filters';
 
 export default function UserListScreen() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function UserListScreen() {
 
   // Filters (Static for now, could be dynamic)
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const fetchUsers = useCallback(async (pageNum: number, isRefresh = false) => {
     if (loading && !isRefresh) return;
@@ -82,31 +84,21 @@ export default function UserListScreen() {
             <ThemedText type="title">Team</ThemedText>
             <ThemedText style={styles.subtitle}>{total} members found</ThemedText>
           </View>
+          <HeaderSearchAction
+            value={search}
+            onChangeText={setSearch}
+            onOpenFilters={() => setShowFilters(true)}
+            filterActive={Boolean(selectedRole)}
+            filterCount={selectedRole ? 1 : 0}
+            placeholder="Employees"
+            theme={theme}
+          />
           <TouchableOpacity 
             onPress={() => router.push('/(tabs)/users/create' as any)}
             style={[styles.addButton, { backgroundColor: theme.accentPrimary }]}
           >
             <Ionicons name="add" size={24} color="white" />
           </TouchableOpacity>
-        </View>
-
-        {/* Search Bar */}
-        <View style={styles.searchSection}>
-          <View style={[styles.searchBar, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
-            <Ionicons name="search" size={20} color={theme.textTertiary} />
-            <TextInput
-              style={[styles.input, { color: theme.textPrimary }]}
-              placeholder="Search employees..."
-              placeholderTextColor={theme.textLabel}
-              value={search}
-              onChangeText={setSearch}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')}>
-                <Ionicons name="close-circle" size={20} color={theme.textLabel} />
-              </TouchableOpacity>
-            )}
-          </View>
         </View>
 
         {/* List */}
@@ -139,6 +131,23 @@ export default function UserListScreen() {
             ) : null
           }
         />
+        <FilterBottomSheet
+          visible={showFilters}
+          title="Filter Team"
+          theme={theme}
+          onClose={() => setShowFilters(false)}
+          onApply={() => setShowFilters(false)}
+          onReset={() => setSelectedRole(null)}
+        >
+          <FilterFormRenderer
+            theme={theme}
+            values={{ role: selectedRole ?? '' }}
+            onChange={(_, value) => setSelectedRole(value || null)}
+            fields={[
+              { type: 'text', key: 'role', label: 'Role', placeholder: 'Role id or name' },
+            ]}
+          />
+        </FilterBottomSheet>
       </SafeAreaView>
     </ThemedView>
   );
@@ -166,23 +175,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
-  },
-  searchSection: {
-    paddingHorizontal: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    height: 48,
-    borderRadius: UI.borderRadius.md,
-    borderWidth: 1,
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
   },
   listContent: {
     paddingHorizontal: Spacing.xl,

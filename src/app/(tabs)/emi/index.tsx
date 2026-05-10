@@ -1,15 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { FilterBottomSheet, FilterFormRenderer, HeaderSearchAction } from '@/src/components/filters';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Keyboard,
-  Modal,
   RefreshControl,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -236,13 +235,18 @@ export default function EmiListScreen() {
     fetchEmis(1, true);
   }, [activeFilters]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => fetchEmis(1, true), 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const handleSearchSubmit = () => {
     Keyboard.dismiss();
     fetchEmis(1, true);
   };
 
-  const applyFilter = (key: keyof typeof activeFilters, value: string) => {
-    setActiveFilters(prev => ({ ...prev, [key]: prev[key] === value ? '' : value }));
+  const applyFilter = (key: keyof typeof activeFilters | string, value: string | null) => {
+    setActiveFilters(prev => ({ ...prev, [key]: value || '' }));
   };
 
   const activeFilterCount = Object.values(activeFilters).filter(Boolean).length;
@@ -262,36 +266,16 @@ export default function EmiListScreen() {
               <Ionicons name="add" size={20} color={theme.bgPrimary} />
               <ThemedText style={styles.primaryBtnText}>New Plan</ThemedText>
             </TouchableOpacity>
-          </View>
-
-          {/* SEARCH BAR */}
-          <View style={styles.searchRow}>
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={20} color={DARK_BLUE_ACCENT} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search Invoice No..."
-                placeholderTextColor={theme.textLabel}
+            <HeaderSearchAction
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearchSubmit}
-                returnKeyType="search"
+                onSubmit={handleSearchSubmit}
+                onOpenFilters={() => setShowFilters(true)}
+                filterActive={activeFilterCount > 0}
+                filterCount={activeFilterCount}
+                placeholder="Invoice no"
+                theme={theme}
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => { setSearchQuery(''); setTimeout(() => fetchEmis(1, true), 0); }} style={{ padding: Spacing.xs }}>
-                  <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <TouchableOpacity style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]} onPress={() => setShowFilters(true)}>
-              <Ionicons name="options-outline" size={22} color={activeFilterCount > 0 ? theme.bgPrimary : DARK_BLUE_ACCENT} />
-              {activeFilterCount > 0 && (
-                <View style={styles.filterBadgeIndicator}>
-                  <ThemedText style={styles.filterBadgeIndicatorText}>{activeFilterCount}</ThemedText>
-                </View>
-              )}
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -327,37 +311,25 @@ export default function EmiListScreen() {
         )}
       </SafeAreaView>
 
-      {/* FILTER MODAL */}
-      <Modal visible={showFilters} animationType="slide" transparent={true} onRequestClose={() => setShowFilters(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>Filter EMIs</ThemedText>
-              <TouchableOpacity onPress={() => setShowFilters(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color={theme.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <ThemedText style={styles.filterGroupLabel}>Plan Status</ThemedText>
-            <View style={styles.chipRow}>
-              {['active', 'completed', 'defaulted', 'closed'].map(status => (
-                <TouchableOpacity key={status} style={[styles.chip, activeFilters.status === status && styles.chipActive]} onPress={() => applyFilter('status', status)}>
-                  <ThemedText style={[styles.chipText, activeFilters.status === status && styles.chipTextActive]}>{status}</ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.modalFooterActions}>
-              <TouchableOpacity style={styles.modalClearBtn} onPress={() => { setActiveFilters({status:'', customerId:''}); setShowFilters(false); }}>
-                <ThemedText style={styles.modalClearBtnText}>Reset</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalApplyBtn} onPress={() => setShowFilters(false)}>
-                <ThemedText style={styles.modalApplyBtnText}>Apply Filters</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <FilterBottomSheet
+        visible={showFilters}
+        title="Filter EMIs"
+        theme={theme}
+        onClose={() => setShowFilters(false)}
+        onApply={() => setShowFilters(false)}
+        onReset={() => setActiveFilters({ status: '', customerId: '' })}
+      >
+        <FilterFormRenderer
+          theme={theme}
+          values={activeFilters}
+          onChange={applyFilter}
+          fields={[
+            { type: 'chips', key: 'status', label: 'Plan Status', options: [
+              { label: 'All', value: '' }, { label: 'Active', value: 'active' }, { label: 'Completed', value: 'completed' }, { label: 'Defaulted', value: 'defaulted' }, { label: 'Closed', value: 'closed' },
+            ] },
+          ]}
+        />
+      </FilterBottomSheet>
 
     </ThemedView>
   );
@@ -394,7 +366,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: `${DARK_BLUE_ACCENT}15`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${DARK_BLUE_ACCENT}40` },
   avatarText: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: DARK_BLUE_ACCENT },
   customerName: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: theme.textPrimary },
-  invoiceNumber: { fontFamily: theme.fonts.body, fontSize: 12, color: theme.textSecondary, marginTop: 2, fontFamily: theme.fonts.mono },
+  invoiceNumber: { fontFamily: theme.fonts.mono, fontSize: 12, color: theme.textSecondary, marginTop: 2 },
   badge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
   badgeText: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
 
@@ -404,7 +376,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   miniCol: { flex: 1 },
   miniColRight: { flex: 1, alignItems: 'flex-end' },
   miniLabel: { fontFamily: theme.fonts.body, fontSize: 10, color: theme.textTertiary, textTransform: 'uppercase', marginBottom: 2 },
-  miniValue: { fontFamily: theme.fonts.heading, fontSize: 14, fontWeight: '600', color: theme.textPrimary, fontFamily: theme.fonts.mono },
+  miniValue: { fontFamily: theme.fonts.mono, fontSize: 14, fontWeight: '600', color: theme.textPrimary },
   miniSubValue: { fontFamily: theme.fonts.body, fontSize: 10, color: theme.textTertiary, marginTop: 2 },
 
   progressContainer: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: theme.borderSecondary, borderStyle: 'dashed' },
@@ -418,7 +390,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, backgroundColor: theme.bgSecondary, borderTopWidth: 1, borderTopColor: theme.borderSecondary },
   financialLabel: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: 'bold', color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   tenureText: { fontFamily: theme.fonts.heading, fontSize: 12, fontWeight: '600', color: theme.textPrimary },
-  balanceTotal: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: theme.textPrimary, fontFamily: theme.fonts.mono },
+  balanceTotal: { fontFamily: theme.fonts.mono, fontSize: 16, fontWeight: 'bold', color: theme.textPrimary },
 
   // EMPTY STATE
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: 64, marginTop: 48 },

@@ -47,15 +47,15 @@ const formatCurrency = (val: number) => {
   const abs = Math.abs(val);
   const formatted =
     abs >= 100000
-      ? `â‚¹${(abs / 100000).toFixed(1)}L`
+      ? `Rs. ${(abs / 100000).toFixed(1)}L`
       : abs >= 1000
-      ? `â‚¹${(abs / 1000).toFixed(1)}K`
-      : `â‚¹${abs.toLocaleString('en-IN')}`;
+      ? `Rs. ${(abs / 1000).toFixed(1)}K`
+      : `Rs. ${abs.toLocaleString('en-IN')}`;
   return val < 0 ? `-${formatted}` : formatted;
 };
 
 const formatDate = (iso?: string) => {
-  if (!iso) return 'â€”';
+  if (!iso) return '-';
   return new Date(iso).toLocaleDateString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',
   });
@@ -346,7 +346,7 @@ export default function CustomerDetailsScreen() {
           <View style={[styles.statCard, { borderLeftColor: currentTheme.success }]}>
             <ThemedText style={styles.statLabel}>LAST INVOICE</ThemedText>
             <ThemedText style={[styles.statValue, { color: currentTheme.success }]}>
-              {customer.lastInvoiceAmount > 0 ? formatCurrency(customer.lastInvoiceAmount) : 'â€”'}
+              {customer.lastInvoiceAmount > 0 ? formatCurrency(customer.lastInvoiceAmount) : '-'}
             </ThemedText>
           </View>
 
@@ -577,7 +577,7 @@ export default function CustomerDetailsScreen() {
               <ThemedText style={styles.itemTitle}>{item.referenceNumber || 'Payment Receipt'}</ThemedText>
               <ThemedText style={styles.itemSubtitle}>
                 {formatDate(item.paymentDate)}
-                {item.paymentMethod ? ` â€¢ ${item.paymentMethod.toUpperCase()}` : ''}
+                {item.paymentMethod ? ` - ${item.paymentMethod.toUpperCase()}` : ''}
               </ThemedText>
             </View>
             <ThemedText style={[styles.itemAmount, { color: currentTheme.success }]}>

@@ -1,4 +1,5 @@
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
+import { FilterBottomSheet, FilterFormRenderer, HeaderSearchAction } from '@/src/components/filters';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -7,10 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   RefreshControl,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
   Text,
@@ -187,84 +186,6 @@ export default function TransactionsScreen() {
     loadData(true);
   };
 
-  const renderFilterModal = () => (
-    <Modal visible={showFilterModal} animationType="slide" transparent={true}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: currentTheme.bgPrimary }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: currentTheme.borderPrimary }]}>
-            <Text style={[styles.modalTitle, { color: currentTheme.textPrimary }]}>Filter Transactions</Text>
-            <TouchableOpacity onPress={() => setShowFilterModal(false)} style={styles.closeBtn}>
-              <Ionicons name="close" size={24} color={currentTheme.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.modalBody}>
-            <Text style={[styles.filterLabel, { color: currentTheme.textSecondary }]}>Transaction Type</Text>
-            <View style={styles.chipContainer}>
-              {transactionTypes.map(t => (
-                <TouchableOpacity
-                  key={t.value}
-                  style={[
-                    styles.chip,
-                    { borderColor: currentTheme.borderPrimary, backgroundColor: currentTheme.bgSecondary },
-                    type === t.value && { backgroundColor: currentTheme.accentPrimary, borderColor: currentTheme.accentPrimary }
-                  ]}
-                  onPress={() => setType(t.value)}
-                >
-                  <Text style={[
-                    styles.chipText,
-                    { color: currentTheme.textSecondary },
-                    type === t.value && { color: '#fff' }
-                  ]}>{t.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={[styles.filterLabel, { color: currentTheme.textSecondary, marginTop: Spacing.xl }]}>Effect (Dr/Cr)</Text>
-            <View style={styles.chipContainer}>
-              {effectTypes.map(e => (
-                <TouchableOpacity
-                  key={e.value}
-                  style={[
-                    styles.chip,
-                    { borderColor: currentTheme.borderPrimary, backgroundColor: currentTheme.bgSecondary },
-                    effect === e.value && { backgroundColor: currentTheme.accentPrimary, borderColor: currentTheme.accentPrimary }
-                  ]}
-                  onPress={() => setEffect(e.value)}
-                >
-                  <Text style={[
-                    styles.chipText,
-                    { color: currentTheme.textSecondary },
-                    effect === e.value && { color: '#fff' }
-                  ]}>{e.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          
-          <View style={[styles.modalFooter, { borderTopColor: currentTheme.borderPrimary }]}>
-            <TouchableOpacity 
-              style={[styles.modalBtn, { backgroundColor: currentTheme.bgSecondary, borderWidth: 1, borderColor: currentTheme.borderPrimary }]}
-              onPress={() => {
-                setType('');
-                setEffect('');
-              }}
-            >
-              <Text style={[styles.modalBtnText, { color: currentTheme.textPrimary }]}>Reset</Text>
-            </TouchableOpacity>
-            <View style={{ width: Spacing.md }} />
-            <TouchableOpacity 
-              style={[styles.modalBtn, { backgroundColor: currentTheme.accentPrimary }]}
-              onPress={() => setShowFilterModal(false)}
-            >
-              <Text style={[styles.modalBtnText, { color: '#fff' }]}>Apply Filters</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.bgPrimary }]} edges={['top', 'left', 'right']}>
       {/* Header */}
@@ -277,34 +198,17 @@ export default function TransactionsScreen() {
             <Text style={[styles.title, { color: currentTheme.textPrimary }]}>Transactions</Text>
             <Text style={[styles.subtitle, { color: currentTheme.textTertiary }]}>Real-time log of all movements</Text>
           </View>
-        </View>
-      </View>
-
-      {/* Mode Toggle & Search */}
-      <View style={[styles.toolbar, { backgroundColor: currentTheme.bgSecondary, borderBottomColor: currentTheme.borderPrimary }]}>
-        <View style={styles.searchRow}>
-          <View style={[styles.searchBar, { backgroundColor: currentTheme.bgPrimary, borderColor: currentTheme.borderPrimary }]}>
-            <Ionicons name="search" size={18} color={currentTheme.textTertiary} />
-            <TextInput
-              style={[styles.searchInput, { color: currentTheme.textPrimary }]}
-              placeholder="Search Ref, Party, Desc..."
-              placeholderTextColor={currentTheme.textLabel}
+          <View style={{ marginLeft: 'auto' }}>
+            <HeaderSearchAction
               value={search}
               onChangeText={setSearch}
+              onOpenFilters={() => setShowFilterModal(true)}
+              filterActive={Boolean(type || effect)}
+              filterCount={[type, effect].filter(Boolean).length}
+              placeholder="Ref or party"
+              theme={currentTheme}
             />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')}>
-                <Ionicons name="close-circle" size={16} color={currentTheme.textTertiary} />
-              </TouchableOpacity>
-            )}
           </View>
-          <TouchableOpacity 
-            style={[styles.filterBtn, { backgroundColor: (type || effect) ? `${currentTheme.accentPrimary}20` : currentTheme.bgPrimary, borderColor: (type || effect) ? currentTheme.accentPrimary : currentTheme.borderPrimary }]}
-            onPress={() => setShowFilterModal(true)}
-          >
-            <Ionicons name="options" size={20} color={(type || effect) ? currentTheme.accentPrimary : currentTheme.textSecondary} />
-            {(type || effect) ? <View style={[styles.filterDot, { backgroundColor: currentTheme.accentPrimary }]} /> : null}
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -333,7 +237,30 @@ export default function TransactionsScreen() {
           ) : null
         }
       />
-      {renderFilterModal()}
+      <FilterBottomSheet
+        visible={showFilterModal}
+        title="Filter Transactions"
+        theme={currentTheme}
+        onClose={() => setShowFilterModal(false)}
+        onApply={() => setShowFilterModal(false)}
+        onReset={() => {
+          setType('');
+          setEffect('');
+        }}
+      >
+        <FilterFormRenderer
+          theme={currentTheme}
+          values={{ type, effect }}
+          onChange={(key, value) => {
+            if (key === 'type') setType(value || '');
+            if (key === 'effect') setEffect(value || '');
+          }}
+          fields={[
+            { type: 'chips', key: 'type', label: 'Transaction Type', options: transactionTypes },
+            { type: 'chips', key: 'effect', label: 'Effect (Dr/Cr)', options: effectTypes },
+          ]}
+        />
+      </FilterBottomSheet>
     </SafeAreaView>
   );
 }

@@ -2,6 +2,7 @@ import { SupplierService } from '@/src/api/supplierService';
 import { TransactionService } from '@/src/api/transactionService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
+import { FilterBottomSheet, FilterFormRenderer } from '@/src/components/filters';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +14,6 @@ import {
     Modal,
     RefreshControl,
     StyleSheet,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -391,51 +391,27 @@ export default function SupplierDetailsScreen() {
                 </TouchableOpacity>
             </Modal>
 
-            {/* --- TRANSACTION FILTER BOTTOM SHEET --- */}
-            <Modal visible={showFilterModal} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
-                    <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowFilterModal(false)} />
-                    <View style={[styles.bottomSheet, { paddingBottom: Math.max(insets.bottom, Spacing.xl) }]}>
-                        <View style={styles.sheetHeader}>
-                            <ThemedText style={styles.sheetTitle}>Filter Transactions</ThemedText>
-                            <TouchableOpacity onPress={() => setShowFilterModal(false)}><Ionicons name="close" size={24} color={theme.textPrimary} /></TouchableOpacity>
-                        </View>
-
-                        <View style={styles.sheetBody}>
-                            <ThemedText style={styles.formLabel}>Search Description / Amount</ThemedText>
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder="Search..."
-                                placeholderTextColor={theme.textTertiary}
-                                value={txnSearch}
-                                onChangeText={setTxnSearch}
-                            />
-
-                            <ThemedText style={styles.formLabel}>Transaction Type</ThemedText>
-                            <View style={styles.chipsContainer}>
-                                {txnTypes.map(t => (
-                                    <TouchableOpacity
-                                        key={t.label}
-                                        style={[styles.chip, txnType === t.value && { backgroundColor: theme.accentPrimary, borderColor: theme.accentPrimary }]}
-                                        onPress={() => setTxnType(t.value)}
-                                    >
-                                        <ThemedText style={[styles.chipText, txnType === t.value && { color: theme.bgSecondary }]}>{t.label}</ThemedText>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <View style={styles.sheetActions}>
-                                <TouchableOpacity style={styles.clearBtn} onPress={resetTxnFilters}>
-                                    <ThemedText style={styles.clearBtnText}>Reset</ThemedText>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.applyBtn} onPress={applyTxnFilters}>
-                                    <ThemedText style={styles.applyBtnText}>Apply Filters</ThemedText>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+            <FilterBottomSheet
+                visible={showFilterModal}
+                title="Filter Transactions"
+                theme={theme}
+                onClose={() => setShowFilterModal(false)}
+                onApply={applyTxnFilters}
+                onReset={resetTxnFilters}
+            >
+                <FilterFormRenderer
+                    theme={theme}
+                    values={{ search: txnSearch, type: txnType }}
+                    onChange={(key, value) => {
+                        if (key === 'search') setTxnSearch(value || '');
+                        if (key === 'type') setTxnType(value || null);
+                    }}
+                    fields={[
+                        { type: 'text', key: 'search', label: 'Search Description / Amount', placeholder: 'Search...' },
+                        { type: 'chips', key: 'type', label: 'Transaction Type', options: txnTypes },
+                    ]}
+                />
+            </FilterBottomSheet>
 
         </ThemedView>
     );

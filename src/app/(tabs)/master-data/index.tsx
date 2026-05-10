@@ -1,4 +1,5 @@
 import { Spacing, Themes, Typography, UI, getElevation } from '@/src/constants/theme';
+import { HeaderSearchAction } from '@/src/components/filters';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { NotificationBell } from '@/src/components/navigation/notification-bell';
@@ -335,6 +336,12 @@ export default function MasterDataScreen() {
             <NotificationBell />
           </View>
           <View style={[styles.headerActions, { marginTop: Spacing.md }]}>
+              <HeaderSearchAction
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Masters"
+                theme={theme}
+              />
               <TouchableOpacity style={styles.iconBtn} onPress={() => fetchData(true)}>
                 <Ionicons name="refresh" size={22} color={DARK_BLUE_ACCENT} />
               </TouchableOpacity>
@@ -348,22 +355,8 @@ export default function MasterDataScreen() {
               </TouchableOpacity>
             </View>
 
-          {/* SEARCH & STATS */}
-          <View style={styles.searchRow}>
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={18} color={theme.textTertiary} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search masters..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-                </TouchableOpacity>
-              )}
-            </View>
+          {/* STATS */}
+          <View style={styles.statsRow}>
             <View style={styles.statsBox}>
               <Text style={styles.statsLabel}>Total</Text>
               <Text style={styles.statsValue}>{data.length}</Text>
@@ -602,7 +595,7 @@ const styles = StyleSheet.create({
   primaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: DARK_BLUE_ACCENT, paddingHorizontal: Spacing.lg, height: 40, borderRadius: UI.borderRadius.md },
   primaryBtnText: { fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, color: theme.bgPrimary },
 
-  searchRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
+  statsRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
   searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.bgSecondary, height: 44, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.md, gap: Spacing.sm },
   searchInput: { flex: 1, fontSize: Typography.size.sm, color: theme.textPrimary },
   statsBox: { backgroundColor: DARK_BLUE_ACCENT, paddingHorizontal: Spacing.lg, borderRadius: UI.borderRadius.md, alignItems: 'center', justifyContent: 'center' },

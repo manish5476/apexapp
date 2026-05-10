@@ -60,7 +60,7 @@ const tabs: Array<{ key: TabType; label: string; icon: keyof typeof Ionicons.gly
 const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const formatCurrency = (value: number | null | undefined) =>
-  `₹${Number(value ?? 0).toLocaleString('en-IN')}`;
+  `Rs. ${Number(value ?? 0).toLocaleString('en-IN')}`;
 
 const formatCompactIndian = (value: number | null | undefined) =>
   Intl.NumberFormat('en-IN', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value ?? 0));
@@ -380,7 +380,7 @@ export default function CustomerAnalyticsScreen() {
         </View>
         <View style={styles.flex1}>
           <ThemedText style={styles.headerTitle}>Customer Analytics</ThemedText>
-          <ThemedText style={styles.headerSub}>360 view · behaviour · lifetime value · financials</ThemedText>
+          <ThemedText style={styles.headerSub}>360 view - behaviour - lifetime value - financials</ThemedText>
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -722,7 +722,7 @@ export default function CustomerAnalyticsScreen() {
                 <View style={styles.flex1}>
                   <ThemedText style={styles.rowTitle}>{payment.customerName}</ThemedText>
                   <ThemedText style={styles.rowSub}>
-                    {payment.paymentMethods?.join(', ') || '—'} · {payment.paymentCount} payment(s)
+                    {payment.paymentMethods?.join(', ') || '-'} - {payment.paymentCount} payment(s)
                   </ThemedText>
                   <View style={styles.progressTrackThin}>
                     <View
@@ -806,7 +806,7 @@ export default function CustomerAnalyticsScreen() {
                     </View>
                   </View>
                   <ThemedText style={styles.rowSub}>
-                    {customer.invoiceCount} inv · AOV {formatCurrency(customer.avgOrderValue)} · {customer.ageDays}d
+                    {customer.invoiceCount} inv - AOV {formatCurrency(customer.avgOrderValue)} - {customer.ageDays}d
                   </ThemedText>
                   <View style={styles.progressDual}>
                     <View

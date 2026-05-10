@@ -1,4 +1,5 @@
 import { paymentService } from '@/src/features/payment/services/payment.service';
+import { FilterBottomSheet, HeaderSearchAction } from '@/src/components/filters';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
@@ -11,7 +12,6 @@ import {
     ActivityIndicator,
     Alert,
     FlatList,
-    Modal,
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -33,6 +33,7 @@ export default function PaymentListScreen() {
 
   // Filters
   const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     type: null as string | null,
     customerId: null as string | null,
@@ -57,6 +58,21 @@ export default function PaymentListScreen() {
 
     return { totalInflow: inflow, totalOutflow: outflow, completed, pending };
   }, [payments]);
+
+  const visiblePayments = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return payments;
+    return payments.filter((payment) => {
+      const values = [
+        payment.customerId?.name,
+        payment.supplierId?.companyName,
+        payment.invoiceId?.invoiceNumber,
+        payment.paymentMethod,
+        payment.status,
+      ];
+      return values.some((value) => String(value || '').toLowerCase().includes(query));
+    });
+  }, [payments, searchQuery]);
 
   // --- DATA FETCHING ---
   const fetchPayments = async (pageNum: number, isRefresh = false) => {
@@ -114,6 +130,8 @@ export default function PaymentListScreen() {
     setFilters({ type: null, customerId: null, supplierId: null, paymentMethod: null, status: null });
     setShowFilters(false);
   };
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   // --- UTILS ---
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
@@ -241,9 +259,15 @@ export default function PaymentListScreen() {
               <ThemedText style={styles.pageSubtitle}>Track inflows & outflows</ThemedText>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.iconBtn} onPress={() => setShowFilters(true)}>
-                <Ionicons name="filter" size={20} color={Object.values(filters).some(v => v) ? theme.accentPrimary : theme.textPrimary} />
-              </TouchableOpacity>
+              <HeaderSearchAction
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onOpenFilters={() => setShowFilters(true)}
+                filterActive={activeFilterCount > 0}
+                filterCount={activeFilterCount}
+                placeholder="Party or invoice"
+                theme={theme}
+              />
               <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/payments/create' as any)}>
                 <Ionicons name="add" size={20} color={theme.bgSecondary} />
                 <ThemedText style={styles.primaryBtnText}>Record</ThemedText>
@@ -276,7 +300,7 @@ export default function PaymentListScreen() {
           </View>
         ) : (
           <FlatList
-            data={payments}
+            data={visiblePayments}
             keyExtractor={(item) => item._id}
             renderItem={renderPaymentCard}
             contentContainerStyle={styles.listContent}
@@ -305,18 +329,15 @@ export default function PaymentListScreen() {
 
       </SafeAreaView>
 
-      {/* FILTER BOTTOM SHEET */}
-      <Modal visible={showFilters} transparent animationType="slide">
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowFilters(false)}>
-          <View style={styles.bottomSheet} onStartShouldSetResponder={() => true}>
-            <View style={styles.sheetHeader}>
-              <ThemedText style={styles.sheetTitle}>Filter Ledger</ThemedText>
-              <TouchableOpacity onPress={() => setShowFilters(false)}>
-                <Ionicons name="close" size={24} color={theme.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
+      <FilterBottomSheet
+        visible={showFilters}
+        title="Filter Ledger"
+        theme={theme}
+        onClose={() => setShowFilters(false)}
+        onApply={applyFilters}
+        onReset={resetFilters}
+        applyLabel="View Results"
+      >
               
               <View style={styles.filterSection}>
                 <ThemedText style={styles.filterGroupLabel}>Transaction Type</ThemedText>
@@ -360,21 +381,7 @@ export default function PaymentListScreen() {
                   ))}
                 </View>
               </View>
-
-            </ScrollView>
-
-            <View style={styles.modalFooterActions}>
-              <TouchableOpacity style={styles.modalResetBtn} onPress={resetFilters}>
-                <ThemedText style={styles.modalResetBtnText}>Reset</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalApplyBtn} onPress={applyFilters}>
-                <ThemedText style={styles.modalApplyBtnText}>View Results</ThemedText>
-              </TouchableOpacity>
-            </View>
-
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      </FilterBottomSheet>
 
     </ThemedView>
   );
