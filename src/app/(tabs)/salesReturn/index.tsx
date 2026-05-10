@@ -12,12 +12,12 @@ import {
   Modal,
   Platform,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Make sure this points to your actual theme file
 import { Spacing, Typography, UI, getElevation } from '@/src/constants/theme';
@@ -210,7 +210,7 @@ export default function SalesReturnListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={{ flex: 1 }}>

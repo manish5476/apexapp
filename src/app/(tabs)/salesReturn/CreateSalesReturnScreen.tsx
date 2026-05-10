@@ -1,4 +1,7 @@
+import { InvoiceService } from '@/src/api/invoiceService';
+import { SalesReturnService } from '@/src/api/SalesReturnService';
 import { ThemedText } from '@/src/components/themed-text';
+import { UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -10,7 +13,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,9 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { InvoiceService } from '@/src/api/invoiceService';
-import { SalesReturnService } from '@/src/api/SalesReturnService';
-import { UI, getElevation } from '@/src/constants/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DARK_BLUE_ACCENT = '#1d4ed8';
 const BORDER_WIDTH = UI.borderWidth.base;
@@ -32,7 +32,6 @@ interface ReturnItem {
   name: string;
   invoicedQty: number;
   price: number;
-  taxRate: number;
   taxRate: number;
   unit: string;
   returnQuantity: number;
@@ -128,7 +127,7 @@ export default function CreateSalesReturnScreen() {
 
         const [invoiceRes, returnsRes] = await Promise.all([
           InvoiceService.getInvoiceById(invoiceId),
-          SalesReturnService.getSalesReturns({ invoiceId, limit: 100 })
+          SalesReturnService.getAllReturns({ invoiceId, limit: 100 })
         ]);
 
         const invoiceData = invoiceRes.data?.data || invoiceRes.data?.invoice || invoiceRes.data;
@@ -136,7 +135,7 @@ export default function CreateSalesReturnScreen() {
 
         const pastReturns = returnsRes.data?.returns || returnsRes.data || [];
         const returnedQtyMap: { [key: string]: number } = {};
-        
+
         for (const r of pastReturns) {
           if (r.status !== 'rejected') {
             for (const i of r.items) {
@@ -235,7 +234,7 @@ export default function CreateSalesReturnScreen() {
         }))
       };
 
-      await SalesReturnService.createSalesReturn(payload);
+      await SalesReturnService.createReturn(payload);
       Alert.alert('Success', 'Sales Return initiated successfully.');
       router.back();
     } catch (err) {
@@ -255,7 +254,7 @@ export default function CreateSalesReturnScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
         {/* HEADER */}

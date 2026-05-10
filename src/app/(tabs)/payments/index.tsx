@@ -19,6 +19,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 export default function PaymentListScreen() {
   const theme = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -66,7 +67,9 @@ export default function PaymentListScreen() {
       const values = [
         payment.customerId?.name,
         payment.supplierId?.companyName,
+        payment.supplierId?.contactPerson,
         payment.invoiceId?.invoiceNumber,
+        payment.purchaseId?.invoiceNumber,
         payment.paymentMethod,
         payment.status,
       ];
@@ -169,8 +172,18 @@ export default function PaymentListScreen() {
   // --- RENDER ITEM (MOBILE CARD) ---
   const renderPaymentCard = ({ item }: { item: any }) => {
     const isInflow = item.type === 'inflow';
-    const entityName = isInflow ? (item.customerId?.name || 'Walk-in Customer') : (item.supplierId?.companyName || 'Unknown Supplier');
-    const entitySub = isInflow ? (item.customerId?.phone || item.customerId?.email) : item.supplierId?.gstin;
+    const customer = item.customerId;
+    const supplier = item.supplierId;
+    const reference = item.invoiceId || item.purchaseId;
+
+    const entityName = isInflow 
+      ? (customer?.name || 'Walk-in Customer') 
+      : (supplier?.companyName || 'Unknown Supplier');
+
+    const entitySub = isInflow 
+      ? (customer?.phone || customer?.email) 
+      : [supplier?.contactPerson, supplier?.phone || supplier?.email].filter(Boolean).join(' • ');
+
     const branchName = item.branchId?.name;
     const initials = getInitials(entityName);
 
@@ -207,7 +220,7 @@ export default function PaymentListScreen() {
               <ThemedText style={[styles.badgeText, { color: sTheme.text }]}>{item.status}</ThemedText>
             </View>
             <View style={styles.directionRow}>
-              <Ionicons text={isInflow ? 'arrow-down-right' : 'arrow-up-right'} size={12} color={isInflow ? theme.success : theme.error} />
+              <Ionicons name={isInflow ? 'arrow-down-outline' : 'arrow-up-outline'} size={12} color={isInflow ? theme.success : theme.error} />
               <ThemedText style={[styles.directionText, { color: isInflow ? theme.success : theme.error }]}>
                 {isInflow ? 'IN' : 'OUT'}
               </ThemedText>
@@ -220,10 +233,10 @@ export default function PaymentListScreen() {
         {/* Bottom Row: Details & Financials */}
         <View style={styles.cardFooter}>
           <View style={{ flex: 1 }}>
-            {item.invoiceId ? (
+            {reference ? (
               <View style={styles.invoiceBadge}>
                 <Ionicons name="document-text" size={12} color={theme.accentPrimary} />
-                <ThemedText style={styles.invoiceText}>{item.invoiceId.invoiceNumber}</ThemedText>
+                <ThemedText style={styles.invoiceText}>{reference.invoiceNumber}</ThemedText>
               </View>
             ) : (
               <ThemedText style={styles.directLabel}>Direct Payment</ThemedText>
@@ -249,7 +262,7 @@ export default function PaymentListScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         
         {/* HEADER */}
         <View style={styles.header}>

@@ -430,32 +430,32 @@ export default function OrganizationSettingsScreen() {
         !!organization && (
             <View style={styles.statsGrid}>
                 <View style={styles.statCard}>
-                    <View>
-                        <ThemedText style={styles.statLabel}>Active Team</ThemedText>
+                    <View style={styles.flex1}>
+                        <ThemedText style={styles.statLabel} numberOfLines={1}>Active Team</ThemedText>
                         <ThemedText style={styles.statValue}>{activeMembers.length}</ThemedText>
                     </View>
                     <View style={[styles.statIcon, { backgroundColor: `${theme.accentPrimary}12` }]}>
-                        <Ionicons name="people-outline" size={18} color={theme.accentPrimary} />
+                        <Ionicons name="people-outline" size={14} color={theme.accentPrimary} />
                     </View>
                 </View>
 
                 <View style={styles.statCard}>
-                    <View>
-                        <ThemedText style={styles.statLabel}>Pending Waitlist</ThemedText>
+                    <View style={styles.flex1}>
+                        <ThemedText style={styles.statLabel} numberOfLines={1}>Pending</ThemedText>
                         <ThemedText style={styles.statValue}>{pendingMembers.length}</ThemedText>
                     </View>
                     <View style={[styles.statIcon, { backgroundColor: `${theme.warning || '#d97706'}12` }]}>
-                        <Ionicons name="time-outline" size={18} color={theme.warning || '#d97706'} />
+                        <Ionicons name="time-outline" size={14} color={theme.warning || '#d97706'} />
                     </View>
                 </View>
 
                 <View style={styles.statCard}>
-                    <View>
-                        <ThemedText style={styles.statLabel}>Roles Configured</ThemedText>
+                    <View style={styles.flex1}>
+                        <ThemedText style={styles.statLabel} numberOfLines={1}>Roles</ThemedText>
                         <ThemedText style={styles.statValue}>{roleDropdown.options.length}</ThemedText>
                     </View>
                     <View style={[styles.statIcon, { backgroundColor: `${theme.success}12` }]}>
-                        <Ionicons name="shield-outline" size={18} color={theme.success} />
+                        <Ionicons name="shield-outline" size={14} color={theme.success} />
                     </View>
                 </View>
             </View>
@@ -1079,7 +1079,7 @@ const createStyles = (theme: any) =>
             borderRadius: 24,
             borderWidth: 1,
             borderColor: theme.borderPrimary,
-            padding: Spacing.xl,
+            padding: Spacing.lg,
             overflow: 'hidden',
             ...getElevation(2, theme),
         },
@@ -1105,9 +1105,9 @@ const createStyles = (theme: any) =>
             flex: 1,
         },
         orgAvatar: {
-            width: 72,
-            height: 72,
-            borderRadius: 20,
+            width: 60,
+            height: 60,
+            borderRadius: 18,
             backgroundColor: `${theme.accentPrimary}12`,
             borderWidth: 1,
             borderColor: `${theme.accentPrimary}30`,
@@ -1116,13 +1116,13 @@ const createStyles = (theme: any) =>
         },
         orgAvatarText: {
             fontFamily: theme.fonts.heading,
-            fontSize: 34,
+            fontSize: 28,
             fontWeight: '700',
             color: theme.accentPrimary,
         },
         orgTitle: {
             fontFamily: theme.fonts.heading,
-            fontSize: Typography.size['3xl'],
+            fontSize: Typography.size['2xl'],
             fontWeight: '700',
             color: theme.textPrimary,
             marginBottom: 6,
@@ -1181,14 +1181,17 @@ const createStyles = (theme: any) =>
         },
 
         statsGrid: {
-            gap: Spacing.md,
+            flexDirection: 'row',
+            gap: Spacing.sm,
+            marginBottom: Spacing.md,
         },
         statCard: {
+            flex: 1,
             backgroundColor: theme.bgPrimary,
             borderWidth: 1,
             borderColor: theme.borderPrimary,
-            borderRadius: 18,
-            padding: Spacing.lg,
+            borderRadius: 14,
+            padding: Spacing.md,
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -1196,20 +1199,20 @@ const createStyles = (theme: any) =>
         },
         statLabel: {
             fontFamily: theme.fonts.body,
-            fontSize: Typography.size.sm,
+            fontSize: 10,
             color: theme.textSecondary,
-            marginBottom: 4,
+            marginBottom: 2,
         },
         statValue: {
             fontFamily: theme.fonts.heading,
-            fontSize: Typography.size['2xl'],
+            fontSize: Typography.size.lg,
             color: theme.textPrimary,
             fontWeight: '700',
         },
         statIcon: {
-            width: 46,
-            height: 46,
-            borderRadius: 14,
+            width: 32,
+            height: 32,
+            borderRadius: 10,
             alignItems: 'center',
             justifyContent: 'center',
         },

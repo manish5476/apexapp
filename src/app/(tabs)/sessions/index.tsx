@@ -149,7 +149,8 @@ export default function SessionManagementScreen() {
         });
       }
 
-      const sessions = response.data?.data?.sessions || response.data?.data || response.data || [];
+      const res = response as any;
+      const sessions = res.data?.sessions || res.sessions || res.data || res || [];
       setData(sessions);
       setSelectedIds([]);
     } catch (err) {
@@ -234,7 +235,7 @@ export default function SessionManagementScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
       {/* HEADER */}
       <View style={styles.header}>

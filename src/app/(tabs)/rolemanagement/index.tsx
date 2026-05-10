@@ -74,7 +74,8 @@ export default function RoleManagementScreen() {
         ApiService.permissions() // Using permissions() from ApiService
       ]);
       
-      const rolesData = (rolesRes as any).data?.roles || (rolesRes as any).data || rolesRes || [];
+      const res = rolesRes as any;
+      const rolesData = res.data?.roles || res.roles || res.data || res || [];
       const permsData = (permsRes as any).data || permsRes || [];
       
       setRoles(rolesData);
@@ -241,7 +242,7 @@ export default function RoleManagementScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
       {/* HEADER */}
       <View style={styles.header}>
