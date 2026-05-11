@@ -23,7 +23,6 @@ import { getElevation, Spacing, Typography, UI } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 
 const DARK_BLUE_ACCENT = '#1d4ed8';
-const BORDER_WIDTH = UI.borderWidth.base;
 
 // --- TYPES ---
 interface PurchaseOrder {
@@ -190,7 +189,27 @@ export default function PurchaseListScreen() {
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState({
+  const emptyFilters = useMemo(
+    () => ({
+      status: '',
+      paymentStatus: '',
+      supplierId: '',
+    }),
+    []
+  );
+  const [activeFilters, setActiveFilters] = useState(emptyFilters);
+  const [draftFilters, setDraftFilters] = useState(emptyFilters);
+  const [quickStatus, setQuickStatus] = useState('');
+  const [quickPaymentStatus, setQuickPaymentStatus] = useState('');
+  const effectiveFilters = useMemo(
+    () => ({
+      ...activeFilters,
+      status: quickStatus || activeFilters.status,
+      paymentStatus: quickPaymentStatus || activeFilters.paymentStatus,
+    }),
+    [activeFilters, quickStatus, quickPaymentStatus]
+  );
+  const [requestFilters, setRequestFilters] = useState({
     status: '',
     paymentStatus: '',
     supplierId: ''
@@ -204,9 +223,9 @@ export default function PurchaseListScreen() {
     try {
       const filters = {
         invoiceNumber: searchQuery || undefined,
-        status: activeFilters.status || undefined,
-        paymentStatus: activeFilters.paymentStatus || undefined,
-        supplierId: activeFilters.supplierId || undefined,
+        status: requestFilters.status || undefined,
+        paymentStatus: requestFilters.paymentStatus || undefined,
+        supplierId: requestFilters.supplierId || undefined,
         page: pageNum,
         limit: 15
       };
@@ -235,15 +254,24 @@ export default function PurchaseListScreen() {
       setIsRefreshing(false);
       setIsFetchingMore(false);
     }
-  }, [searchQuery, activeFilters]);
+  }, [searchQuery, requestFilters]);
 
   useEffect(() => {
+    setRequestFilters(effectiveFilters);
     fetchPurchases(1, true);
-  }, [activeFilters]);
+    // fetchPurchases intentionally runs when committed filters change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveFilters]);
+
+  useEffect(() => {
+    if (showFilters) setDraftFilters(activeFilters);
+  }, [showFilters, activeFilters]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchPurchases(1, true), 350);
     return () => clearTimeout(timer);
+    // debounced server refresh for search.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   // --- HANDLERS ---
@@ -253,15 +281,23 @@ export default function PurchaseListScreen() {
   };
 
   const applyFilter = (key: keyof typeof activeFilters | string, value: string | null) => {
-    setActiveFilters(prev => ({ ...prev, [key]: value || '' }));
+    setDraftFilters(prev => ({ ...prev, [key]: value || '' }));
   };
 
   const clearFilters = () => {
-    setActiveFilters({ status: '', paymentStatus: '', supplierId: '' });
+    setDraftFilters(emptyFilters);
+    setActiveFilters(emptyFilters);
+    setQuickStatus('');
+    setQuickPaymentStatus('');
     setShowFilters(false);
   };
 
-  const activeFilterCount = Object.values(activeFilters).filter(Boolean).length;
+  const activeFilterCount = Object.values(requestFilters).filter(Boolean).length;
+  const draftFilterCount = Object.values({
+    ...draftFilters,
+    status: quickStatus || draftFilters.status,
+    paymentStatus: quickPaymentStatus || draftFilters.paymentStatus,
+  }).filter(Boolean).length;
 
   return (
     <ThemedView style={styles.container}>
@@ -288,6 +324,30 @@ export default function PurchaseListScreen() {
                 placeholder="Invoice no"
                 theme={theme}
               />
+          </View>
+          <View style={styles.quickRow}>
+            {['', 'draft', 'received', 'cancelled'].map((status) => (
+              <TouchableOpacity
+                key={status || 'all-status'}
+                style={[styles.quickChip, quickStatus === status && styles.quickChipActive]}
+                onPress={() => setQuickStatus(status)}
+              >
+                <ThemedText style={[styles.quickText, quickStatus === status && styles.quickTextActive]}>
+                  {status || 'All Status'}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+            {['', 'paid', 'partial', 'unpaid'].map((p) => (
+              <TouchableOpacity
+                key={p || 'all-payment'}
+                style={[styles.quickChip, quickPaymentStatus === p && styles.quickChipActive]}
+                onPress={() => setQuickPaymentStatus(p)}
+              >
+                <ThemedText style={[styles.quickText, quickPaymentStatus === p && styles.quickTextActive]}>
+                  {p || 'All Payment'}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -328,20 +388,52 @@ export default function PurchaseListScreen() {
         title="Filter Purchases"
         theme={theme}
         onClose={() => setShowFilters(false)}
-        onApply={() => setShowFilters(false)}
-        onReset={() => setActiveFilters({ status: '', paymentStatus: '', supplierId: '' })}
+        onApply={() => {
+          setActiveFilters(draftFilters);
+          setShowFilters(false);
+        }}
+        onReset={clearFilters}
+        activeCount={draftFilterCount}
       >
         <FilterFormRenderer
           theme={theme}
-          values={activeFilters}
+          values={draftFilters}
           onChange={applyFilter}
-          fields={[
-            { type: 'chips', key: 'status', label: 'Order Status', options: [
-              { label: 'All', value: '' }, { label: 'Draft', value: 'draft' }, { label: 'Received', value: 'received' }, { label: 'Cancelled', value: 'cancelled' },
-            ] },
-            { type: 'chips', key: 'paymentStatus', label: 'Payment Status', options: [
-              { label: 'All', value: '' }, { label: 'Unpaid', value: 'unpaid' }, { label: 'Partial', value: 'partial' }, { label: 'Paid', value: 'paid' },
-            ] },
+          sections={[
+            {
+              key: 'order',
+              title: 'Purchase Order Filters',
+              fields: [
+                {
+                  type: 'chips',
+                  key: 'status',
+                  label: 'Order Status',
+                  options: [
+                    { label: 'All', value: '' },
+                    { label: 'Draft', value: 'draft' },
+                    { label: 'Received', value: 'received' },
+                    { label: 'Cancelled', value: 'cancelled' },
+                  ],
+                },
+              ],
+            },
+            {
+              key: 'payment',
+              title: 'Payment Filters',
+              fields: [
+                {
+                  type: 'chips',
+                  key: 'paymentStatus',
+                  label: 'Payment Status',
+                  options: [
+                    { label: 'All', value: '' },
+                    { label: 'Unpaid', value: 'unpaid' },
+                    { label: 'Partial', value: 'partial' },
+                    { label: 'Paid', value: 'paid' },
+                  ],
+                },
+              ],
+            },
           ]}
         />
       </FilterBottomSheet>
@@ -358,6 +450,18 @@ const createStyles = (theme: any) => StyleSheet.create({
   // HEADER
   header: { backgroundColor: theme.bgPrimary, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.borderSecondary },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: UI.borderRadius.pill,
+    borderWidth: 1,
+    borderColor: theme.borderSecondary,
+    backgroundColor: theme.bgSecondary,
+  },
+  quickChipActive: { borderColor: theme.accentPrimary, backgroundColor: `${theme.accentPrimary}15` },
+  quickText: { color: theme.textSecondary, fontSize: 11, fontWeight: '600' },
+  quickTextActive: { color: theme.accentPrimary, fontWeight: '700' },
   pageTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size['2xl'], fontWeight: 'bold', color: theme.textPrimary },
   pageSubtitle: { fontFamily: theme.fonts.body, fontSize: 13, color: theme.textSecondary, marginTop: 2 },
   primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: DARK_BLUE_ACCENT, paddingHorizontal: 16, height: 44, borderRadius: 8, gap: 8, borderWidth: 1, borderColor: DARK_BLUE_ACCENT },

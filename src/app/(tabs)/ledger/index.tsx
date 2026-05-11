@@ -852,7 +852,7 @@ export default function LedgerScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.bgPrimary }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.bgPrimary }]} edges={['bottom', 'left', 'right']}>
       <View style={[styles.header, { borderBottomColor: theme.borderPrimary }]}>
         <View style={styles.headerTitleRow}>
           <View style={[styles.headerIconBox, { backgroundColor: `${theme.accentPrimary}15` }]}>

@@ -1,6 +1,8 @@
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
-import { Spacing, Typography } from '@/src/constants/theme';
+import { Spacing, Themes, Typography, getElevation } from '@/src/constants/theme';
+
+
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { ADMIN_ANALYTICS_SCREENS } from '@/src/features/analytics/admin-analytics-config';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,11 +33,43 @@ export default function AnalyticsHubScreen() {
     });
   }, [activeCategory, search]);
 
+  const categoryCounts = React.useMemo(() => {
+    return categories.reduce<Record<string, number>>((acc, category) => {
+      if (category === 'All') {
+        acc[category] = ADMIN_ANALYTICS_SCREENS.length;
+      } else {
+        acc[category] = ADMIN_ANALYTICS_SCREENS.filter((screen) => screen.category === category).length;
+      }
+      return acc;
+    }, {});
+  }, [categories]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bgSecondary }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <ThemedText style={styles.title}>Analytics Hub</ThemedText>
-        <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>All migrated analytics screens from the Angular admin module.</ThemedText>
+        <View style={[styles.heroCard, { borderColor: theme.borderPrimary, backgroundColor: theme.bgPrimary }]}>
+          <View style={styles.heroTop}>
+            <View style={[styles.heroIconWrap, { backgroundColor: `${theme.accentPrimary}18` }]}>
+              <Ionicons name="analytics-outline" size={20} color={theme.accentPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={styles.title}>Analytics Hub</ThemedText>
+              <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
+                Unified dashboards aligned with Apex-Infinity web analytics.
+              </ThemedText>
+            </View>
+          </View>
+          <View style={styles.heroStatsRow}>
+            <View style={[styles.heroStat, { borderColor: theme.borderPrimary }]}>
+              <ThemedText style={styles.heroStatValue}>{ADMIN_ANALYTICS_SCREENS.length}</ThemedText>
+              <ThemedText style={[styles.heroStatLabel, { color: theme.textSecondary }]}>Dashboards</ThemedText>
+            </View>
+            <View style={[styles.heroStat, { borderColor: theme.borderPrimary }]}>
+              <ThemedText style={styles.heroStatValue}>{categories.length - 1}</ThemedText>
+              <ThemedText style={[styles.heroStatLabel, { color: theme.textSecondary }]}>Categories</ThemedText>
+            </View>
+          </View>
+        </View>
 
         <Pressable
           onPress={() => router.push('/(tabs)/analytics/settings/ownership' as any)}
@@ -80,7 +114,7 @@ export default function AnalyticsHubScreen() {
                 ]}
               >
                 <ThemedText style={{ fontSize: Typography.size.xs, color: active ? theme.bgPrimary : theme.textSecondary, fontWeight: '600' }}>
-                  {category}
+                  {category} ({categoryCounts[category] ?? 0})
                 </ThemedText>
               </Pressable>
             );
@@ -114,29 +148,62 @@ export default function AnalyticsHubScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: Spacing.lg, gap: Spacing.md },
-  title: { fontSize: Typography.size['3xl'], fontWeight: '700' },
-  subtitle: { fontSize: Typography.size.sm, marginBottom: Spacing.sm },
-  searchInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: Typography.size.sm },
-  categoryWrap: { paddingBottom: 2, gap: 8 },
-  categoryChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
-  cardPress: { borderRadius: 14 },
-  card: {
+  heroCard: {
     borderWidth: 1,
-    borderRadius: 14,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
+    borderRadius: 24,
+    padding: Spacing.xl,
+    gap: Spacing.lg,
+    ...getElevation(2, Themes.light), // Default light elevation for base
   },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  heroIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardBody: { flex: 1, gap: 2 },
-  cardTitle: { fontSize: Typography.size.md, fontWeight: '700' },
-  cardSubtitle: { fontSize: Typography.size.xs },
-  cardMeta: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginTop: 4 },
+  heroStatsRow: { flexDirection: 'row', gap: Spacing.md },
+  heroStat: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: Spacing.md,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+  },
+  heroStatValue: { fontSize: Typography.size.xl, fontWeight: '800', fontFamily: 'Plus Jakarta Sans' },
+  heroStatLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 },
+  title: { fontSize: Typography.size['3xl'], fontWeight: '800', fontFamily: 'Plus Jakarta Sans', letterSpacing: -0.5 },
+  subtitle: { fontSize: Typography.size.sm, fontFamily: 'Inter', opacity: 0.8 },
+  searchInput: { 
+    borderWidth: 1, 
+    borderRadius: 16, 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    fontSize: Typography.size.md,
+    fontFamily: 'Inter'
+  },
+  categoryWrap: { paddingBottom: 4, gap: 10 },
+  categoryChip: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8 },
+  cardPress: { borderRadius: 18, marginBottom: 4 },
+  card: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardBody: { flex: 1, gap: 4 },
+  cardTitle: { fontSize: Typography.size.md, fontWeight: '700', fontFamily: 'Plus Jakarta Sans' },
+  cardSubtitle: { fontSize: 12, fontFamily: 'Inter', opacity: 0.7, lineHeight: 16 },
+  cardMeta: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 },
 });

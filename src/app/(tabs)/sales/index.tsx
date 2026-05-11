@@ -12,19 +12,18 @@ import {
   Keyboard,
   RefreshControl,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Spacing } from '@/src/constants/theme';
+import { Spacing, UI } from '@/src/constants/theme';
 
 const DARK_BLUE_ACCENT = '#1d4ed8';
 
 // --- TYPES ---
 interface SaleRecord {
   _id: string;
-  invoiceId?: { invoiceNumber: string; status: string };
+  invoiceId?: { _id?: string; invoiceNumber: string; status: string };
   invoiceNumber?: string;
   branchId?: { name: string };
   customerId?: { name: string; phone: string; email: string };
@@ -89,7 +88,15 @@ const SalesCard = React.memo(({ item, theme, styles }: { item: SaleRecord, theme
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.6}
-      onPress={() => router.push(`/invoice/${item._id}` as any)}
+      onPress={() => {
+        const invoiceId = item.invoiceId?._id || (item.invoiceId as any);
+        if (invoiceId && typeof invoiceId === 'string') {
+          router.push(`/(tabs)/invoice/${invoiceId}` as any);
+        } else {
+          // Fallback to item._id if invoiceId is not available as a string
+          router.push(`/(tabs)/invoice/${item._id}` as any);
+        }
+      }}
     >
       {/* Header */}
       <View style={styles.cardHeader}>
@@ -187,7 +194,27 @@ export default function SalesListScreen() {
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState({
+  const emptyFilters = useMemo(
+    () => ({
+      status: '',
+      paymentStatus: '',
+    }),
+    []
+  );
+  const [activeFilters, setActiveFilters] = useState(emptyFilters);
+  const [draftFilters, setDraftFilters] = useState(emptyFilters);
+  const [quickStatus, setQuickStatus] = useState('');
+  const [quickPaymentStatus, setQuickPaymentStatus] = useState('');
+  const effectiveFilters = useMemo(
+    () => ({
+      ...activeFilters,
+      status: quickStatus || activeFilters.status,
+      paymentStatus: quickPaymentStatus || activeFilters.paymentStatus,
+    }),
+    [activeFilters, quickStatus, quickPaymentStatus]
+  );
+
+  const [requestFilters, setRequestFilters] = useState({
     status: '',
     paymentStatus: ''
   });
@@ -202,8 +229,8 @@ export default function SalesListScreen() {
         page: pageNum,
         limit: 20,
         search: searchQuery,
-        status: activeFilters.status,
-        paymentStatus: activeFilters.paymentStatus
+        status: requestFilters.status,
+        paymentStatus: requestFilters.paymentStatus
       };
 
       const res = await salesService.list(filterParams);
@@ -219,22 +246,31 @@ export default function SalesListScreen() {
       });
       setHasNextPage(pageNum < totalPages);
       setPage(pageNum);
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to load sales register.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
       setIsFetchingMore(false);
     }
-  }, [searchQuery, activeFilters]);
+  }, [searchQuery, requestFilters]);
 
   useEffect(() => {
+    setRequestFilters(effectiveFilters);
     fetchSales(1, true);
-  }, [activeFilters]);
+    // fetchSales intentionally runs when committed filter state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveFilters]);
+
+  useEffect(() => {
+    if (showFilters) setDraftFilters(activeFilters);
+  }, [showFilters, activeFilters]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchSales(1, true), 350);
     return () => clearTimeout(timer);
+    // debounced server refresh for search.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   // --- HANDLERS ---
@@ -244,10 +280,15 @@ export default function SalesListScreen() {
   };
 
   const applyFilter = (key: keyof typeof activeFilters | string, value: string | null) => {
-    setActiveFilters(prev => ({ ...prev, [key]: value || '' }));
+    setDraftFilters(prev => ({ ...prev, [key]: value || '' }));
   };
 
-  const activeFilterCount = Object.values(activeFilters).filter(Boolean).length;
+  const activeFilterCount = Object.values(requestFilters).filter(Boolean).length;
+  const draftFilterCount = Object.values({
+    ...draftFilters,
+    status: quickStatus || draftFilters.status,
+    paymentStatus: quickPaymentStatus || draftFilters.paymentStatus,
+  }).filter(Boolean).length;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
@@ -273,6 +314,30 @@ export default function SalesListScreen() {
               placeholder="Invoice or customer"
               theme={theme}
             />
+        </View>
+        <View style={styles.quickRow}>
+          {['', 'active', 'completed', 'cancelled'].map((status) => (
+            <TouchableOpacity
+              key={status || 'all-status'}
+              style={[styles.quickChip, quickStatus === status && styles.quickChipActive]}
+              onPress={() => setQuickStatus(status)}
+            >
+              <ThemedText style={[styles.quickText, quickStatus === status && styles.quickTextActive]}>
+                {status || 'All Status'}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
+          {['', 'paid', 'partial', 'unpaid'].map((p) => (
+            <TouchableOpacity
+              key={p || 'all-payment'}
+              style={[styles.quickChip, quickPaymentStatus === p && styles.quickChipActive]}
+              onPress={() => setQuickPaymentStatus(p)}
+            >
+              <ThemedText style={[styles.quickText, quickPaymentStatus === p && styles.quickTextActive]}>
+                {p || 'All Payment'}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
@@ -314,20 +379,58 @@ export default function SalesListScreen() {
         title="Filter Sales"
         theme={theme}
         onClose={() => setShowFilters(false)}
-        onApply={() => setShowFilters(false)}
-        onReset={() => setActiveFilters({ status: '', paymentStatus: '' })}
+        onApply={() => {
+          setActiveFilters(draftFilters);
+          setShowFilters(false);
+        }}
+        onReset={() => {
+          setDraftFilters(emptyFilters);
+          setActiveFilters(emptyFilters);
+          setQuickStatus('');
+          setQuickPaymentStatus('');
+        }}
+        activeCount={draftFilterCount}
       >
         <FilterFormRenderer
           theme={theme}
-          values={activeFilters}
+          values={draftFilters}
           onChange={applyFilter}
-          fields={[
-            { type: 'chips', key: 'status', label: 'Order Status', options: [
-              { label: 'All', value: '' }, { label: 'Active', value: 'active' }, { label: 'Completed', value: 'completed' }, { label: 'Cancelled', value: 'cancelled' }, { label: 'Draft', value: 'draft' },
-            ] },
-            { type: 'chips', key: 'paymentStatus', label: 'Payment Status', options: [
-              { label: 'All', value: '' }, { label: 'Unpaid', value: 'unpaid' }, { label: 'Partial', value: 'partial' }, { label: 'Paid', value: 'paid' },
-            ] },
+          sections={[
+            {
+              key: 'order',
+              title: 'Order Filters',
+              fields: [
+                {
+                  type: 'chips',
+                  key: 'status',
+                  label: 'Order Status',
+                  options: [
+                    { label: 'All', value: '' },
+                    { label: 'Active', value: 'active' },
+                    { label: 'Completed', value: 'completed' },
+                    { label: 'Cancelled', value: 'cancelled' },
+                    { label: 'Draft', value: 'draft' },
+                  ],
+                },
+              ],
+            },
+            {
+              key: 'payment',
+              title: 'Payment Filters',
+              fields: [
+                {
+                  type: 'chips',
+                  key: 'paymentStatus',
+                  label: 'Payment Status',
+                  options: [
+                    { label: 'All', value: '' },
+                    { label: 'Unpaid', value: 'unpaid' },
+                    { label: 'Partial', value: 'partial' },
+                    { label: 'Paid', value: 'paid' },
+                  ],
+                },
+              ],
+            },
           ]}
         />
       </FilterBottomSheet>
@@ -342,6 +445,18 @@ const createStyles = (theme: any) => StyleSheet.create({
   // HEADER
   header: { backgroundColor: theme.bgPrimary, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.borderSecondary },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: UI.borderRadius.pill,
+    borderWidth: 1,
+    borderColor: theme.borderSecondary,
+    backgroundColor: theme.bgSecondary,
+  },
+  quickChipActive: { borderColor: theme.accentPrimary, backgroundColor: `${theme.accentPrimary}15` },
+  quickText: { color: theme.textSecondary, fontSize: 11, fontWeight: '600' },
+  quickTextActive: { color: theme.accentPrimary, fontWeight: '700' },
   pageTitle: { fontFamily: theme.fonts.heading, fontSize: 24, fontWeight: 'bold', color: theme.textPrimary },
   pageSubtitle: { fontFamily: theme.fonts.body, fontSize: 13, color: theme.textSecondary, marginTop: 2 },
   primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: DARK_BLUE_ACCENT, paddingHorizontal: 16, height: 44, borderRadius: 8, gap: 8, borderWidth: 1, borderColor: DARK_BLUE_ACCENT },

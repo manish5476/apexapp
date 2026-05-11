@@ -36,7 +36,26 @@ export default function InvoiceListScreen() {
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState({
+  const emptyFilters = useMemo(
+    () => ({
+      status: '',
+      paymentStatus: '',
+    }),
+    []
+  );
+  const [activeFilters, setActiveFilters] = useState(emptyFilters);
+  const [draftFilters, setDraftFilters] = useState(emptyFilters);
+  const [quickStatus, setQuickStatus] = useState('');
+
+  const appliedFilters = useMemo(
+    () => ({
+      ...activeFilters,
+      status: quickStatus || activeFilters.status,
+    }),
+    [activeFilters, quickStatus]
+  );
+
+  const [visibleFilters, setVisibleFilters] = useState({
     status: '',
     paymentStatus: '',
   });
@@ -51,14 +70,14 @@ export default function InvoiceListScreen() {
         page: pageNum,
         limit: 20,
         invoiceNumber: searchQuery || undefined,
-        status: activeFilters.status || undefined,
-        paymentStatus: activeFilters.paymentStatus || undefined,
+        status: visibleFilters.status || undefined,
+        paymentStatus: visibleFilters.paymentStatus || undefined,
       };
 
       const res = await InvoiceService.getAllInvoices(params) as any;
       const newData = res.data?.data || res.data || [];
       
-      setInvoices(isRefresh || pageNum === 1 ? newData : [...invoices, ...newData]);
+      setInvoices((prev) => (isRefresh || pageNum === 1 ? newData : [...prev, ...newData]));
       setHasNextPage(res.pagination?.hasNextPage ?? (newData.length === 20));
       setPage(pageNum);
     } catch (err: any) {
@@ -70,18 +89,31 @@ export default function InvoiceListScreen() {
   };
 
   useEffect(() => {
+    setVisibleFilters(appliedFilters);
     fetchInvoices(1);
-  }, [activeFilters]);
+    // fetchInvoices is intentionally called when committed filters change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedFilters]);
+
+  useEffect(() => {
+    if (showFilters) {
+      setDraftFilters(activeFilters);
+    }
+  }, [showFilters, activeFilters]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchInvoices(1, true), 350);
     return () => clearTimeout(timer);
+    // debounced server refresh driven by search term.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   // --- HANDLERS ---
   const onRefresh = useCallback(() => {
     fetchInvoices(1, true);
-  }, [searchQuery, activeFilters]);
+    // fetchInvoices uses latest screen state intentionally.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, visibleFilters]);
 
   const handleSearchSubmit = () => {
     fetchInvoices(1, true);
@@ -94,7 +126,7 @@ export default function InvoiceListScreen() {
       // Mock export - wire up to your actual exportInvoices service
       await new Promise(resolve => setTimeout(resolve, 1000));
       Alert.alert('Success', 'Invoice report exported successfully.');
-    } catch (err) {
+    } catch {
       Alert.alert('Export Failed', 'Could not export the report.');
     } finally {
       setIsExporting(false);
@@ -102,10 +134,11 @@ export default function InvoiceListScreen() {
   };
 
   const applyFilter = (key: string, value: string | null) => {
-    setActiveFilters(prev => ({ ...prev, [key]: value || '' }));
+    setDraftFilters(prev => ({ ...prev, [key]: value || '' }));
   };
 
-  const activeFilterCount = Object.values(activeFilters).filter(Boolean).length;
+  const activeFilterCount = Object.values(visibleFilters).filter(Boolean).length;
+  const draftFilterCount = Object.values({ ...draftFilters, status: quickStatus || draftFilters.status }).filter(Boolean).length;
 
   // --- UTILS ---
   const formatCurrency = (amount: number) => {
@@ -238,6 +271,19 @@ export default function InvoiceListScreen() {
             </View>
           </View>
         </View>
+        <View style={styles.quickFilterRow}>
+          {['', 'draft', 'issued', 'paid', 'cancelled'].map((status) => (
+            <TouchableOpacity
+              key={status || 'all'}
+              style={[styles.quickChip, quickStatus === status && styles.quickChipActive]}
+              onPress={() => setQuickStatus(status)}
+            >
+              <ThemedText style={[styles.quickChipText, quickStatus === status && styles.quickChipTextActive]}>
+                {status || 'All Status'}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         {/* LIST */}
         {isLoading ? (
@@ -283,21 +329,58 @@ export default function InvoiceListScreen() {
         title="Filter Invoices"
         theme={theme}
         onClose={() => setShowFilters(false)}
-        onApply={() => setShowFilters(false)}
-        onReset={() => setActiveFilters({ status: '', paymentStatus: '' })}
+        onApply={() => {
+          setActiveFilters(draftFilters);
+          setShowFilters(false);
+        }}
+        onReset={() => {
+          setDraftFilters(emptyFilters);
+          setActiveFilters(emptyFilters);
+          setQuickStatus('');
+        }}
         applyLabel="View Results"
+        activeCount={draftFilterCount}
       >
         <FilterFormRenderer
           theme={theme}
-          values={activeFilters}
+          values={draftFilters}
           onChange={applyFilter}
-          fields={[
-            { type: 'chips', key: 'status', label: 'Invoice Status', options: [
-              { label: 'All', value: '' }, { label: 'Draft', value: 'draft' }, { label: 'Issued', value: 'issued' }, { label: 'Paid', value: 'paid' }, { label: 'Cancelled', value: 'cancelled' },
-            ] },
-            { type: 'chips', key: 'paymentStatus', label: 'Payment Status', options: [
-              { label: 'All', value: '' }, { label: 'Unpaid', value: 'unpaid' }, { label: 'Partial', value: 'partial' }, { label: 'Paid', value: 'paid' },
-            ] },
+          sections={[
+            {
+              key: 'invoice',
+              title: 'Invoice Filters',
+              fields: [
+                {
+                  type: 'chips',
+                  key: 'status',
+                  label: 'Invoice Status',
+                  options: [
+                    { label: 'All', value: '' },
+                    { label: 'Draft', value: 'draft' },
+                    { label: 'Issued', value: 'issued' },
+                    { label: 'Paid', value: 'paid' },
+                    { label: 'Cancelled', value: 'cancelled' },
+                  ],
+                },
+              ],
+            },
+            {
+              key: 'payment',
+              title: 'Payment Filters',
+              fields: [
+                {
+                  type: 'chips',
+                  key: 'paymentStatus',
+                  label: 'Payment Status',
+                  options: [
+                    { label: 'All', value: '' },
+                    { label: 'Unpaid', value: 'unpaid' },
+                    { label: 'Partial', value: 'partial' },
+                    { label: 'Paid', value: 'paid' },
+                  ],
+                },
+              ],
+            },
           ]}
         />
       </FilterBottomSheet>
@@ -327,6 +410,36 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   searchInput: { flex: 1, fontFamily: theme.fonts.body, fontSize: Typography.size.md, color: theme.textPrimary, marginLeft: Spacing.sm },
   filterBtn: { width: 48, height: 48, borderRadius: UI.borderRadius.md, backgroundColor: theme.bgSecondary, alignItems: 'center', justifyContent: 'center', borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
   filterBtnActive: { backgroundColor: theme.accentPrimary, borderColor: theme.accentPrimary },
+  quickFilterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.md,
+  },
+  quickChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: UI.borderRadius.pill,
+    backgroundColor: theme.bgSecondary,
+    borderWidth: UI.borderWidth.thin,
+    borderColor: theme.borderPrimary,
+  },
+  quickChipActive: {
+    backgroundColor: `${theme.accentPrimary}15`,
+    borderColor: theme.accentPrimary,
+  },
+  quickChipText: {
+    color: theme.textSecondary,
+    fontFamily: theme.fonts.body,
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.semibold,
+    textTransform: 'capitalize',
+  },
+  quickChipTextActive: {
+    color: theme.accentPrimary,
+    fontWeight: Typography.weight.bold,
+  },
 
   // LIST
   listContent: { padding: Spacing.xl, paddingBottom: 100 },

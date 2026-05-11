@@ -28,13 +28,44 @@ export default function PaymentListScreen() {
   const [payments, setPayments] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const emptyFilters = useMemo(
+    () => ({
+      type: null as string | null,
+      customerId: null as string | null,
+      supplierId: null as string | null,
+      paymentMethod: null as string | null,
+      status: null as string | null,
+    }),
+    []
+  );
+  const [appliedFilters, setAppliedFilters] = useState(emptyFilters);
+  const [draftFilters, setDraftFilters] = useState(emptyFilters);
+
+  const [quickStatus, setQuickStatus] = useState<string | null>(null);
+  const [quickType, setQuickType] = useState<string | null>(null);
+
+  const quickFilters = useMemo(
+    () => ({
+      status: quickStatus,
+      type: quickType,
+    }),
+    [quickStatus, quickType]
+  );
+
+  const combineFilters = useCallback(
+    (base: typeof emptyFilters) => ({
+      ...base,
+      ...quickFilters,
+    }),
+    [quickFilters]
+  );
+
   const [filters, setFilters] = useState({
     type: null as string | null,
     customerId: null as string | null,
@@ -96,14 +127,12 @@ export default function PaymentListScreen() {
       const res = await paymentService.list(params) as any;
       const newData = res.data?.data || res.data || [];
       
-      setPayments(isRefresh || pageNum === 1 ? newData : [...payments, ...newData]);
+      setPayments((prev) => (isRefresh || pageNum === 1 ? newData : [...prev, ...newData]));
       
       if (res.data?.pagination) {
         setHasNextPage(pageNum < res.data.pagination.totalPages);
-        setTotalCount(res.data.pagination.totalResults);
       } else {
         setHasNextPage(newData.length === 20);
-        setTotalCount(res.results || 0);
       }
       
       setPage(pageNum);
@@ -116,25 +145,40 @@ export default function PaymentListScreen() {
   };
 
   useEffect(() => {
+    const merged = combineFilters(appliedFilters);
+    setFilters(merged);
     fetchPayments(1);
-  }, [filters]);
+    // fetchPayments intentionally executed when applied filters change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedFilters, combineFilters]);
+
+  useEffect(() => {
+    if (!showFilters) return;
+    setDraftFilters(appliedFilters);
+  }, [showFilters, appliedFilters]);
 
   // --- HANDLERS ---
   const onRefresh = useCallback(() => {
     fetchPayments(1, true);
-  }, [filters]);
+    // fetchPayments uses current state intentionally.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, searchQuery]);
 
   const applyFilters = () => {
+    setAppliedFilters(draftFilters);
     setShowFilters(false);
-    fetchPayments(1, true);
   };
 
   const resetFilters = () => {
-    setFilters({ type: null, customerId: null, supplierId: null, paymentMethod: null, status: null });
+    setDraftFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
+    setQuickStatus(null);
+    setQuickType(null);
     setShowFilters(false);
   };
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const draftActiveCount = Object.values(combineFilters(draftFilters)).filter(Boolean).length;
 
   // --- UTILS ---
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
@@ -303,6 +347,31 @@ export default function PaymentListScreen() {
               <ThemedText style={styles.statValue}>{stats.completed} <ThemedText style={{ fontSize: Typography.size.sm, color: theme.warning }}>/ {stats.pending}</ThemedText></ThemedText>
             </View>
           </ScrollView>
+
+          <View style={styles.quickFilterRow}>
+            {[{ l: 'All Status', v: null }, { l: 'Completed', v: 'completed' }, { l: 'Pending', v: 'pending' }].map((opt) => (
+              <TouchableOpacity
+                key={opt.l}
+                style={[styles.quickChip, quickStatus === opt.v && styles.quickChipActive]}
+                onPress={() => setQuickStatus(opt.v)}
+              >
+                <ThemedText style={[styles.quickChipText, quickStatus === opt.v && styles.quickChipTextActive]}>
+                  {opt.l}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+            {[{ l: 'All Types', v: null }, { l: 'Inflow', v: 'inflow' }, { l: 'Outflow', v: 'outflow' }].map((opt) => (
+              <TouchableOpacity
+                key={opt.l}
+                style={[styles.quickChip, quickType === opt.v && styles.quickChipActive]}
+                onPress={() => setQuickType(opt.v)}
+              >
+                <ThemedText style={[styles.quickChipText, quickType === opt.v && styles.quickChipTextActive]}>
+                  {opt.l}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* LIST */}
@@ -350,14 +419,15 @@ export default function PaymentListScreen() {
         onApply={applyFilters}
         onReset={resetFilters}
         applyLabel="View Results"
+        activeCount={draftActiveCount}
       >
               
               <View style={styles.filterSection}>
                 <ThemedText style={styles.filterGroupLabel}>Transaction Type</ThemedText>
                 <View style={styles.chipRow}>
                   {[{l: 'All', v: null}, {l: 'Inflow', v: 'inflow'}, {l: 'Outflow', v: 'outflow'}].map(opt => (
-                    <TouchableOpacity key={opt.l} style={[styles.chip, filters.type === opt.v && styles.chipActive]} onPress={() => setFilters(p => ({ ...p, type: opt.v }))}>
-                      <ThemedText style={[styles.chipText, filters.type === opt.v && styles.chipTextActive]}>{opt.l}</ThemedText>
+                    <TouchableOpacity key={opt.l} style={[styles.chip, draftFilters.type === opt.v && styles.chipActive]} onPress={() => setDraftFilters(p => ({ ...p, type: opt.v }))}>
+                      <ThemedText style={[styles.chipText, draftFilters.type === opt.v && styles.chipTextActive]}>{opt.l}</ThemedText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -365,20 +435,20 @@ export default function PaymentListScreen() {
 
               <View style={styles.filterSection}>
                 <ThemedText style={styles.filterGroupLabel}>Customer</ThemedText>
-                <FilterDropdown endpoint="customers" value={filters.customerId} onChange={(v: any) => setFilters(p => ({ ...p, customerId: v }))} placeholder="Select Customer" />
+                <FilterDropdown endpoint="customers" value={draftFilters.customerId} onChange={(v: any) => setDraftFilters(p => ({ ...p, customerId: v }))} placeholder="Select Customer" />
               </View>
 
               <View style={styles.filterSection}>
                 <ThemedText style={styles.filterGroupLabel}>Supplier</ThemedText>
-                <FilterDropdown endpoint="suppliers" value={filters.supplierId} onChange={(v: any) => setFilters(p => ({ ...p, supplierId: v }))} placeholder="Select Supplier" />
+                <FilterDropdown endpoint="suppliers" value={draftFilters.supplierId} onChange={(v: any) => setDraftFilters(p => ({ ...p, supplierId: v }))} placeholder="Select Supplier" />
               </View>
 
               <View style={styles.filterSection}>
                 <ThemedText style={styles.filterGroupLabel}>Payment Method</ThemedText>
                 <View style={styles.chipRow}>
                   {[{l: 'All', v: null}, {l: 'Cash', v: 'cash'}, {l: 'UPI', v: 'upi'}, {l: 'Bank Transfer', v: 'bank_transfer'}, {l: 'Card', v: 'card'}].map(opt => (
-                    <TouchableOpacity key={opt.l} style={[styles.chip, filters.paymentMethod === opt.v && styles.chipActive]} onPress={() => setFilters(p => ({ ...p, paymentMethod: opt.v }))}>
-                      <ThemedText style={[styles.chipText, filters.paymentMethod === opt.v && styles.chipTextActive]}>{opt.l}</ThemedText>
+                    <TouchableOpacity key={opt.l} style={[styles.chip, draftFilters.paymentMethod === opt.v && styles.chipActive]} onPress={() => setDraftFilters(p => ({ ...p, paymentMethod: opt.v }))}>
+                      <ThemedText style={[styles.chipText, draftFilters.paymentMethod === opt.v && styles.chipTextActive]}>{opt.l}</ThemedText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -388,8 +458,8 @@ export default function PaymentListScreen() {
                 <ThemedText style={styles.filterGroupLabel}>Status</ThemedText>
                 <View style={styles.chipRow}>
                   {[{l: 'All', v: null}, {l: 'Completed', v: 'completed'}, {l: 'Pending', v: 'pending'}, {l: 'Failed', v: 'failed'}].map(opt => (
-                    <TouchableOpacity key={opt.l} style={[styles.chip, filters.status === opt.v && styles.chipActive]} onPress={() => setFilters(p => ({ ...p, status: opt.v }))}>
-                      <ThemedText style={[styles.chipText, filters.status === opt.v && styles.chipTextActive]}>{opt.l}</ThemedText>
+                    <TouchableOpacity key={opt.l} style={[styles.chip, draftFilters.status === opt.v && styles.chipActive]} onPress={() => setDraftFilters(p => ({ ...p, status: opt.v }))}>
+                      <ThemedText style={[styles.chipText, draftFilters.status === opt.v && styles.chipTextActive]}>{opt.l}</ThemedText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -447,6 +517,35 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   statCard: { backgroundColor: theme.bgPrimary, padding: Spacing.md, borderRadius: UI.borderRadius.lg, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary, minWidth: 120, ...getElevation(1, theme) },
   statLabel: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: Typography.weight.bold, color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   statValue: { fontFamily: theme.fonts.mono, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
+  quickFilterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.md,
+  },
+  quickChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: UI.borderRadius.pill,
+    backgroundColor: theme.bgSecondary,
+    borderWidth: UI.borderWidth.thin,
+    borderColor: theme.borderPrimary,
+  },
+  quickChipActive: {
+    backgroundColor: `${theme.accentPrimary}15`,
+    borderColor: theme.accentPrimary,
+  },
+  quickChipText: {
+    color: theme.textSecondary,
+    fontFamily: theme.fonts.body,
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.semibold,
+  },
+  quickChipTextActive: {
+    color: theme.accentPrimary,
+    fontWeight: Typography.weight.bold,
+  },
 
   // LIST
   listContent: { padding: Spacing.xl, paddingBottom: 100 },

@@ -1,21 +1,21 @@
-import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
+import { TransactionService } from '@/src/api/transactionService';
 import { FilterBottomSheet, FilterFormRenderer, HeaderSearchAction } from '@/src/components/filters';
+import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
-  Text,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TransactionService } from '@/src/api/transactionService';
 
 const formatCurrency = (val: number) => {
   if (!val) return '₹0';
@@ -54,66 +54,119 @@ const getTransactionIcon = (type: string) => {
 };
 
 const TransactionCard = React.memo(({ item, theme }: { item: any; theme: ThemeColors }) => {
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const isCredit = item.effect?.toLowerCase() === 'credit';
+
   const amountColor = isCredit ? theme.success : theme.error;
   const iconName = getTransactionIcon(item.type);
 
+  const handlePress = () => {
+    // If we have a reference ID, we use it. Otherwise, we might use the transaction ID as a fallback
+    // depending on how the detail screens handle it.
+    const targetId = item.refId || item.documentId || item._id;
+
+    switch (item.type?.toLowerCase()) {
+      case 'invoice':
+      case 'sale':
+        router.push(`/(tabs)/invoice/${targetId}` as any);
+        break;
+      case 'purchase':
+        router.push(`/(tabs)/purchase/${targetId}` as any);
+        break;
+      case 'payment':
+      case 'emi_payment':
+        router.push(`/(tabs)/payments/${targetId}` as any);
+        break;
+      case 'customer':
+        if (item.partyId) router.push(`/(tabs)/customers/${item.partyId}` as any);
+        break;
+      case 'supplier':
+        if (item.partyId) router.push(`/(tabs)/suppliers/${item.partyId}` as any);
+        break;
+      default:
+        // For journals or others, maybe just show the description for now
+        Alert.alert('Transaction Details', item.description || 'Details not available for this type.');
+        break;
+    }
+  };
+
   return (
-    <View style={[styles.card, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: theme.bgPrimary, borderColor: theme.borderPrimary }]}
+      activeOpacity={0.7}
+      onPress={handlePress}
+    >
       <View style={styles.cardHeader}>
         <View style={styles.typeBadgeContainer}>
           <View style={[styles.iconBox, { backgroundColor: `${theme.accentPrimary}15` }]}>
-            <Ionicons name={iconName} size={16} color={theme.accentPrimary} />
+            <Ionicons name={iconName} size={18} color={theme.accentPrimary} />
           </View>
-          <Text style={[styles.typeText, { color: theme.textSecondary }]}>
-            {item.type?.replace('_', ' ')?.toUpperCase() || 'TRANSACTION'}
-          </Text>
+          <View>
+            <Text style={[styles.typeText, { color: theme.textPrimary }]}>
+              {item.type?.replace('_', ' ')?.toUpperCase() || 'TRANSACTION'}
+            </Text>
+            <Text style={[styles.dateText, { color: theme.textTertiary }]}>
+              {formatDate(item.date)}
+            </Text>
+          </View>
         </View>
-        <Text style={[styles.dateText, { color: theme.textTertiary }]}>
-          {formatDate(item.date)}
-        </Text>
-      </View>
-
-      <View style={styles.cardBody}>
-        <View style={styles.bodyLeft}>
-          <Text style={[styles.partyName, { color: theme.textPrimary }]} numberOfLines={1}>
-            {item.partyName || 'System / Internal'}
-          </Text>
-          <Text style={[styles.description, { color: theme.textTertiary }]} numberOfLines={2}>
-            {item.description || item.refNumber || 'No description'}
-          </Text>
-        </View>
-        <View style={styles.bodyRight}>
+        <View style={styles.amountContainer}>
           <Text style={[styles.amountText, { color: amountColor }]}>
             {isCredit ? '+' : '-'}{formatCurrency(item.amount || item.totalAmount)}
           </Text>
           <View style={[styles.effectBadge, { backgroundColor: isCredit ? `${theme.success}15` : `${theme.error}15` }]}>
             <Text style={[styles.effectText, { color: amountColor }]}>
-              {isCredit ? 'CR' : 'DR'}
+              {isCredit ? 'CREDIT' : 'DEBIT'}
             </Text>
           </View>
         </View>
       </View>
-      
-      {item.refNumber && (
-        <View style={[styles.cardFooter, { borderTopColor: theme.borderPrimary }]}>
-          <Text style={[styles.refText, { color: theme.textLabel }]}>
-            Ref: {item.refNumber}
+
+      <View style={styles.cardBody}>
+        <View style={styles.partyRow}>
+          <Ionicons name="person-outline" size={14} color={theme.textTertiary} />
+          <Text style={[styles.partyName, { color: theme.textSecondary }]} numberOfLines={1}>
+            {item.partyName || 'System / Internal'}
           </Text>
         </View>
+        <Text style={[styles.description, { color: theme.textPrimary }]} numberOfLines={2}>
+          {item.description || item.refNumber || 'No description provided'}
+        </Text>
+      </View>
+
+      {(item.refNumber || item.partyId) && (
+        <View style={[styles.cardFooter, { borderTopColor: theme.borderPrimary }]}>
+          <View style={styles.footerInfo}>
+            {item.refNumber && (
+              <View style={styles.footerTag}>
+                <Ionicons name="bookmark-outline" size={12} color={theme.textTertiary} />
+                <Text style={[styles.refText, { color: theme.textTertiary }]}>{item.refNumber}</Text>
+              </View>
+            )}
+            {item.partyId && (
+              <View style={styles.footerTag}>
+                <Ionicons name="id-card-outline" size={12} color={theme.textTertiary} />
+                <Text style={[styles.refText, { color: theme.textTertiary }]}>{item.partyId.slice(-6)}</Text>
+              </View>
+            )}
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.borderPrimary} />
+        </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 });
 TransactionCard.displayName = 'TransactionCard';
 
 export default function TransactionsScreen() {
   const currentTheme = useAppTheme();
-  
+  const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
+
+
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(true);
@@ -121,9 +174,12 @@ export default function TransactionsScreen() {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [type, setType] = useState('');
-  const [effect, setEffect] = useState('');
-  
+  const [draftType, setDraftType] = useState('');
+  const [draftEffect, setDraftEffect] = useState('');
+  const [quickEffect, setQuickEffect] = useState('');
+  const [appliedType, setAppliedType] = useState('');
+  const [appliedEffect, setAppliedEffect] = useState('');
+
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const transactionTypes = [
@@ -153,12 +209,12 @@ export default function TransactionsScreen() {
         page: targetPage,
         limit: pageSize,
         search: search || undefined,
-        type: type || undefined,
-        effect: effect || undefined,
+        type: appliedType || undefined,
+        effect: (quickEffect || appliedEffect) || undefined,
       };
 
       const res = await TransactionService.getAllTransactions(params) as any;
-      
+
       // res is the response body: { status: 'success', total, page, limit, data: { data: [...] } }
       const fetchedData = res?.data?.data || (Array.isArray(res?.data) ? res.data : []);
       const totalCount = res?.total || 0;
@@ -179,7 +235,9 @@ export default function TransactionsScreen() {
   useEffect(() => {
     const timer = setTimeout(() => loadData(true), 500);
     return () => clearTimeout(timer);
-  }, [search, type, effect]);
+    // loadData intentionally driven by committed filter state + search.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, appliedType, appliedEffect, quickEffect]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -187,7 +245,7 @@ export default function TransactionsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.bgPrimary }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.bgPrimary }]} edges={['bottom', 'left', 'right']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: currentTheme.borderPrimary }]}>
         <View style={styles.headerTitleRow}>
@@ -202,14 +260,43 @@ export default function TransactionsScreen() {
             <HeaderSearchAction
               value={search}
               onChangeText={setSearch}
-              onOpenFilters={() => setShowFilterModal(true)}
-              filterActive={Boolean(type || effect)}
-              filterCount={[type, effect].filter(Boolean).length}
+              onOpenFilters={() => {
+                setDraftType(appliedType);
+                setDraftEffect(appliedEffect);
+                setShowFilterModal(true);
+              }}
+              filterActive={Boolean(appliedType || quickEffect || appliedEffect)}
+              filterCount={[appliedType, quickEffect || appliedEffect].filter(Boolean).length}
               placeholder="Ref or party"
               theme={currentTheme}
             />
           </View>
         </View>
+      </View>
+      <View style={styles.quickRow}>
+        {[
+          { label: 'All', value: '' },
+          { label: 'Credit', value: 'credit' },
+          { label: 'Debit', value: 'debit' },
+        ].map((opt) => (
+          <TouchableOpacity
+            key={opt.label}
+            style={[
+              styles.quickChip,
+              { borderColor: currentTheme.borderPrimary, backgroundColor: currentTheme.bgPrimary },
+              quickEffect === opt.value && { borderColor: currentTheme.accentPrimary, backgroundColor: `${currentTheme.accentPrimary}15` },
+              quickEffect === opt.value && styles.quickChipActive
+            ]}
+            onPress={() => setQuickEffect(opt.value)}
+          >
+            <Text style={[
+              styles.quickText,
+              { color: currentTheme.textSecondary },
+              quickEffect === opt.value && { color: currentTheme.accentPrimary },
+              quickEffect === opt.value && styles.quickTextActive
+            ]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* List */}
@@ -241,23 +328,43 @@ export default function TransactionsScreen() {
         visible={showFilterModal}
         title="Filter Transactions"
         theme={currentTheme}
-        onClose={() => setShowFilterModal(false)}
-        onApply={() => setShowFilterModal(false)}
-        onReset={() => {
-          setType('');
-          setEffect('');
+        onClose={() => {
+          setDraftType(appliedType);
+          setDraftEffect(appliedEffect);
+          setShowFilterModal(false);
         }}
+        onApply={() => {
+          setAppliedType(draftType);
+          setAppliedEffect(draftEffect);
+          setShowFilterModal(false);
+        }}
+        onReset={() => {
+          setDraftType('');
+          setDraftEffect('');
+          setAppliedType('');
+          setAppliedEffect('');
+          setQuickEffect('');
+        }}
+        activeCount={[draftType, draftEffect || quickEffect].filter(Boolean).length}
       >
         <FilterFormRenderer
           theme={currentTheme}
-          values={{ type, effect }}
+          values={{ type: draftType, effect: draftEffect }}
           onChange={(key, value) => {
-            if (key === 'type') setType(value || '');
-            if (key === 'effect') setEffect(value || '');
+            if (key === 'type') setDraftType(value || '');
+            if (key === 'effect') setDraftEffect(value || '');
           }}
-          fields={[
-            { type: 'chips', key: 'type', label: 'Transaction Type', options: transactionTypes },
-            { type: 'chips', key: 'effect', label: 'Effect (Dr/Cr)', options: effectTypes },
+          sections={[
+            {
+              key: 'type',
+              title: 'Transaction Type',
+              fields: [{ type: 'chips', key: 'type', label: 'Type', options: transactionTypes }],
+            },
+            {
+              key: 'effect',
+              title: 'Effect Filters',
+              fields: [{ type: 'chips', key: 'effect', label: 'Effect (Dr/Cr)', options: effectTypes }],
+            },
           ]}
         />
       </FilterBottomSheet>
@@ -265,12 +372,38 @@ export default function TransactionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
+  },
+  quickRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.md,
+  },
+  quickChip: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 8,
+    borderRadius: UI.borderRadius.pill,
+    borderWidth: 1,
+  },
+  quickChipActive: {
+    ...getElevation(1, theme),
+  },
+  quickText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Plus Jakarta Sans',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  quickTextActive: {
+    fontWeight: '800'
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -336,87 +469,105 @@ const styles = StyleSheet.create({
   listContent: {
     padding: Spacing.xl,
   },
-  
+
   // Card Styles
   card: {
-    borderRadius: UI.borderRadius.lg,
+    borderRadius: UI.borderRadius.xl,
     borderWidth: 1,
     marginBottom: Spacing.lg,
     padding: Spacing.lg,
+    ...getElevation(1, theme),
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
+    alignItems: 'flex-start',
+    marginBottom: Spacing.lg,
   },
   typeBadgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   iconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: UI.borderRadius.sm,
+    width: 42,
+    height: 42,
+    borderRadius: UI.borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   typeText: {
     fontFamily: 'Plus Jakarta Sans',
     fontSize: Typography.size.sm,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   dateText: {
-    fontFamily: 'Space Mono',
+    fontFamily: 'Inter',
     fontSize: Typography.size.xs,
+    marginTop: 2,
   },
-  cardBody: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  bodyLeft: {
-    flex: 1,
-    paddingRight: Spacing.md,
-  },
-  partyName: {
-    fontFamily: 'Inter',
-    fontSize: Typography.size.md,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  description: {
-    fontFamily: 'Inter',
-    fontSize: Typography.size.sm,
-  },
-  bodyRight: {
+  amountContainer: {
     alignItems: 'flex-end',
     gap: 4,
   },
   amountText: {
     fontFamily: 'Plus Jakarta Sans',
     fontSize: Typography.size.lg,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   effectBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: UI.borderRadius.sm,
   },
   effectText: {
     fontFamily: 'Inter',
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  cardBody: {
+    marginBottom: Spacing.md,
+  },
+  partyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
+  },
+  partyName: {
+    fontFamily: 'Inter',
+    fontSize: Typography.size.sm,
+    fontWeight: '600',
+  },
+  description: {
+    fontFamily: 'Inter',
+    fontSize: Typography.size.md,
+    lineHeight: 20,
+    fontWeight: '500',
   },
   cardFooter: {
     marginTop: Spacing.md,
     paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  footerInfo: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+  },
+  footerTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   refText: {
     fontFamily: 'Space Mono',
-    fontSize: Typography.size.xs,
+    fontSize: 10,
+    fontWeight: '600',
   },
 
   // Empty State

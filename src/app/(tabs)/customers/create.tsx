@@ -44,7 +44,7 @@ export default function CreateCustomerScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <ThemedView style={styles.container}>
         <View style={styles.header}>
           <ThemedText style={styles.title}>New Customer</ThemedText>

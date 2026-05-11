@@ -2,8 +2,9 @@
  * AppChart — Reusable chart widget wrapping react-native-gifted-charts.
  * Supports: Line, Bar, Pie, Area with Loading/Empty/Error states.
  */
-import { Spacing, Typography } from '@/src/constants/theme';
+import { Spacing, Typography, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
+
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
@@ -11,6 +12,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { BarChart, LineChart, PieChart } from 'react-native-gifted-charts';
@@ -61,7 +63,10 @@ export default function AppChart({
   noDataMessage = 'No data available for this period.',
 }: AppChartProps) {
   const theme = useAppTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const accentColor = color ?? theme.accentPrimary;
+  /** Leave horizontal margin for card padding + safe readability on small phones */
+  const chartWidth = Math.min(340, Math.max(260, windowWidth - Spacing.xl * 4));
 
   const renderBody = () => {
     if (loading) {
@@ -100,8 +105,6 @@ export default function AppChart({
         </View>
       );
     }
-
-    const chartWidth = 340;
 
     if (type === 'bar') {
       const colored = data.map((d) => ({
@@ -219,7 +222,8 @@ export default function AppChart({
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
+    <View style={[styles.card, { backgroundColor: theme.bgPrimary, borderColor: theme.borderPrimary, ...getElevation(1, theme) }]}>
+
       <View style={styles.cardHeader}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{title}</Text>
@@ -248,12 +252,15 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: Typography.size.md,
-    fontWeight: '700',
+    fontWeight: '800',
+    fontFamily: 'Plus Jakarta Sans',
   },
   cardSubtitle: {
     fontSize: Typography.size.xs,
+    fontFamily: 'Inter',
     marginTop: 2,
   },
+
   chartBody: {
     alignItems: 'center',
   },
@@ -291,6 +298,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 8,
   },
   legendDot: {
     width: 10,

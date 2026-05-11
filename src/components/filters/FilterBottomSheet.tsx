@@ -19,6 +19,7 @@ import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/consta
 type FilterBottomSheetProps = {
   visible: boolean;
   title?: string;
+  activeCount?: number;
   theme: ThemeColors;
   children: ReactNode;
   onClose: () => void;
@@ -26,6 +27,7 @@ type FilterBottomSheetProps = {
   onReset: () => void;
   applyLabel?: string;
   resetLabel?: string;
+  applyDisabled?: boolean;
 };
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -33,6 +35,7 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 export function FilterBottomSheet({
   visible,
   title = 'Filters',
+  activeCount = 0,
   theme,
   children,
   onClose,
@@ -40,6 +43,7 @@ export function FilterBottomSheet({
   onReset,
   applyLabel = 'Apply',
   resetLabel = 'Reset',
+  applyDisabled = false,
 }: FilterBottomSheetProps) {
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -96,9 +100,18 @@ export function FilterBottomSheet({
           </View>
 
           <View style={[styles.header, { borderBottomColor: theme.borderPrimary }]}>
-            <ThemedText style={[styles.title, { color: theme.textPrimary, fontFamily: theme.fonts.heading }]}>
-              {title}
-            </ThemedText>
+            <View style={styles.titleRow}>
+              <ThemedText style={[styles.title, { color: theme.textPrimary, fontFamily: theme.fonts.heading }]}>
+                {title}
+              </ThemedText>
+              {activeCount > 0 ? (
+                <View style={[styles.countBadge, { backgroundColor: theme.accentPrimary }]}>
+                  <ThemedText style={[styles.countBadgeText, { color: theme.bgPrimary }]}>
+                    {activeCount}
+                  </ThemedText>
+                </View>
+              ) : null}
+            </View>
             <TouchableOpacity
               style={[styles.closeBtn, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}
               onPress={onClose}
@@ -128,8 +141,12 @@ export function FilterBottomSheet({
               </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.applyBtn, { backgroundColor: theme.accentPrimary }]}
+              style={[
+                styles.applyBtn,
+                { backgroundColor: applyDisabled ? theme.disabledText : theme.accentPrimary },
+              ]}
               onPress={onApply}
+              disabled={applyDisabled}
             >
               <ThemedText style={[styles.applyText, { color: theme.bgPrimary, fontFamily: theme.fonts.heading }]}>
                 {applyLabel}
@@ -177,8 +194,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
   title: {
     fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.bold,
+  },
+  countBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countBadgeText: {
+    fontSize: Typography.size.xs,
     fontWeight: Typography.weight.bold,
   },
   closeBtn: {

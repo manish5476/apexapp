@@ -25,75 +25,138 @@ export type FilterField =
       keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
     };
 
-type FilterFormRendererProps<T extends Record<string, any>> = {
+export type FilterSection = {
+  key: string;
+  title: string;
   fields: FilterField[];
+  defaultExpanded?: boolean;
+};
+
+type FilterFormRendererProps<T extends Record<string, any>> = {
+  fields?: FilterField[];
+  sections?: FilterSection[];
   values: T;
   onChange: (key: keyof T | string, value: any) => void;
   theme: ThemeColors;
 };
 
 export function FilterFormRenderer<T extends Record<string, any>>({
-  fields,
+  fields = [],
+  sections = [],
   values,
   onChange,
   theme,
 }: FilterFormRendererProps<T>) {
+  const [expandedSections, setExpandedSections] = React.useState<Record<string, boolean>>(
+    sections.reduce<Record<string, boolean>>((acc, section) => {
+      acc[section.key] = section.defaultExpanded ?? true;
+      return acc;
+    }, {})
+  );
+
+  React.useEffect(() => {
+    if (sections.length === 0) return;
+    setExpandedSections(
+      sections.reduce<Record<string, boolean>>((acc, section) => {
+        acc[section.key] = section.defaultExpanded ?? true;
+        return acc;
+      }, {})
+    );
+  }, [sections]);
+
+  const renderField = (field: FilterField) => (
+    <View key={field.key} style={styles.section}>
+      <ThemedText style={[styles.label, { color: theme.textSecondary, fontFamily: theme.fonts.body }]}>
+        {field.label}
+      </ThemedText>
+
+      {field.type === 'chips' ? (
+        <View style={styles.chipRow}>
+          {field.options.map((option) => {
+            const active = values[field.key] === option.value;
+            return (
+              <TouchableOpacity
+                key={`${field.key}-${option.label}-${option.value ?? 'all'}`}
+                style={[
+                  styles.chip,
+                  { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary },
+                  active && { backgroundColor: theme.accentPrimary, borderColor: theme.accentPrimary },
+                ]}
+                onPress={() => onChange(field.key, option.value)}
+              >
+                <ThemedText
+                  style={[
+                    styles.chipText,
+                    { color: theme.textSecondary, fontFamily: theme.fonts.body },
+                    active && { color: theme.bgPrimary },
+                  ]}
+                >
+                  {option.label}
+                </ThemedText>
+                {active ? <Ionicons name="checkmark" size={14} color={theme.bgPrimary} /> : null}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : (
+        <TextInput
+          value={values[field.key] ?? ''}
+          onChangeText={(text) => onChange(field.key, text)}
+          placeholder={field.placeholder}
+          placeholderTextColor={theme.textLabel}
+          keyboardType={field.keyboardType ?? 'default'}
+          style={[
+            styles.input,
+            {
+              color: theme.textPrimary,
+              backgroundColor: theme.bgSecondary,
+              borderColor: theme.borderPrimary,
+              fontFamily: theme.fonts.body,
+            },
+          ]}
+        />
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.wrap}>
-      {fields.map((field) => (
-        <View key={field.key} style={styles.section}>
-          <ThemedText style={[styles.label, { color: theme.textSecondary, fontFamily: theme.fonts.body }]}>
-            {field.label}
-          </ThemedText>
-
-          {field.type === 'chips' ? (
-            <View style={styles.chipRow}>
-              {field.options.map((option) => {
-                const active = values[field.key] === option.value;
-                return (
-                  <TouchableOpacity
-                    key={`${field.key}-${option.label}-${option.value ?? 'all'}`}
-                    style={[
-                      styles.chip,
-                      { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary },
-                      active && { backgroundColor: theme.accentPrimary, borderColor: theme.accentPrimary },
-                    ]}
-                    onPress={() => onChange(field.key, option.value)}
+      {sections.length > 0
+        ? sections.map((section) => {
+            const expanded = expandedSections[section.key] ?? true;
+            return (
+              <View
+                key={section.key}
+                style={[
+                  styles.sectionCard,
+                  { borderColor: theme.borderPrimary, backgroundColor: theme.bgPrimary },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() =>
+                    setExpandedSections((prev) => ({
+                      ...prev,
+                      [section.key]: !expanded,
+                    }))
+                  }
+                >
+                  <ThemedText
+                    style={[styles.sectionTitle, { color: theme.textPrimary, fontFamily: theme.fonts.heading }]}
                   >
-                    <ThemedText
-                      style={[
-                        styles.chipText,
-                        { color: theme.textSecondary, fontFamily: theme.fonts.body },
-                        active && { color: theme.bgPrimary },
-                      ]}
-                    >
-                      {option.label}
-                    </ThemedText>
-                    {active ? <Ionicons name="checkmark" size={14} color={theme.bgPrimary} /> : null}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : (
-            <TextInput
-              value={values[field.key] ?? ''}
-              onChangeText={(text) => onChange(field.key, text)}
-              placeholder={field.placeholder}
-              placeholderTextColor={theme.textLabel}
-              keyboardType={field.keyboardType ?? 'default'}
-              style={[
-                styles.input,
-                {
-                  color: theme.textPrimary,
-                  backgroundColor: theme.bgSecondary,
-                  borderColor: theme.borderPrimary,
-                  fontFamily: theme.fonts.body,
-                },
-              ]}
-            />
-          )}
-        </View>
-      ))}
+                    {section.title}
+                  </ThemedText>
+                  <Ionicons
+                    name={expanded ? 'chevron-up-outline' : 'chevron-down-outline'}
+                    size={18}
+                    color={theme.textSecondary}
+                  />
+                </TouchableOpacity>
+                {expanded ? <View style={styles.sectionFields}>{section.fields.map(renderField)}</View> : null}
+              </View>
+            );
+          })
+        : fields.map(renderField)}
     </View>
   );
 }
@@ -104,6 +167,24 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: Spacing.md,
+  },
+  sectionCard: {
+    borderWidth: UI.borderWidth.thin,
+    borderRadius: UI.borderRadius.lg,
+    padding: Spacing.md,
+    gap: Spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.bold,
+  },
+  sectionFields: {
+    gap: Spacing.lg,
   },
   label: {
     fontSize: Typography.size.sm,

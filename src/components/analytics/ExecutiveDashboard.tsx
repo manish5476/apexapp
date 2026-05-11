@@ -5,13 +5,14 @@
  */
 import AppChart, { ChartDataPoint } from '@/src/components/analytics/AppChart';
 import { ThemedText } from '@/src/components/themed-text';
-import { Spacing, Typography } from '@/src/constants/theme';
+import { getElevation, Spacing, Typography } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { AdminAnalyticsService } from '@/src/api/AdminAnalyticsService';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -34,11 +35,11 @@ interface ExecutiveData {
     totalInvoices?: number;
     paidInvoices?: number;
   };
-  trends?: { timeline: Array<{ date: string; income?: number; profit?: number; expense?: number }> };
-  customers?: { segmentation?: Array<{ _id: string; count: number }> };
+  trends?: { timeline: { date: string; income?: number; profit?: number; expense?: number }[] };
+  customers?: { segmentation?: { _id: string; count: number }[] };
   inventory?: { lowStockItems?: number; totalItems?: number };
   alerts?: { total?: number };
-  insights?: { insights: Array<{ title: string; message: string }> };
+  insights?: { insights: { title: string; message: string }[] };
 }
 
 // ─── Helper: formatCurrency ────────────────────────────────────────────────────
@@ -52,27 +53,95 @@ function fmt(v?: number): string {
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, icon, color, trend }: { label: string; value: string; icon: any; color: string; trend?: string }) {
+const KpiCard = React.memo(function KpiCard({
+  label,
+  value,
+  icon,
+  color,
+  trend,
+}: {
+  label: string;
+  value: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  trend?: string;
+}) {
   const theme = useAppTheme();
+  const elevation = useMemo(() => getElevation(1, theme), [theme]);
   return (
-    <View style={[kpiStyles.card, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
-      <View style={[kpiStyles.iconWrap, { backgroundColor: `${color}18` }]}>
-        <Ionicons name={icon} size={18} color={color} />
+    <View
+      style={[
+        kpiStyles.card,
+        { backgroundColor: theme.bgPrimary, borderColor: theme.borderPrimary, borderLeftColor: color },
+        elevation,
+      ]}
+    >
+      <View style={kpiStyles.topRow}>
+        <View style={[kpiStyles.iconWrap, { backgroundColor: `${color}15` }]}>
+          <Ionicons name={icon} size={16} color={color} />
+        </View>
+        {trend ? (
+          <View style={[kpiStyles.trendBadge, { backgroundColor: `${color}10` }]}>
+            <Text style={[kpiStyles.trendText, { color }]}>{trend}</Text>
+          </View>
+        ) : null}
       </View>
-      <Text style={[kpiStyles.value, { color: theme.textPrimary }]}>{value}</Text>
-      <Text style={[kpiStyles.label, { color: theme.textSecondary }]}>{label}</Text>
-      {trend ? <Text style={[kpiStyles.trend, { color: color }]}>{trend}</Text> : null}
+      <View style={kpiStyles.bottomRow}>
+        <Text style={[kpiStyles.label, { color: theme.textSecondary }]}>{label.toUpperCase()}</Text>
+        <Text style={[kpiStyles.value, { color: theme.textPrimary }]}>{value}</Text>
+      </View>
     </View>
   );
-}
+});
 
 const kpiStyles = StyleSheet.create({
-  card: { flex: 1, borderWidth: 1, borderRadius: 14, padding: 12, alignItems: 'center', gap: 4, minWidth: 90 },
-  iconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  value: { fontSize: 16, fontWeight: '800' },
-  label: { fontSize: 10, fontWeight: '600', textAlign: 'center', lineHeight: 13 },
-  trend: { fontSize: 10, fontWeight: '700' },
+  card: {
+    flex: 1,
+    borderWidth: 1,
+    borderLeftWidth: 4,
+    borderRadius: 20,
+    padding: Spacing.md,
+    gap: 12,
+    minHeight: 100,
+    overflow: 'hidden',
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trendBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  trendText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  bottomRow: {
+    gap: 2,
+  },
+  label: { 
+    fontSize: 10, 
+    fontWeight: '700', 
+    letterSpacing: 0.5,
+    fontFamily: 'Inter'
+  },
+  value: { 
+    fontSize: 18, 
+    fontWeight: '800', 
+    fontFamily: 'Plus Jakarta Sans'
+  },
 });
+
 
 // ─── Date Preset ──────────────────────────────────────────────────────────────
 
@@ -90,6 +159,10 @@ function getPreset(preset: 'today' | '7d' | '30d' | 'month') {
 
 export default function ExecutiveDashboard() {
   const theme = useAppTheme();
+  const toolbarElevation = useMemo(() => getElevation(1, theme), [theme]);
+  const spin = useRef(new Animated.Value(0)).current;
+  const spinRotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
   const [filters, setFilters] = useState<{ startDate: string; endDate: string; branchId?: string }>({
     ...getPreset('30d'),
     branchId: undefined,
@@ -100,6 +173,11 @@ export default function ExecutiveDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState('');
   const abortRef = useRef<AbortController | null>(null);
+
+  const triggerRefreshSpin = useCallback(() => {
+    spin.setValue(0);
+    Animated.timing(spin, { toValue: 1, duration: 720, useNativeDriver: true }).start();
+  }, [spin]);
 
   const fetchData = useCallback(async () => {
     abortRef.current?.abort();
@@ -120,7 +198,11 @@ export default function ExecutiveDashboard() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const onRefresh = useCallback(() => { setRefreshing(true); fetchData(); }, [fetchData]);
+  const onRefresh = useCallback(() => {
+    triggerRefreshSpin();
+    setRefreshing(true);
+    fetchData();
+  }, [fetchData, triggerRefreshSpin]);
 
   // ─── Chart data transforms ─────────────────────────────────────────────────
 
@@ -140,6 +222,7 @@ export default function ExecutiveDashboard() {
   }));
 
   const f = data?.financial;
+  const chartBusy = loading && !!data;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bgPrimary }]} edges={['bottom']}>
@@ -155,42 +238,72 @@ export default function ExecutiveDashboard() {
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
               {updatedAt ? `Updated ${updatedAt}` : 'Top-level KPIs and growth indicators'}
             </Text>
+            {data?.period ? (
+              <View style={[styles.periodChip, { backgroundColor: theme.bgTernary, borderColor: theme.borderSecondary }]}>
+                <Ionicons name="calendar-outline" size={12} color={theme.textTertiary} />
+                <Text style={[styles.periodChipText, { color: theme.textSecondary }]} numberOfLines={1}>
+                  {data.period.start} → {data.period.end} · {data.period.days}d
+                </Text>
+              </View>
+            ) : null}
           </View>
-          <Pressable onPress={fetchData} style={[styles.refreshBtn, { borderColor: theme.borderPrimary, backgroundColor: theme.bgSecondary }]}>
-            <Ionicons name="refresh" size={16} color={theme.accentPrimary} />
+          <Pressable
+            onPress={() => {
+              triggerRefreshSpin();
+              fetchData();
+            }}
+            style={[styles.refreshBtn, { borderColor: theme.borderPrimary, backgroundColor: theme.bgSecondary }]}
+          >
+            <Animated.View style={{ transform: [{ rotate: spinRotate }] }}>
+              <Ionicons name="refresh" size={16} color={theme.accentPrimary} />
+            </Animated.View>
           </Pressable>
         </View>
 
-        {/* Date Presets */}
-        <View style={styles.presetRow}>
-          {(['today', '7d', '30d', 'month'] as const).map((p) => {
-            const preset = getPreset(p);
-            const active = preset.startDate === filters.startDate && preset.endDate === filters.endDate;
-            return (
-              <Pressable
-                key={p}
-                onPress={() => setFilters(preset)}
-                style={[styles.presetChip, {
-                  backgroundColor: active ? theme.accentPrimary : theme.bgSecondary,
-                  borderColor: active ? theme.accentPrimary : theme.borderPrimary,
-                }]}
-              >
-                <Text style={{ fontSize: 11, fontWeight: '700', color: active ? '#fff' : theme.textSecondary }}>
-                  {p === 'today' ? 'Today' : p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : 'Month'}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Branch Filter */}
-        <View style={styles.dropdownContainer}>
-          <ThemedText style={styles.label}>Filter by Branch</ThemedText>
+        <View
+          style={[
+            styles.filterToolbar,
+            { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary },
+            toolbarElevation,
+          ]}
+        >
+          <Text style={[styles.toolbarSectionLabel, { color: theme.textTertiary }]}>Range</Text>
+          <View style={styles.presetRow}>
+            {(['today', '7d', '30d', 'month'] as const).map((p) => {
+              const preset = getPreset(p);
+              const active = preset.startDate === filters.startDate && preset.endDate === filters.endDate;
+              return (
+                <Pressable
+                  key={p}
+                  onPress={() => setFilters((prev) => ({ ...prev, ...preset }))}
+                  style={[
+                    styles.presetChip,
+                    {
+                      backgroundColor: active ? theme.accentPrimary : theme.bgTernary,
+                      borderColor: active ? theme.accentPrimary : theme.borderPrimary,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: active ? theme.bgPrimary : theme.textSecondary,
+                    }}
+                  >
+                    {p === 'today' ? 'Today' : p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : 'Month'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <View style={[styles.toolbarDivider, { backgroundColor: theme.borderPrimary }]} />
+          <Text style={[styles.toolbarSectionLabel, { color: theme.textTertiary }]}>Branch</Text>
           <MasterDropdown
             endpoint="branches"
             value={filters.branchId}
             onChange={(val) => setFilters((prev) => ({ ...prev, branchId: val || undefined } as any))}
-            placeholder="Select Branch (All)"
+            placeholder="All branches"
             themeVariant={theme.name.toLowerCase().includes('dark') ? 'dark' : 'light'}
           />
         </View>
@@ -233,7 +346,7 @@ export default function ExecutiveDashboard() {
               subtitle="Revenue over selected period"
               type="area"
               data={revenueTrend}
-              loading={false}
+              loading={chartBusy}
               color={theme.success}
               height={200}
               formatValue={fmt}
@@ -246,7 +359,7 @@ export default function ExecutiveDashboard() {
               subtitle="Profit over selected period"
               type="line"
               data={profitTrend}
-              loading={false}
+              loading={chartBusy}
               color={theme.accentPrimary}
               height={200}
               formatValue={fmt}
@@ -260,7 +373,7 @@ export default function ExecutiveDashboard() {
                 subtitle="RFM-based customer distribution"
                 type="pie"
                 data={segmentPie}
-                loading={false}
+                loading={chartBusy}
                 color={theme.accentPrimary}
                 height={180}
                 formatValue={(v) => String(v)}
@@ -269,7 +382,13 @@ export default function ExecutiveDashboard() {
 
             {/* Insights */}
             {(data?.insights?.insights ?? []).length > 0 && (
-              <View style={[styles.insightCard, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
+              <View
+                style={[
+                  styles.insightCard,
+                  { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary },
+                  getElevation(1, theme),
+                ]}
+              >
                 <View style={styles.insightHeader}>
                   <Ionicons name="bulb-outline" size={18} color={theme.warning} />
                   <Text style={[styles.insightTitle, { color: theme.textPrimary }]}>AI Insights</Text>
@@ -295,18 +414,43 @@ export default function ExecutiveDashboard() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: Spacing.lg, paddingBottom: 80, gap: Spacing.md },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   title: { fontSize: Typography.size['2xl'], fontWeight: '700' },
   subtitle: { fontSize: Typography.size.xs, marginTop: 2 },
-  refreshBtn: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  periodChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    maxWidth: '100%',
+  },
+  periodChipText: { fontSize: 10, fontWeight: '600', flexShrink: 1 },
+  refreshBtn: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  filterToolbar: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  toolbarSectionLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginLeft: 2,
+  },
+  toolbarDivider: { height: StyleSheet.hairlineWidth, marginVertical: 2 },
   presetRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  presetChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
+  presetChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: Typography.size.sm },
   centered: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 8 },
   errorCard: { borderWidth: 1, borderRadius: 14, padding: Spacing.md, alignItems: 'center', gap: 8 },
   retryBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 7, marginTop: 4 },
-  dropdownContainer: { marginBottom: Spacing.sm },
-  label: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', color: '#888', marginBottom: 4, marginLeft: 4 },
   kpiGrid: { gap: Spacing.sm },
   kpiRow: { flexDirection: 'row', gap: Spacing.sm },
   insightCard: { borderWidth: 1, borderRadius: 14, padding: Spacing.md, gap: Spacing.sm },
