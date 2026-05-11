@@ -161,6 +161,214 @@ const BranchComparisonRenderer = ({ data, theme, groupBy }: { data: any; theme: 
   );
 };
 
+const StaffPerformanceRenderer = ({ data, theme }: { data: any; theme: any }) => {
+  const staff = data?.topStaff || data || [];
+  if (!Array.isArray(staff) || staff.length === 0) return null;
+
+  const topValue = staff[0]?.revenue || 1;
+  const formatCurrency = (val: number) => `₹${val.toLocaleString('en-IN')}`;
+
+  return (
+    <View style={styles.comparisonContainer}>
+      <View style={styles.comparisonHeader}>
+        <ThemedText style={styles.comparisonTitle}>Top Performers</ThemedText>
+        <ThemedText style={[styles.comparisonSubtitle, { color: theme.textSecondary }]}>
+          Revenue contribution by staff
+        </ThemedText>
+      </View>
+
+      {staff.map((member: any, index: number) => {
+        const val = member.revenue || 0;
+        const percent = Math.min(100, (val / topValue) * 100);
+        const isTop = index === 0;
+
+        return (
+          <ThemedView key={member._id || index} style={[styles.branchRow, { borderColor: theme.borderPrimary }]}>
+            <View style={styles.branchInfo}>
+              <View style={[styles.rankBadge, { backgroundColor: isTop ? '#facc15' : theme.bgPrimary, borderColor: isTop ? '#a16207' : theme.borderPrimary }]}>
+                <ThemedText style={[styles.rankText, { color: isTop ? '#422006' : theme.textSecondary }]}>{index + 1}</ThemedText>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.branchNameRow}>
+                  <ThemedText style={styles.branchName}>{member.name}</ThemedText>
+                  {isTop && (
+                    <View style={[styles.marketLeaderBadge, { backgroundColor: '#fef9c3' }]}>
+                      <Ionicons name="star" size={10} color="#a16207" />
+                      <ThemedText style={[styles.marketLeaderText, { color: '#a16207' }]}>STAR</ThemedText>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${percent}%`, backgroundColor: isTop ? '#facc15' : theme.accentPrimary }]} />
+                </View>
+              </View>
+              <View style={styles.branchStats}>
+                <ThemedText style={styles.branchValue}>{formatCurrency(val)}</ThemedText>
+                <ThemedText style={[styles.branchSubValue, { color: theme.textTertiary }]}>
+                  {member.count} Invoices
+                </ThemedText>
+              </View>
+            </View>
+          </ThemedView>
+        );
+      })}
+    </View>
+  );
+};
+
+const CustomerSegmentationRenderer = ({ data, theme }: { data: any; theme: any }) => {
+  const segments = Array.isArray(data) ? data : [];
+  if (segments.length === 0) return null;
+
+  const total = segments.reduce((acc: number, s: any) => acc + s.count, 0) || 1;
+  const champions = segments.find((s: any) => s._id === 'Champion')?.count || 0;
+  const atRisk = segments.find((s: any) => s._id === 'At Risk')?.count || 0;
+  
+  const healthScore = Math.round(((champions + (total - atRisk - champions) * 0.5) / total) * 100);
+
+  return (
+    <View style={styles.comparisonContainer}>
+      <View style={[styles.rawCard, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary, padding: 20, marginTop: 0 }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <ThemedText style={{ fontSize: 12, fontWeight: '700', opacity: 0.6, textTransform: 'uppercase' }}>Customer Health Score</ThemedText>
+            <ThemedText style={{ fontSize: 32, fontWeight: '800', color: theme.accentPrimary }}>{healthScore}%</ThemedText>
+          </View>
+          <View style={{ width: 60, height: 60, borderRadius: 30, borderWidth: 4, borderColor: `${theme.accentPrimary}20`, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="heart" size={24} color={healthScore > 70 ? theme.success : theme.warning} />
+          </View>
+        </View>
+      </View>
+
+      <ThemedText style={styles.comparisonTitle}>Segment Distribution</ThemedText>
+      <View style={{ gap: Spacing.md }}>
+        {segments.map((s: any) => {
+          const pct = (s.count / total) * 100;
+          const color = s._id === 'Champion' ? theme.success : s._id === 'At Risk' ? theme.error : theme.accentPrimary;
+          
+          return (
+            <ThemedView key={s._id} style={[styles.branchRow, { borderColor: theme.borderPrimary, padding: 16 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: color }} />
+                  <ThemedText style={{ fontWeight: '700' }}>{s._id}</ThemedText>
+                </View>
+                <ThemedText style={{ fontWeight: '800' }}>{s.count} Customers</ThemedText>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: color }]} />
+              </View>
+              <ThemedText style={{ fontSize: 10, marginTop: 8, opacity: 0.5 }}>{pct.toFixed(1)}% of total customer base</ThemedText>
+            </ThemedView>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+const CashFlowRenderer = ({ data, theme }: { data: any; theme: any }) => {
+  const modes = data?.paymentModes || [];
+  const aging = data?.agingReport || [];
+  if (modes.length === 0 && aging.length === 0) return null;
+
+  const totalInflow = modes.reduce((acc: number, m: any) => acc + m.value, 0);
+
+  return (
+    <View style={styles.comparisonContainer}>
+      <View style={styles.comparisonHeader}>
+        <ThemedText style={styles.comparisonTitle}>Liquidity Breakdown</ThemedText>
+        <ThemedText style={[styles.comparisonSubtitle, { color: theme.textSecondary }]}>
+          Payment modes and incoming cash flow
+        </ThemedText>
+      </View>
+
+      <View style={{ gap: Spacing.md }}>
+        <ThemedText style={styles.label}>Inflow by Method</ThemedText>
+        {modes.map((m: any) => (
+          <View key={m.name} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <ThemedText style={{ fontSize: 13, fontWeight: '600' }}>{m.name || 'Other'}</ThemedText>
+            <ThemedText style={{ fontSize: 13, fontWeight: '800', color: theme.success }}>₹{m.value?.toLocaleString()}</ThemedText>
+          </View>
+        ))}
+      </View>
+
+      <View style={{ marginTop: Spacing.xl, gap: Spacing.md }}>
+        <ThemedText style={styles.label}>Debtor Aging (Receivables)</ThemedText>
+        <DebtorAgingRenderer data={aging} theme={theme} />
+      </View>
+    </View>
+  );
+};
+
+const DebtorAgingRenderer = ({ data, theme }: { data: any; theme: any }) => {
+  const aging = Array.isArray(data) ? data : [];
+  if (aging.length === 0) return null;
+
+  const maxVal = Math.max(...aging.map((a: any) => a.amount || 1), 1);
+
+  return (
+    <View style={{ gap: Spacing.md }}>
+      {aging.map((bucket: any) => {
+        const pct = (bucket.amount / maxVal) * 100;
+        const isCritical = bucket.range.includes('90+');
+        
+        return (
+          <View key={bucket.range} style={[styles.branchRow, { borderColor: theme.borderPrimary, padding: 12 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+              <ThemedText style={{ fontSize: 11, fontWeight: '700' }}>{bucket.range}</ThemedText>
+              <ThemedText style={{ fontSize: 11, fontWeight: '800', color: isCritical ? theme.error : theme.textPrimary }}>₹{bucket.amount?.toLocaleString()}</ThemedText>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: isCritical ? theme.error : theme.warning }]} />
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
+const SecurityPulseRenderer = ({ data, theme }: { data: any; theme: any }) => {
+  const events = data?.recentEvents || [];
+  const riskCount = data?.riskyActions || 0;
+
+  return (
+    <View style={styles.comparisonContainer}>
+      <View style={[styles.rawCard, { backgroundColor: theme.error + '10', borderColor: theme.error + '30', padding: 20, marginTop: 0 }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <ThemedText style={{ fontSize: 12, fontWeight: '700', color: theme.error, textTransform: 'uppercase' }}>Security Risk Alerts</ThemedText>
+            <ThemedText style={{ fontSize: 32, fontWeight: '800', color: theme.error }}>{riskCount}</ThemedText>
+          </View>
+          <Ionicons name="shield-half-outline" size={32} color={theme.error} />
+        </View>
+      </View>
+
+      <ThemedText style={styles.comparisonTitle}>Activity Timeline</ThemedText>
+      <View style={{ gap: Spacing.md }}>
+        {events.length === 0 && <ThemedText style={{ opacity: 0.5, textAlign: 'center', marginTop: 20 }}>No recent security events</ThemedText>}
+        {events.map((ev: any, idx: number) => (
+          <View key={ev._id || idx} style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ alignItems: 'center' }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.accentPrimary }} />
+              {idx !== events.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: theme.borderPrimary, marginVertical: 4 }} />}
+            </View>
+            <View style={{ flex: 1, paddingBottom: 20 }}>
+              <ThemedText style={{ fontSize: 13, fontWeight: '700' }}>{ev.action}</ThemedText>
+              <ThemedText style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{ev.module} • {ev.userId?.name || 'System'}</ThemedText>
+              <ThemedText style={{ fontSize: 10, color: theme.textTertiary, marginTop: 4 }}>{new Date(ev.createdAt).toLocaleString()}</ThemedText>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+
+
+
 
 export default function AdminAnalyticsScreen({ slug }: Props) {
   const theme = useAppTheme();
@@ -328,7 +536,18 @@ export default function AdminAnalyticsScreen({ slug }: Props) {
             />
             {slug === 'branch-compare' ? (
               <BranchComparisonRenderer data={result} theme={theme} groupBy={filters.groupBy || 'revenue'} />
+            ) : slug === 'staff-performance' || slug === 'operational' ? (
+              <StaffPerformanceRenderer data={result} theme={theme} />
+            ) : slug === 'customer-segmentation' ? (
+              <CustomerSegmentationRenderer data={result} theme={theme} />
+            ) : slug === 'cash-flow' ? (
+              <CashFlowRenderer data={result} theme={theme} />
+            ) : slug === 'debtor-aging' ? (
+              <DebtorAgingRenderer data={result} theme={theme} />
+            ) : slug === 'live-monitor' ? (
+              <SecurityPulseRenderer data={result} theme={theme} />
             ) : (
+
               <View style={styles.metricGrid}>
                 {metrics.slice(4).map((metric) => (
                   <ThemedView key={metric.label} style={[styles.metricCard, { borderColor: theme.borderPrimary, ...getElevation(1, theme) }]}>

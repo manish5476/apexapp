@@ -10,7 +10,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '../../components/themed-text';
 import { ThemedView } from '../../components/themed-view';
 import { useAuthStore } from '../../store/auth.store';
+import { env } from '@/src/core/config/env';
 import { useScrollHide } from '@/src/hooks/use-scroll-hide';
+import { NotesService, Note } from '@/src/api/NotesService';
+import { LinearGradient } from 'expo-linear-gradient';
+
 
 // ─── KPI Mini Card ─────────────────────────────────────────────────────────────
 
@@ -61,6 +65,68 @@ function fmt(v?: number): string {
   return `₹${v}`;
 }
 
+// ─── Customer Intelligence ───────────────────────────────────────────────────
+
+function CustomerInsights({ data, theme }: { data: any; theme: ThemeColors }) {
+  const segments = data || [];
+  const total = segments.reduce((acc: number, s: any) => acc + s.count, 0) || 1;
+  
+  return (
+    <View style={[styles_home.card, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary, ...getElevation(1, theme) }]}>
+      <View style={styles_home.cardHeader}>
+        <Ionicons name="people" size={18} color={theme.accentPrimary} />
+        <ThemedText style={styles_home.cardTitleText}>Customer Health</ThemedText>
+      </View>
+      <View style={styles_home.segmentRow}>
+        {segments.map((s: any) => {
+          const percent = (s.count / total) * 100;
+          const color = s._id === 'Champion' ? theme.success : s._id === 'At Risk' ? theme.error : theme.accentPrimary;
+          return (
+            <View key={s._id} style={{ flex: 1, gap: 4 }}>
+              <View style={styles_home.segmentBarTrack}>
+                <View style={[styles_home.segmentBarFill, { width: `${percent}%`, backgroundColor: color }]} />
+              </View>
+              <ThemedText style={styles_home.segmentLabel}>{s._id}</ThemedText>
+              <ThemedText style={styles_home.segmentValue}>{s.count}</ThemedText>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ─── Recent Notes ─────────────────────────────────────────────────────────────
+
+function RecentNotes({ notes, theme }: { notes: Note[]; theme: ThemeColors }) {
+  if (!notes || notes.length === 0) return null;
+  
+  return (
+    <View style={styles_home.section}>
+      <ThemedText style={styles_home.sectionTitle}>Recent Notes</ThemedText>
+      {notes.map((note) => (
+        <TouchableOpacity 
+          key={note._id} 
+          style={[styles_home.noteItem, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}
+          activeOpacity={0.7}
+        >
+          <View style={[styles_home.noteIcon, { backgroundColor: `${theme.accentPrimary}15` }]}>
+            <Ionicons name="document-text" size={16} color={theme.accentPrimary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <ThemedText style={styles_home.noteTitle} numberOfLines={1}>{note.title || 'Untitled Note'}</ThemedText>
+            <ThemedText style={[styles_home.noteDate, { color: theme.textTertiary }]}>
+              {new Date(note.createdAt).toLocaleDateString()} · {note.owner?.name || 'You'}
+            </ThemedText>
+          </View>
+          <Ionicons name="chevron-forward" size={14} color={theme.textTertiary} />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -69,7 +135,10 @@ export default function HomeScreen() {
   const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
 
   const [kpiData, setKpiData] = useState<any>(null);
-  const [kpiLoading, setKpiLoading] = useState(true);
+  const [customerData, setCustomerData] = useState<any>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+
   
   // Navigation auto-hide on scroll
   const { handleScroll } = useScrollHide(10);
@@ -93,22 +162,31 @@ export default function HomeScreen() {
     return 'Member';
   }, [user?.name]);
 
-  const loadKpis = useCallback(async () => {
-    setKpiLoading(true);
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
       const today = now.toISOString().slice(0, 10);
-      const res = await AdminAnalyticsService.getDashboardOverview({ startDate: startOfMonth, endDate: today });
-      setKpiData(res?.data?.data ?? res?.data ?? null);
+      
+      const [kpiRes, custRes, notesRes] = await Promise.allSettled([
+        AdminAnalyticsService.getDashboardOverview({ startDate: startOfMonth, endDate: today }),
+        AdminAnalyticsService.getCustomerSegmentation(),
+        NotesService.getRecentNotes(3)
+      ]);
+
+      if (kpiRes.status === 'fulfilled') setKpiData(kpiRes.value?.data?.data ?? kpiRes.value?.data ?? null);
+      if (custRes.status === 'fulfilled') setCustomerData(custRes.value?.data?.data ?? custRes.value?.data ?? null);
+      if (notesRes.status === 'fulfilled') setNotes(notesRes.value?.data?.data?.notes ?? []);
     } catch {
-      // Silently fail — KPIs are bonus context
+      // Silently fail
     } finally {
-      setKpiLoading(false);
+      setLoading(false);
     }
   }, []);
 
-  useEffect(() => { loadKpis(); }, [loadKpis]);
+  useEffect(() => { loadData(); }, [loadData]);
+
 
   const f = kpiData?.financial;
 
@@ -146,45 +224,35 @@ export default function HomeScreen() {
 
           {/* Live KPIs */}
           <View style={styles.sectionHeaderRow}>
-            <ThemedText style={styles.sectionTitle}>This Month</ThemedText>
-            {kpiLoading && <ActivityIndicator size="small" color={currentTheme.accentPrimary} />}
+            <ThemedText style={styles.sectionTitle}>Financial Performance</ThemedText>
+            {loading && <ActivityIndicator size="small" color={currentTheme.accentPrimary} />}
           </View>
           <View style={styles.kpiRow}>
-            <MiniKpi label="Revenue" value={fmt(f?.totalRevenue?.value)} icon="trending-up-outline" color={currentTheme.success} theme={currentTheme} />
-            <MiniKpi label="Expenses" value={fmt(f?.totalExpense?.value)} icon="trending-down-outline" color={currentTheme.error} theme={currentTheme} />
-            <MiniKpi label="Profit" value={fmt(f?.netProfit?.value)} icon="stats-chart-outline" color={currentTheme.accentPrimary} theme={currentTheme} />
+            <MiniKpi label="Revenue" value={fmt(f?.totalRevenue?.value)} icon="trending-up" color={currentTheme.success} theme={currentTheme} />
+            <MiniKpi label="Expenses" value={fmt(f?.totalExpense?.value)} icon="trending-down" color={currentTheme.error} theme={currentTheme} />
+            <MiniKpi label="Profit" value={fmt(f?.netProfit?.value)} icon="stats-chart" color={currentTheme.accentPrimary} theme={currentTheme} />
           </View>
+
+          {/* Customer Insights */}
+          <View style={styles_home.section}>
+            <ThemedText style={styles_home.sectionTitle}>Customer Insights</ThemedText>
+            <CustomerInsights data={customerData} theme={currentTheme} />
+          </View>
+
+          {/* Recent Notes */}
+          <RecentNotes notes={notes} theme={currentTheme} />
 
           {/* Quick Actions */}
-          <ThemedText style={styles.sectionTitle}>Quick Actions</ThemedText>
-          <View style={styles.actionRow}>
-            <QuickAction label="Users" icon="people-outline" color={currentTheme.info} onPress={() => router.push('/(tabs)/users' as any)} theme={currentTheme} />
-            <QuickAction label="HRMS" icon="clipboard-outline" color={currentTheme.accentPrimary} onPress={() => router.push('/(tabs)/hrms' as any)} theme={currentTheme} />
-            <QuickAction label="Analytics" icon="bar-chart-outline" color={currentTheme.success} onPress={() => router.push('/(tabs)/analytics' as any)} theme={currentTheme} />
-            <QuickAction label="Invoices" icon="document-text-outline" color={currentTheme.warning} onPress={() => router.push('/(tabs)/invoice' as any)} theme={currentTheme} />
+          <View style={styles_home.section}>
+            <ThemedText style={styles_home.sectionTitle}>Quick Actions</ThemedText>
+            <View style={styles.actionRow}>
+              <QuickAction label="Users" icon="people-outline" color={currentTheme.info} onPress={() => router.push('/(tabs)/users' as any)} theme={currentTheme} />
+              <QuickAction label="HRMS" icon="clipboard-outline" color={currentTheme.accentPrimary} onPress={() => router.push('/(tabs)/hrms' as any)} theme={currentTheme} />
+              <QuickAction label="Analytics" icon="bar-chart-outline" color={currentTheme.success} onPress={() => router.push('/(tabs)/analytics' as any)} theme={currentTheme} />
+              <QuickAction label="Invoices" icon="document-text-outline" color={currentTheme.warning} onPress={() => router.push('/(tabs)/invoice' as any)} theme={currentTheme} />
+            </View>
           </View>
 
-          {/* Analytics Quick Links */}
-          <ThemedText style={styles.sectionTitle}>Analytics Dashboards</ThemedText>
-          {[
-            { label: 'Executive Dashboard', icon: 'speedometer-outline', route: '/(tabs)/analytics/executive', color: currentTheme.accentPrimary },
-            { label: 'Financial Dashboard', icon: 'wallet-outline', route: '/(tabs)/analytics/finance-main', color: currentTheme.success },
-            { label: 'HRMS Analytics', icon: 'people-circle-outline', route: '/(tabs)/hrms/analytics', color: currentTheme.info },
-            { label: 'Staff Performance', icon: 'person-circle-outline', route: '/(tabs)/analytics/staff-performance', color: currentTheme.warning },
-          ].map((item) => (
-            <TouchableOpacity
-              key={item.route}
-              activeOpacity={0.7}
-              onPress={() => router.push(item.route as any)}
-              style={[styles.analyticsLink, { backgroundColor: currentTheme.bgSecondary, borderColor: currentTheme.borderPrimary }]}
-            >
-              <View style={[styles.analyticsIconBg, { backgroundColor: `${item.color}15` }]}>
-                <Ionicons name={item.icon as any} size={20} color={item.color} />
-              </View>
-              <ThemedText style={styles.analyticsLinkLabel}>{item.label}</ThemedText>
-              <Ionicons name="chevron-forward" size={16} color={currentTheme.textTertiary} />
-            </TouchableOpacity>
-          ))}
 
         </ScrollView>
       </SafeAreaView>
@@ -213,4 +281,80 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   analyticsLink: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, borderWidth: 1, borderRadius: 14, padding: Spacing.md, marginBottom: Spacing.sm },
   analyticsIconBg: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   analyticsLinkLabel: { flex: 1, fontSize: Typography.size.md, fontWeight: '600' },
+});
+
+const styles_home = StyleSheet.create({
+  section: {
+    marginBottom: Spacing['3xl'],
+  },
+  sectionTitle: {
+    fontSize: Typography.size.xs,
+    fontWeight: '800',
+    color: '#6366f1',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: Spacing.lg,
+  },
+  card: {
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: Spacing.xl,
+    gap: Spacing.lg,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardTitleText: {
+    fontSize: Typography.size.md,
+    fontWeight: '700',
+  },
+  segmentRow: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+  },
+  segmentBarTrack: {
+    height: 4,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  segmentBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  segmentLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    opacity: 0.6,
+  },
+  segmentValue: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  noteItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderRadius: 16,
+    marginBottom: Spacing.sm,
+    gap: Spacing.md,
+  },
+  noteIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noteTitle: {
+    fontSize: Typography.size.sm,
+    fontWeight: '700',
+  },
+  noteDate: {
+    fontSize: 10,
+    marginTop: 2,
+  },
 });
