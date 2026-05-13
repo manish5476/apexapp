@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "com.apexapp.demo",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./src/assets/images/android-icon-foreground.png",
