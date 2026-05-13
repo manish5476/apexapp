@@ -1,29 +1,29 @@
-import { productService } from '@/src/features/product/services/product.service';
 import { extractProductList, extractProductPagination } from '@/src/api/productService';
+import { FilterBottomSheet, HeaderSearchAction } from '@/src/components/filters';
+import { NotificationBell } from '@/src/components/navigation/notification-bell';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
-import { FilterBottomSheet, HeaderSearchAction } from '@/src/components/filters';
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
+import { productService } from '@/src/features/product/services/product.service';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 import { useMasterDropdown } from '@/src/hooks/use-master-dropdown';
+import { useScrollHide } from '@/src/hooks/use-scroll-hide';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { NotificationBell } from '@/src/components/navigation/notification-bell';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    Modal,
-    RefreshControl,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  RefreshControl,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useScrollHide } from '@/src/hooks/use-scroll-hide';
 
 
 
@@ -72,7 +72,7 @@ export default function ProductListScreen() {
       const res = await productService.list(params) as any;
       const newData = extractProductList(res);
       const pagination = extractProductPagination(res);
-      
+
       setProducts((prev) => (isRefresh || pageNum === 1 ? newData : [...prev, ...newData]));
       setHasNextPage(pagination?.hasNextPage ?? (newData.length === 20));
       setTotalCount(pagination?.totalResults ?? (isRefresh || pageNum === 1 ? newData.length : totalCount));
@@ -126,8 +126,8 @@ export default function ProductListScreen() {
       `Are you sure you want to delete ${selectedProduct.name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -198,78 +198,110 @@ export default function ProductListScreen() {
 
   // --- RENDER ITEM (MOBILE CARD) ---
   const renderProductCard = ({ item }: { item: any }) => {
-    const totalStock = Array.isArray(item.inventory) 
-      ? item.inventory.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0) 
+    const totalStock = Array.isArray(item.inventory)
+      ? item.inventory.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0)
       : 0;
     const reorderLevel = item.inventory?.[0]?.reorderLevel || 10;
-    
+
     const isOut = totalStock <= 0;
     const isLow = totalStock > 0 && totalStock <= reorderLevel;
-    
+
     const avatar = getAvatarStyle(item.name);
     const imageUrl = item.images?.[0] || item.imageAssets?.[0]?.url;
 
-    // Margin Calculation
+    // Pricing & Margin
     const buy = item.purchasePrice || 0;
-    const sell = item.sellingPrice || 0;
+    const sell = item.discountedPrice || item.sellingPrice || 0;
+    const originalPrice = item.sellingPrice || 0;
+    const hasDiscount = item.discountedPrice && item.discountedPrice < item.sellingPrice;
+
     const margin = sell > 0 ? ((sell - buy) / sell) * 100 : 0;
 
     return (
-      <TouchableOpacity 
-        style={[styles.card, !item.isActive && { opacity: 0.6 }]} 
-        activeOpacity={0.7} 
+      <TouchableOpacity
+        style={[styles.card, !item.isActive && { opacity: 0.6 }]}
+        activeOpacity={0.8}
         onPress={() => router.push(`/(tabs)/product/${item._id}` as any)}
         onLongPress={() => handleLongPress(item)}
       >
         <View style={styles.cardLayout}>
-          {/* Left: Image / Avatar */}
-          <View style={styles.imageContainer}>
-            {imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={styles.productImage} />
-            ) : (
-              <View style={[styles.avatarBox, { backgroundColor: avatar.bg }]}>
-                <ThemedText style={[styles.avatarText, { color: avatar.text }]}>{getInitials(item.name)}</ThemedText>
-              </View>
-            )}
-            {item.isDeleted && <View style={styles.deletedOverlay}><Ionicons name="trash" size={16} color="white" /></View>}
-          </View>
-
-          {/* Middle: Details */}
-          <View style={styles.cardDetails}>
-            <View style={styles.titleRow}>
-              <ThemedText style={styles.productName} numberOfLines={1}>{item.name}</ThemedText>
-              {!item.isActive && <View style={styles.inactiveBadge}><ThemedText style={styles.inactiveText}>INACTIVE</ThemedText></View>}
-            </View>
-            
-            <View style={styles.metaRow}>
-              <ThemedText style={styles.skuText}>{item.sku || 'No SKU'}</ThemedText>
-              {(item.categoryId?.name || item.tags?.[0]) && (
-                <>
-                  <ThemedText style={styles.metaDot}>•</ThemedText>
-                  <ThemedText style={styles.categoryText}>{item.categoryId?.name || item.tags[0]}</ThemedText>
-                </>
+          {/* Left Side: Visual & Status */}
+          <View style={styles.imageSection}>
+            <View style={styles.imageWrapper}>
+              {imageUrl ? (
+                <Image source={{ uri: imageUrl }} style={styles.productImage} />
+              ) : (
+                <View style={[styles.avatarBox, { backgroundColor: avatar.bg }]}>
+                  <ThemedText style={[styles.avatarText, { color: avatar.text }]}>{getInitials(item.name)}</ThemedText>
+                </View>
+              )}
+              {item.isDeleted && (
+                <View style={styles.deletedOverlay}>
+                  <Ionicons name="trash" size={16} color="white" />
+                </View>
               )}
             </View>
 
-            <View style={styles.financialRow}>
-              <ThemedText style={styles.priceText}>{formatCurrency(item.sellingPrice)}</ThemedText>
-              <ThemedText style={styles.taxText}>Tax {item.taxRate || 0}%</ThemedText>
-              <View style={[styles.marginBadge, margin > 20 ? styles.marginGood : margin < 10 ? styles.marginLow : styles.marginOk]}>
-                <ThemedText style={[styles.marginText, margin > 20 ? styles.marginTextGood : margin < 10 ? styles.marginTextLow : styles.marginTextOk]}>
-                  {margin > 20 ? '↑' : margin < 10 ? '↓' : '→'} {margin.toFixed(1)}%
-                </ThemedText>
+            <View style={[styles.statusIndicator, isOut ? styles.statusOut : isLow ? styles.statusLow : styles.statusOk]} />
+          </View>
+
+          {/* Center: Info */}
+          <View style={styles.infoSection}>
+            <View style={styles.titleRow}>
+              <ThemedText style={styles.productName} numberOfLines={1}>{item.name}</ThemedText>
+              {!item.isActive && (
+                <View style={styles.inactiveBadge}>
+                  <ThemedText style={styles.inactiveText}>INACTIVE</ThemedText>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.tagRow}>
+              <View style={styles.skuBadge}>
+                <ThemedText style={styles.skuText}>{item.sku || 'NO SKU'}</ThemedText>
+              </View>
+              {item.categoryId?.name && (
+                <View style={styles.categoryBadge}>
+                  <ThemedText style={styles.categoryText}>{item.categoryId.name}</ThemedText>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.pricingSection}>
+              <View style={styles.priceColumn}>
+                {hasDiscount && (
+                  <ThemedText style={styles.originalPriceText}>{formatCurrency(originalPrice)}</ThemedText>
+                )}
+                <ThemedText style={styles.sellingPriceText}>{formatCurrency(sell)}</ThemedText>
+              </View>
+
+              <View style={styles.marginSection}>
+                <View style={[styles.marginBadge, margin > 20 ? styles.marginGood : margin < 10 ? styles.marginLow : styles.marginOk]}>
+                  <ThemedText style={[styles.marginText, margin > 20 ? styles.marginTextGood : margin < 10 ? styles.marginTextLow : styles.marginTextOk]}>
+                    {margin.toFixed(1)}%
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.marginLabel}>Margin</ThemedText>
               </View>
             </View>
           </View>
 
-          {/* Right: Stock Status */}
-          <View style={styles.stockColumn}>
-            <ThemedText style={styles.stockLabel}>STOCK</ThemedText>
-            <View style={[styles.stockBadge, isOut ? styles.stockOut : isLow ? styles.stockLow : styles.stockOk]}>
-              <ThemedText style={[styles.stockText, isOut ? styles.stockTextOut : isLow ? styles.stockTextLow : styles.stockTextOk]}>
+          {/* Right: Stock Info */}
+          <View style={styles.stockSection}>
+            <View style={[styles.stockBox, isOut ? styles.stockBoxOut : isLow ? styles.stockBoxLow : styles.stockBoxOk]}>
+              <ThemedText style={[styles.stockValue, isOut ? styles.stockValueOut : isLow ? styles.stockValueLow : styles.stockValueOk]}>
                 {totalStock}
               </ThemedText>
+              <ThemedText style={[styles.stockUnit, isOut ? styles.stockValueOut : isLow ? styles.stockValueLow : styles.stockValueOk]}>
+                {totalStock === 1 ? 'UNIT' : 'UNITS'}
+              </ThemedText>
             </View>
+            {isLow && !isOut && (
+              <View style={styles.lowStockWarning}>
+                <Ionicons name="warning" size={10} color="#633806" />
+                <ThemedText style={styles.lowStockText}>LOW</ThemedText>
+              </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -279,7 +311,7 @@ export default function ProductListScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-        
+
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -361,7 +393,7 @@ export default function ProductListScreen() {
           <FilterDropdown
             endpoint="brands"
             value={activeFilters.brandId}
-            onChange={(val:any) => setActiveFilters(p => ({ ...p, brandId: val }))}
+            onChange={(val: any) => setActiveFilters(p => ({ ...p, brandId: val }))}
             placeholder="Select Brand"
           />
         </View>
@@ -371,7 +403,7 @@ export default function ProductListScreen() {
           <FilterDropdown
             endpoint="categories"
             value={activeFilters.categoryId}
-            onChange={(val:any) => setActiveFilters(p => ({ ...p, categoryId: val }))}
+            onChange={(val: any) => setActiveFilters(p => ({ ...p, categoryId: val }))}
             placeholder="Select Category"
           />
         </View>
@@ -410,19 +442,19 @@ function FilterDropdown({ endpoint, value, onChange, placeholder }: any) {
   const theme = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { options } = useMasterDropdown({ endpoint, initialValue: value });
-  
+
   return (
     <View style={styles.dropdownGrid}>
-      <TouchableOpacity 
-        style={[styles.dropdownChip, !value && styles.dropdownChipActive]} 
+      <TouchableOpacity
+        style={[styles.dropdownChip, !value && styles.dropdownChipActive]}
         onPress={() => onChange(null)}
       >
         <ThemedText style={[styles.dropdownChipText, !value && styles.dropdownChipTextActive]}>All</ThemedText>
       </TouchableOpacity>
       {options.slice(0, 5).map(opt => (
-        <TouchableOpacity 
-          key={opt.value} 
-          style={[styles.dropdownChip, value === opt.value && styles.dropdownChipActive]} 
+        <TouchableOpacity
+          key={opt.value}
+          style={[styles.dropdownChip, value === opt.value && styles.dropdownChipActive]}
           onPress={() => onChange(opt.value)}
         >
           <ThemedText style={[styles.dropdownChipText, value === opt.value && styles.dropdownChipTextActive]} numberOfLines={1}>{opt.label}</ThemedText>
@@ -437,68 +469,115 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.bgSecondary },
   safeArea: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  
+
   // HEADER
-  header: { backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, paddingBottom: Spacing.lg, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
+  header: {
+    backgroundColor: theme.bgPrimary,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: UI.borderWidth.thin,
+    borderBottomColor: theme.borderPrimary,
+    ...getElevation(1, theme)
+  },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
   pageTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size['3xl'], fontWeight: Typography.weight.bold, color: theme.textPrimary, letterSpacing: -0.5 },
   pageSubtitle: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, color: theme.textSecondary, marginTop: 2 },
   headerRightActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flexShrink: 0, flexWrap: 'nowrap' },
   primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.accentPrimary, paddingHorizontal: Spacing.md, height: 38, borderRadius: UI.borderRadius.pill, gap: Spacing.xs, ...getElevation(1, theme) },
   primaryBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: theme.bgSecondary },
-  
-  searchRow: { flexDirection: 'row', gap: Spacing.md },
-  searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.bgSecondary, height: 48, borderRadius: UI.borderRadius.md, paddingHorizontal: Spacing.lg, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
-  searchInput: { flex: 1, fontFamily: theme.fonts.body, fontSize: Typography.size.md, color: theme.textPrimary, marginLeft: Spacing.sm },
-  filterBtn: { width: 48, height: 48, borderRadius: UI.borderRadius.md, backgroundColor: theme.bgSecondary, alignItems: 'center', justifyContent: 'center', borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
-  filterBtnActive: { backgroundColor: theme.accentPrimary, borderColor: theme.accentPrimary },
 
   // LIST
   listContent: { padding: Spacing.xl, paddingBottom: 100 },
-  
-  // PRODUCT CARD
-  card: { backgroundColor: theme.bgPrimary, borderRadius: UI.borderRadius.xl, marginBottom: Spacing.md, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary, ...getElevation(1, theme), overflow: 'hidden' },
+
+  // PRODUCT CARD (PREMIUM)
+  card: {
+    backgroundColor: theme.bgPrimary,
+    borderRadius: UI.borderRadius.xl,
+    marginBottom: Spacing.md,
+    borderWidth: UI.borderWidth.thin,
+    borderColor: theme.borderPrimary,
+    ...getElevation(2, theme),
+    overflow: 'hidden'
+  },
   cardLayout: { flexDirection: 'row', padding: Spacing.lg },
-  
-  imageContainer: { position: 'relative', width: 60, height: 60, borderRadius: UI.borderRadius.md, overflow: 'hidden' },
+
+  // LEFT SECTION
+  imageSection: { alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  imageWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: UI.borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: theme.bgSecondary,
+    borderWidth: UI.borderWidth.thin,
+    borderColor: theme.borderPrimary
+  },
   productImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   avatarBox: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.xl, fontWeight: Typography.weight.bold },
   deletedOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
+  statusIndicator: { width: 8, height: 8, borderRadius: 4 },
+  statusOk: { backgroundColor: theme.success },
+  statusLow: { backgroundColor: '#E19B05' },
+  statusOut: { backgroundColor: theme.error },
 
-  cardDetails: { flex: 1, paddingHorizontal: Spacing.md, justifyContent: 'space-between' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  // INFO SECTION
+  infoSection: { flex: 1, paddingHorizontal: Spacing.lg },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: 4 },
   productName: { flex: 1, fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  inactiveBadge: { backgroundColor: theme.borderPrimary, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 },
+  inactiveBadge: { backgroundColor: theme.borderPrimary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   inactiveText: { fontFamily: theme.fonts.body, fontSize: 8, fontWeight: Typography.weight.bold, color: theme.textSecondary },
-  
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2, marginBottom: Spacing.sm },
-  skuText: { fontFamily: theme.fonts?.mono, fontSize: Typography.size.xs, color: theme.textSecondary, backgroundColor: theme.bgSecondary, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
-  metaDot: { fontSize: 10, color: theme.textTertiary, marginHorizontal: 4 },
-  categoryText: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, color: theme.textTertiary },
 
-  financialRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  priceText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.success },
-  taxText: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: theme.textTertiary },
-  marginBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  marginText: { fontFamily: theme.fonts?.mono, fontSize: 10, fontWeight: Typography.weight.bold },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginBottom: Spacing.md },
+  skuBadge: { backgroundColor: theme.bgSecondary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  skuText: { fontFamily: theme.fonts?.mono || 'Courier', fontSize: 10, color: theme.textSecondary, fontWeight: Typography.weight.semibold },
+  categoryBadge: { backgroundColor: '#EEEDFE', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  categoryText: { fontFamily: theme.fonts.body, fontSize: 10, color: '#3C3489', fontWeight: Typography.weight.semibold },
+
+  pricingSection: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  priceColumn: { gap: 2 },
+  originalPriceText: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, color: theme.textTertiary, textDecorationLine: 'line-through' },
+  sellingPriceText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
+
+  marginSection: { alignItems: 'flex-end' },
+  marginBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginBottom: 2 },
+  marginText: { fontFamily: theme.fonts?.mono || 'Courier', fontSize: 10, fontWeight: Typography.weight.bold },
+  marginLabel: { fontFamily: theme.fonts.body, fontSize: 8, color: theme.textTertiary, textTransform: 'uppercase' },
   marginGood: { backgroundColor: '#EAF3DE' }, marginTextGood: { color: '#27500A' },
   marginOk: { backgroundColor: '#FAEEDA' }, marginTextOk: { color: '#633806' },
   marginLow: { backgroundColor: '#FCEBEB' }, marginTextLow: { color: '#791F1F' },
 
-  stockColumn: { width: 60, alignItems: 'flex-end', justifyContent: 'center' },
-  stockLabel: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: Typography.weight.bold, color: theme.textTertiary, marginBottom: 4 },
-  stockBadge: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: UI.borderRadius.pill, minWidth: 40, alignItems: 'center' },
-  stockText: { fontFamily: theme.fonts?.mono, fontSize: Typography.size.md, fontWeight: Typography.weight.bold },
-  stockOut: { backgroundColor: '#FCEBEB' }, stockTextOut: { color: '#791F1F' },
-  stockLow: { backgroundColor: '#FAEEDA' }, stockTextLow: { color: '#633806' },
-  stockOk: { backgroundColor: theme.bgSecondary }, stockTextOk: { color: theme.textPrimary },
+  // STOCK SECTION
+  stockSection: { width: 56, alignItems: 'center', justifyContent: 'center' },
+  stockBox: { width: 48, height: 48, borderRadius: UI.borderRadius.md, alignItems: 'center', justifyContent: 'center', borderWidth: UI.borderWidth.thin },
+  stockBoxOk: { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary },
+  stockBoxLow: { backgroundColor: '#FAEEDA', borderColor: '#E19B05' },
+  stockBoxOut: { backgroundColor: '#FCEBEB', borderColor: theme.error },
+
+  stockValue: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold },
+  stockUnit: { fontSize: 8, fontWeight: Typography.weight.bold, marginTop: -2 },
+  stockValueOk: { color: theme.textPrimary },
+  stockValueLow: { color: '#633806' },
+  stockValueOut: { color: '#791F1F' },
+
+  lowStockWarning: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 },
+  lowStockText: { fontFamily: theme.fonts.body, fontSize: 8, fontWeight: Typography.weight.bold, color: '#633806' },
 
   // EMPTY STATE
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: Spacing['4xl'], marginTop: Spacing['3xl'] },
   emptyIconBox: { width: 80, height: 80, borderRadius: 40, backgroundColor: theme.bgPrimary, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xl, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
   emptyTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size.xl, fontWeight: Typography.weight.bold, color: theme.textPrimary },
   emptyDesc: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, color: theme.textSecondary, marginTop: Spacing.sm, textAlign: 'center' },
+
+  // ACTION MENU
+  actionOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
+  actionMenu: { width: '100%', backgroundColor: theme.bgSecondary, borderRadius: UI.borderRadius.xl, overflow: 'hidden', ...getElevation(3, theme) },
+  actionHeader: { padding: Spacing.xl, backgroundColor: theme.bgPrimary, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
+  actionTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
+  actionItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg, padding: Spacing.xl, backgroundColor: theme.bgPrimary },
+  actionItemText: { fontFamily: theme.fonts.body, fontSize: Typography.size.md, fontWeight: Typography.weight.semibold, color: theme.textPrimary },
+  actionDivider: { height: 1, backgroundColor: theme.borderPrimary },
 
   // FILTER MODAL
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
@@ -507,25 +586,10 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   modalTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size.xl, fontWeight: Typography.weight.bold, color: theme.textPrimary },
   filterSection: { marginBottom: Spacing['2xl'] },
   filterGroupLabel: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, color: theme.textSecondary, marginBottom: Spacing.md },
-  
+
   dropdownGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   dropdownChip: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: UI.borderRadius.pill, backgroundColor: theme.bgSecondary, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
   dropdownChipActive: { backgroundColor: theme.accentPrimary, borderColor: theme.accentPrimary },
   dropdownChipText: { fontFamily: theme.fonts.body, fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, color: theme.textSecondary },
   dropdownChipTextActive: { color: theme.bgSecondary },
-
-  modalFooterActions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xl },
-  modalResetBtn: { flex: 1, padding: Spacing.xl, borderRadius: UI.borderRadius.lg, alignItems: 'center', backgroundColor: theme.bgSecondary, borderWidth: UI.borderWidth.thin, borderColor: theme.borderPrimary },
-  modalResetBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  modalApplyBtn: { flex: 2, backgroundColor: theme.textPrimary, padding: Spacing.xl, borderRadius: UI.borderRadius.lg, alignItems: 'center' },
-  modalApplyBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.bgPrimary },
-
-  // ACTION MENU (Long Press)
-  actionOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-  actionMenu: { width: '100%', backgroundColor: theme.bgSecondary, borderRadius: UI.borderRadius.xl, overflow: 'hidden', ...getElevation(3, theme) },
-  actionHeader: { padding: Spacing.xl, backgroundColor: theme.bgPrimary, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
-  actionTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
-  actionItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg, padding: Spacing.xl, backgroundColor: theme.bgPrimary },
-  actionItemText: { fontFamily: theme.fonts.body, fontSize: Typography.size.md, fontWeight: Typography.weight.semibold, color: theme.textPrimary },
-  actionDivider: { height: 1, backgroundColor: theme.borderPrimary },
 });
