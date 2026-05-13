@@ -118,7 +118,7 @@ const extractListPayload = (response: any): any[] => {
 // MAIN SCREEN
 // ==========================================
 export default function PurchaseFormScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, supplierId } = useLocalSearchParams<{ id: string, supplierId?: string }>();
   const isEditMode = !!id && id !== '-1';
   const theme = useAppTheme();
 
@@ -161,8 +161,11 @@ export default function PurchaseFormScreen() {
     loadMasterData();
     if (isEditMode && id !== '-1') {
       loadExistingPurchase();
+    } else if (supplierId) {
+      // Pre-fill supplier if provided in query params
+      setInvoiceDetails(prev => ({ ...prev, supplierId }));
     }
-  }, [id]);
+  }, [id, supplierId]);
 
   const loadMasterData = async () => {
     try {
@@ -372,7 +375,7 @@ export default function PurchaseFormScreen() {
 
   return (
     <ThemedView style={styles.safeArea}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom', 'left', 'right']}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
           {/* PREMIUM HEADER */}
@@ -593,7 +596,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row' },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderBottomWidth: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: 4, borderBottomWidth: 1 },
   backBtn: { marginRight: Spacing.md, padding: Spacing.xs },
   headerCenter: { flex: 1 },
   headerTitle: { fontSize: Typography.size.lg, fontWeight: 'bold' },

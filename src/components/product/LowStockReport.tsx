@@ -170,6 +170,9 @@ export default function LowStockReportScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color={theme.textPrimary} />
+            </TouchableOpacity>
             <View style={styles.iconBox}>
               <Ionicons name="alert-circle" size={24} color={theme.error} />
             </View>
@@ -222,6 +225,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   // HEADER
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flex: 1 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: -4 },
   iconBox: { width: 44, height: 44, borderRadius: UI.borderRadius.md, backgroundColor: `${theme.error}15`, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
   headerSubtitle: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, color: theme.textSecondary, marginTop: 2 },

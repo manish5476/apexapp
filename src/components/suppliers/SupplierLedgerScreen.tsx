@@ -114,7 +114,7 @@ export default function SupplierLedgerScreen() {
 
     return (
         <ThemedView style={styles.container}>
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
+            <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
                 {/* HEADER */}
                 <View style={styles.header}>
@@ -283,7 +283,7 @@ const createStyles = (theme: ThemeColors, insets: any) => StyleSheet.create({
     backBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary },
 
     // HEADER
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingVertical: 4, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
     headerTitleContainer: { flex: 1, alignItems: 'center' },
     headerTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
 

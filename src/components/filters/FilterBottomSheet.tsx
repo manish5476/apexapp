@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: {
-    maxHeight: SCREEN_HEIGHT * 0.62,
+    maxHeight: SCREEN_HEIGHT * 0.75,
   },
   bodyContent: {
     padding: Spacing.xl,

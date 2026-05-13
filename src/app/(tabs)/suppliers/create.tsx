@@ -117,7 +117,7 @@ export default function SupplierFormScreen() {
 
                 if (isEditMode) {
                     const res = await SupplierService.getSupplierById(id as string) as any;
-                    const s = res?.data?.data || res?.data;
+                    const s = res?.data?.data?.data || res?.data?.data || res?.data;
 
                     if (s) {
                         // Map branch objects to IDs if necessary
@@ -199,7 +199,7 @@ export default function SupplierFormScreen() {
 
     return (
         <ThemedView style={styles.container}>
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
+            <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
                 {/* HEADER */}
                 <View style={styles.header}>
@@ -586,7 +586,7 @@ const createStyles = (theme: ThemeColors, insets: any) => StyleSheet.create({
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
     // HEADER
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingVertical: 4, borderBottomWidth: UI.borderWidth.thin, borderBottomColor: theme.borderPrimary },
     headerTitleContainer: { flex: 1, alignItems: 'center' },
     headerTitle: { fontFamily: theme.fonts.heading, fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary },
     headerSubtitle: { fontFamily: theme.fonts.body, fontSize: Typography.size.xs, color: theme.textSecondary, marginTop: 2 },

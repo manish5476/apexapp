@@ -247,7 +247,7 @@ export default function HomeScreen() {
           <View style={styles_home.section}>
             <ThemedText style={styles_home.sectionTitle}>Quick Actions</ThemedText>
             <View style={styles.actionRow}>
-              <QuickAction label="Users" icon="people-outline" color={currentTheme.info} onPress={() => router.push('/(tabs)/users' as any)} theme={currentTheme} />
+              <QuickAction label="Low Stock" icon="alert-circle-outline" color={currentTheme.error} onPress={() => router.push('/(tabs)/product/low-stock' as any)} theme={currentTheme} />
               <QuickAction label="HRMS" icon="clipboard-outline" color={currentTheme.accentPrimary} onPress={() => router.push('/(tabs)/hrms' as any)} theme={currentTheme} />
               <QuickAction label="Analytics" icon="bar-chart-outline" color={currentTheme.success} onPress={() => router.push('/(tabs)/analytics' as any)} theme={currentTheme} />
               <QuickAction label="Invoices" icon="document-text-outline" color={currentTheme.warning} onPress={() => router.push('/(tabs)/invoice' as any)} theme={currentTheme} />

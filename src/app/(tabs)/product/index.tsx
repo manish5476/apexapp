@@ -332,6 +332,12 @@ export default function ProductListScreen() {
                 placeholder="Name or SKU"
                 theme={theme}
               />
+              <TouchableOpacity
+                style={[styles.warningBtn, { marginRight: -Spacing.xs }]}
+                onPress={() => router.push('/(tabs)/product/low-stock' as any)}
+              >
+                <Ionicons name="alert-circle-outline" size={22} color={theme.error} />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/(tabs)/product/create' as any)}>
                 <Ionicons name="add" size={20} color={theme.bgSecondary} />
                 <ThemedText style={styles.primaryBtnText}>New</ThemedText>
@@ -486,6 +492,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   headerRightActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flexShrink: 0, flexWrap: 'nowrap' },
   primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.accentPrimary, paddingHorizontal: Spacing.md, height: 38, borderRadius: UI.borderRadius.pill, gap: Spacing.xs, ...getElevation(1, theme) },
   primaryBtnText: { fontFamily: theme.fonts.heading, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: theme.bgSecondary },
+  warningBtn: { width: 38, height: 38, borderRadius: UI.borderRadius.pill, backgroundColor: '#FCEBEB', alignItems: 'center', justifyContent: 'center', ...getElevation(1, theme) },
 
   // LIST
   listContent: { padding: Spacing.xl, paddingBottom: 100 },
