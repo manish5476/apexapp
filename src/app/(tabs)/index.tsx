@@ -12,7 +12,8 @@ import { ThemedView } from '../../components/themed-view';
 import { useAuthStore } from '../../store/auth.store';
 import { env } from '@/src/core/config/env';
 import { useScrollHide } from '@/src/hooks/use-scroll-hide';
-import { NotesService, Note } from '@/src/api/NotesService';
+import { NotesService } from '@/src/api/notesService';
+import { Note } from '@/src/types/note';
 import { LinearGradient } from 'expo-linear-gradient';
 
 
@@ -177,7 +178,7 @@ export default function HomeScreen() {
 
       if (kpiRes.status === 'fulfilled') setKpiData(kpiRes.value?.data?.data ?? kpiRes.value?.data ?? null);
       if (custRes.status === 'fulfilled') setCustomerData(custRes.value?.data?.data ?? custRes.value?.data ?? null);
-      if (notesRes.status === 'fulfilled') setNotes(notesRes.value?.data?.data?.notes ?? []);
+      if (notesRes.status === 'fulfilled') setNotes(notesRes.value?.notes ?? []);
     } catch {
       // Silently fail
     } finally {
