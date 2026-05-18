@@ -56,6 +56,7 @@ export default function DrawerLayout() {
     'any'
   );
   const canReadAnalytics = hasPermission(PERMISSIONS.ANALYTICS.READ);
+  const canManageReconciliation = hasPermission(PERMISSIONS.RECONCILIATION.MANAGE);
   const canReadNotes = hasPermission(PERMISSIONS.NOTE.READ);
   const canReadNotifications = hasPermission(PERMISSIONS.NOTIFICATION.READ);
   const canReadMasterData = hasPermission(PERMISSIONS.MASTER.READ);
@@ -211,6 +212,14 @@ export default function DrawerLayout() {
             title: 'Analytics Hub',
             drawerItemStyle: drawerVisibility(canReadAnalytics),
             drawerIcon: ({ color }) => <Ionicons name="analytics-outline" size={20} color={color} />,
+          }}
+        />
+        <Drawer.Screen
+          name="reconciliation"
+          options={{
+            title: 'Reconciliation',
+            drawerItemStyle: drawerVisibility(canManageReconciliation),
+            drawerIcon: ({ color }) => <Ionicons name="checkmark-done-outline" size={20} color={color} />,
           }}
         />
         <Drawer.Screen

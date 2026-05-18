@@ -120,6 +120,7 @@ export const PERMISSIONS = {
   },
   ANALYTICS: { READ: 'analytics:read', EMI_READ: 'analytics:emi_read', EXPORT: 'analytics:export' },
   DASHBOARD: { VIEW: 'dashboard:view' },
+  RECONCILIATION: { MANAGE: 'reconciliation:manage' },
   REPORT: { PROFIT: 'report:profit', SALES: 'report:sales', TAX: 'report:tax', OUTSTANDING: 'report:outstanding' },
   NOTIFICATION: { READ: 'notification:read', MANAGE: 'notification:manage' },
   FEED: { READ: 'feed:read' },
