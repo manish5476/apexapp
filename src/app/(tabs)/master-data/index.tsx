@@ -1,9 +1,3 @@
-import { ApiService } from '@/src/api/ApiService';
-import { HeaderSearchAction } from '@/src/components/filters';
-import { NotificationBell } from '@/src/components/navigation/notification-bell';
-import { ThemedText } from '@/src/components/themed-text';
-import { Spacing, Themes, Typography, UI, getElevation } from '@/src/constants/theme';
-import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,11 +15,14 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const theme = Themes.light;
-const DARK_BLUE_ACCENT = '#1d4ed8';
-const BORDER_COLOR = theme.borderSecondary;
-const BORDER_WIDTH = UI.borderWidth.base;
+import { Ionicons } from '@expo/vector-icons';
+import { ApiService } from '@/src/api/ApiService';
+import { HeaderSearchAction } from '@/src/components/filters';
+import { NotificationBell } from '@/src/components/navigation/notification-bell';
+import { ThemedText } from '@/src/components/themed-text';
+import { ThemedView } from '@/src/components/themed-view';
+import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
+import { useAppTheme } from '@/src/hooks/use-app-theme';
 
 // --- TYPES ---
 interface Master {
@@ -60,17 +57,62 @@ const getInitials = (name: string) => {
   return parts.length > 1 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : name.substring(0, 2).toUpperCase();
 };
 
-const getTypeColor = (type: string) => {
+const getMasterTypeConfig = (type: string, theme: ThemeColors) => {
   switch (type) {
-    case 'category': return theme.info;
-    case 'sub_category': return theme.accentPrimary;
-    case 'brand': return theme.warning;
-    case 'unit': return theme.success;
-    case 'department': return theme.accentSecondary;
-    case 'tax_rate': return theme.error;
-    case 'warranty_plan': return theme.info;
-    case 'product_condition': return theme.textSecondary;
-    default: return theme.textTertiary;
+    case 'department':
+      return {
+        label: 'Department',
+        icon: 'business-outline' as const,
+        color: theme.accentSecondary || '#8b5cf6',
+      };
+    case 'category':
+      return {
+        label: 'Category',
+        icon: 'grid-outline' as const,
+        color: theme.info || '#0ea5e9',
+      };
+    case 'sub_category':
+      return {
+        label: 'Sub Category',
+        icon: 'layers-outline' as const,
+        color: theme.accentPrimary || '#3b82f6',
+      };
+    case 'brand':
+      return {
+        label: 'Brand',
+        icon: 'ribbon-outline' as const,
+        color: theme.warning || '#f59e0b',
+      };
+    case 'unit':
+      return {
+        label: 'Unit',
+        icon: 'cube-outline' as const,
+        color: theme.success || '#10b981',
+      };
+    case 'tax_rate':
+      return {
+        label: 'Tax Rate',
+        icon: 'receipt-outline' as const,
+        color: theme.error || '#ef4444',
+      };
+    case 'warranty_plan':
+      return {
+        label: 'Warranty Plan',
+        icon: 'shield-checkmark-outline' as const,
+        color: '#d946ef',
+      };
+    case 'product_condition':
+      return {
+        label: 'Product Condition',
+        icon: 'sparkles-outline' as const,
+        color: theme.textSecondary || '#6b7280',
+      };
+    default:
+      return {
+        label: 'Master',
+        icon: 'bookmark-outline' as const,
+        color: theme.textTertiary || '#9ca3af',
+      };
   }
 };
 
@@ -82,19 +124,27 @@ const MasterCard = React.memo(({
   isSelected,
   onToggleSelect,
   onEdit,
-  onDelete
+  onDelete,
+  theme,
+  styles
 }: {
   item: Master;
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
   onEdit: (item: Master) => void;
   onDelete: (id: string) => void;
+  theme: ThemeColors;
+  styles: any;
 }) => {
-  const typeColor = getTypeColor(item.type);
+  const config = getMasterTypeConfig(item.type, theme);
 
   return (
     <TouchableOpacity
-      style={[styles.card, isSelected && styles.cardSelected]}
+      style={[
+        styles.card, 
+        isSelected && styles.cardSelected,
+        item.metadata?.isFeatured && { borderColor: `${theme.warning}40` }
+      ]}
       activeOpacity={0.7}
       onPress={() => onToggleSelect(item._id)}
       onLongPress={() => onEdit(item)}
@@ -102,25 +152,38 @@ const MasterCard = React.memo(({
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
           <TouchableOpacity style={styles.checkbox} onPress={() => onToggleSelect(item._id)}>
-            <Ionicons name={isSelected ? "checkbox" : "square-outline"} size={22} color={isSelected ? DARK_BLUE_ACCENT : theme.textTertiary} />
+            <Ionicons 
+              name={isSelected ? "checkbox" : "square-outline"} 
+              size={20} 
+              color={isSelected ? theme.accentPrimary : theme.textTertiary} 
+            />
           </TouchableOpacity>
-          <View style={[styles.typeBadge, { borderColor: typeColor, backgroundColor: `${typeColor}15` }]}>
-            <ThemedText style={[styles.typeBadgeText, { color: typeColor }]}>{item.type}</ThemedText>
+          <View style={[styles.typeBadge, { borderColor: `${config.color}30`, backgroundColor: `${config.color}10` }]}>
+            <Ionicons name={config.icon} size={10} color={config.color} style={{ marginRight: 4 }} />
+            <ThemedText style={[styles.typeBadgeText, { color: config.color }]}>{config.label}</ThemedText>
           </View>
           {item.metadata?.isFeatured && (
-            <Ionicons name="star" size={14} color={theme.warning} style={{ marginLeft: 4 }} />
+            <View style={[styles.featuredBadge, { backgroundColor: `${theme.warning}15` }]}>
+              <Ionicons name="star" size={10} color={theme.warning} />
+              <ThemedText style={[styles.featuredBadgeText, { color: theme.warning }]}>Featured</ThemedText>
+            </View>
           )}
         </View>
-        <View style={[styles.statusIndicator, { backgroundColor: item.isActive ? theme.success : theme.textTertiary }]} />
+        <View style={styles.headerRight}>
+          <View style={[styles.statusIndicator, { backgroundColor: item.isActive ? theme.success : theme.textTertiary }]} />
+          <ThemedText style={[styles.statusLabel, { color: item.isActive ? theme.success : theme.textTertiary }]}>
+            {item.isActive ? 'Active' : 'Inactive'}
+          </ThemedText>
+        </View>
       </View>
 
       <View style={styles.cardBody}>
-        <View style={styles.avatarBox}>
-          <ThemedText style={styles.avatarText}>{getInitials(item.name)}</ThemedText>
+        <View style={[styles.avatarBox, { backgroundColor: `${config.color}08`, borderColor: `${config.color}20` }]}>
+          <Ionicons name={config.icon} size={20} color={config.color} />
         </View>
         <View style={{ marginLeft: Spacing.md, flex: 1 }}>
           <ThemedText style={styles.itemName} numberOfLines={1}>{item.name}</ThemedText>
-          <ThemedText style={styles.itemCode}>{item.code || 'NO CODE'}</ThemedText>
+          <ThemedText style={[styles.itemCode, { color: theme.accentPrimary }]}>{item.code || 'NO CODE'}</ThemedText>
         </View>
       </View>
 
@@ -130,13 +193,13 @@ const MasterCard = React.memo(({
 
       <View style={styles.cardActions}>
         <TouchableOpacity style={styles.actionBtn} onPress={() => onEdit(item)}>
-          <Ionicons name="pencil" size={14} color={DARK_BLUE_ACCENT} />
-          <ThemedText style={styles.actionBtnTextPrimary}>Edit</ThemedText>
+          <Ionicons name="create-outline" size={15} color={theme.accentPrimary} />
+          <ThemedText style={[styles.actionBtnText, { color: theme.accentPrimary }]}>Edit</ThemedText>
         </TouchableOpacity>
         <View style={styles.actionDivider} />
         <TouchableOpacity style={styles.actionBtn} onPress={() => onDelete(item._id)}>
-          <Ionicons name="trash" size={14} color={theme.error} />
-          <ThemedText style={styles.actionBtnTextDanger}>Delete</ThemedText>
+          <Ionicons name="trash-outline" size={15} color={theme.error} />
+          <ThemedText style={[styles.actionBtnText, { color: theme.error }]}>Delete</ThemedText>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -147,6 +210,9 @@ const MasterCard = React.memo(({
 // MAIN SCREEN
 // ==========================================
 export default function MasterDataScreen() {
+  const theme = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const [data, setData] = useState<Master[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -336,7 +402,7 @@ export default function MasterDataScreen() {
             </View>
             <View style={{ flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' }}>
               <TouchableOpacity style={styles.iconBtn} onPress={() => fetchData(true)}>
-                <Ionicons name="refresh" size={20} color={DARK_BLUE_ACCENT} />
+                <Ionicons name="refresh" size={20} color={theme.accentPrimary} />
               </TouchableOpacity>
               <NotificationBell />
             </View>
@@ -351,12 +417,12 @@ export default function MasterDataScreen() {
             />
             <View style={styles.actionButtons}>
               <TouchableOpacity style={styles.importBtn} onPress={() => setIsBulkImportVisible(true)}>
-                <Ionicons name="cloud-upload-outline" size={18} color={DARK_BLUE_ACCENT} />
-                <ThemedText style={styles.importBtnText}>Import</ThemedText>
+                <Ionicons name="cloud-upload-outline" size={18} color={theme.accentPrimary} />
+                <ThemedText style={[styles.importBtnText, { color: theme.accentPrimary }]}>Import</ThemedText>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryBtn} onPress={openAddModal}>
-                <Ionicons name="add" size={20} color="#fff" />
-                <ThemedText style={styles.primaryBtnText}>Add New</ThemedText>
+              <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: theme.accentPrimary }]} onPress={openAddModal}>
+                <Ionicons name="add" size={20} color={theme.bgPrimary} />
+                <ThemedText style={[styles.primaryBtnText, { color: theme.bgPrimary }]}>Add New</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -376,7 +442,7 @@ export default function MasterDataScreen() {
         {/* LIST */}
         {isLoading ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color={DARK_BLUE_ACCENT} />
+            <ActivityIndicator size="large" color={theme.accentPrimary} />
           </View>
         ) : (
           <FlatList
@@ -389,10 +455,12 @@ export default function MasterDataScreen() {
                 onToggleSelect={toggleSelection}
                 onEdit={openEditModal}
                 onDelete={handleDeleteSingle}
+                theme={theme}
+                styles={styles}
               />
             )}
             contentContainerStyle={styles.listContent}
-            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => fetchData(true)} tintColor={DARK_BLUE_ACCENT} />}
+            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => fetchData(true)} tintColor={theme.accentPrimary} />}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <View style={styles.emptyIconBox}>
@@ -421,15 +489,23 @@ export default function MasterDataScreen() {
               <View style={styles.formGroup}>
                 <ThemedText style={styles.label}>Master Type</ThemedText>
                 <View style={styles.chipRow}>
-                  {MASTER_TYPES.map(t => (
-                    <TouchableOpacity
-                      key={t.value}
-                      style={[styles.chip, formData.type === t.value && styles.chipActive]}
-                      onPress={() => setFormData({ ...formData, type: t.value })}
-                    >
-                      <ThemedText style={[styles.chipText, formData.type === t.value && styles.chipTextActive]}>{t.label}</ThemedText>
-                    </TouchableOpacity>
-                  ))}
+                  {MASTER_TYPES.map(t => {
+                    const c = getMasterTypeConfig(t.value, theme);
+                    const isActive = formData.type === t.value;
+                    return (
+                      <TouchableOpacity
+                        key={t.value}
+                        style={[
+                          styles.chip, 
+                          isActive && { backgroundColor: c.color, borderColor: c.color }
+                        ]}
+                        onPress={() => setFormData({ ...formData, type: t.value })}
+                      >
+                        <Ionicons name={c.icon} size={13} color={isActive ? '#fff' : theme.textSecondary} style={{ marginRight: 4 }} />
+                        <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>{t.label}</ThemedText>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
@@ -450,7 +526,7 @@ export default function MasterDataScreen() {
                   style={styles.input}
                   value={formData.code}
                   onChangeText={v => setFormData({ ...formData, code: v.toUpperCase() })}
-                  placeholder="Optional code"
+                  placeholder="Optional code (e.g. GST-18)"
                   placeholderTextColor={theme.textTertiary}
                   autoCapitalize="characters"
                 />
@@ -476,7 +552,7 @@ export default function MasterDataScreen() {
                 <Switch
                   value={formData.isActive}
                   onValueChange={v => setFormData({ ...formData, isActive: v })}
-                  trackColor={{ true: DARK_BLUE_ACCENT }}
+                  trackColor={{ true: theme.accentPrimary }}
                 />
               </View>
 
@@ -497,8 +573,8 @@ export default function MasterDataScreen() {
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsModalVisible(false)}>
                 <ThemedText style={styles.cancelBtnText}>Cancel</ThemedText>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={saveMaster} disabled={isSubmitting}>
-                {isSubmitting ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.saveBtnText}>Save Record</ThemedText>}
+              <TouchableOpacity style={[styles.saveBtn, { backgroundColor: theme.accentPrimary }]} onPress={saveMaster} disabled={isSubmitting}>
+                {isSubmitting ? <ActivityIndicator color="#fff" /> : <ThemedText style={[styles.saveBtnText, { color: theme.bgPrimary }]}>Save Record</ThemedText>}
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
@@ -516,9 +592,9 @@ export default function MasterDataScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.importHelper}>
+            <View style={[styles.importHelper, { backgroundColor: `${theme.info}10`, borderColor: `${theme.info}30` }]}>
               <Ionicons name="information-circle" size={18} color={theme.info} />
-              <ThemedText style={styles.importHelperText}>Enter items below. Blank names will be ignored.</ThemedText>
+              <ThemedText style={[styles.importHelperText, { color: theme.info }]}>Enter items below. Blank names will be ignored.</ThemedText>
             </View>
 
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
@@ -543,15 +619,22 @@ export default function MasterDataScreen() {
                       />
                     </View>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                      {MASTER_TYPES.map(t => (
-                        <TouchableOpacity
-                          key={t.value}
-                          style={[styles.miniChip, row.type === t.value && styles.miniChipActive]}
-                          onPress={() => updateBulkRow(index, 'type', t.value)}
-                        >
-                          <ThemedText style={[styles.miniChipText, row.type === t.value && styles.miniChipTextActive]}>{t.label}</ThemedText>
-                        </TouchableOpacity>
-                      ))}
+                      {MASTER_TYPES.map(t => {
+                        const c = getMasterTypeConfig(t.value, theme);
+                        const isRowActive = row.type === t.value;
+                        return (
+                          <TouchableOpacity
+                            key={t.value}
+                            style={[
+                              styles.miniChip, 
+                              isRowActive && { backgroundColor: c.color, borderColor: c.color }
+                            ]}
+                            onPress={() => updateBulkRow(index, 'type', t.value)}
+                          >
+                            <ThemedText style={[styles.miniChipText, isRowActive && styles.miniChipTextActive]}>{t.label}</ThemedText>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </ScrollView>
                   </View>
                   <TouchableOpacity style={styles.removeRowBtn} onPress={() => removeBulkRow(index)}>
@@ -559,9 +642,9 @@ export default function MasterDataScreen() {
                   </TouchableOpacity>
                 </View>
               ))}
-              <TouchableOpacity style={styles.addRowBtn} onPress={addBulkRow}>
-                <Ionicons name="add-circle-outline" size={20} color={DARK_BLUE_ACCENT} />
-                <ThemedText style={styles.addRowBtnText}>Add More Rows</ThemedText>
+              <TouchableOpacity style={[styles.addRowBtn, { borderColor: theme.accentPrimary }]} onPress={addBulkRow}>
+                <Ionicons name="add-circle-outline" size={20} color={theme.accentPrimary} />
+                <ThemedText style={[styles.addRowBtnText, { color: theme.accentPrimary }]}>Add More Rows</ThemedText>
               </TouchableOpacity>
             </ScrollView>
 
@@ -569,8 +652,8 @@ export default function MasterDataScreen() {
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsBulkImportVisible(false)}>
                 <ThemedText style={styles.cancelBtnText}>Cancel</ThemedText>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={saveBulkImport} disabled={isSubmitting}>
-                {isSubmitting ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.saveBtnText}>Import All</ThemedText>}
+              <TouchableOpacity style={[styles.saveBtn, { backgroundColor: theme.accentPrimary }]} onPress={saveBulkImport} disabled={isSubmitting}>
+                {isSubmitting ? <ActivityIndicator color="#fff" /> : <ThemedText style={[styles.saveBtnText, { color: theme.bgPrimary }]}>Import All</ThemedText>}
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
@@ -581,24 +664,32 @@ export default function MasterDataScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.bgSecondary },
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  header: { backgroundColor: theme.bgPrimary, paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl, paddingBottom: Spacing.lg, borderBottomWidth: 1, borderBottomColor: BORDER_COLOR, gap: Spacing.md },
+  header: { 
+    backgroundColor: theme.bgPrimary, 
+    paddingHorizontal: Spacing.xl, 
+    paddingTop: Spacing.md, 
+    paddingBottom: Spacing.md, 
+    borderBottomWidth: 1, 
+    borderBottomColor: theme.borderPrimary, 
+    gap: Spacing.md 
+  },
   headerTop: { flexDirection: 'row', alignItems: 'center' },
-  pageTitle: { fontSize: Typography.size['2xl'], fontWeight: Typography.weight.bold, color: theme.textPrimary, letterSpacing: -0.5 },
-  pageSubtitle: { fontSize: Typography.size.xs, color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 },
+  pageTitle: { fontSize: Typography.size['2xl'], fontWeight: Typography.weight.bold, color: theme.textPrimary, letterSpacing: -0.5, fontFamily: theme.fonts.heading },
+  pageSubtitle: { fontSize: Typography.size.xs, color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 1, marginTop: 2, fontFamily: theme.fonts.body },
 
   headerActionsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   actionButtons: { flexDirection: 'row', gap: Spacing.sm },
 
-  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.bgSecondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: BORDER_COLOR },
-  importBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.bgSecondary, paddingHorizontal: Spacing.md, height: 38, borderRadius: UI.borderRadius.md, borderWidth: 1, borderColor: BORDER_COLOR },
-  importBtnText: { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: DARK_BLUE_ACCENT },
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: DARK_BLUE_ACCENT, paddingHorizontal: Spacing.md, height: 38, borderRadius: UI.borderRadius.md, ...getElevation(2, theme) },
-  primaryBtnText: { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: '#fff' },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.bgSecondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.borderPrimary },
+  importBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.bgSecondary, paddingHorizontal: Spacing.md, height: 38, borderRadius: UI.borderRadius.md, borderWidth: 1, borderColor: theme.borderPrimary },
+  importBtnText: { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold },
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, height: 38, borderRadius: UI.borderRadius.md, ...getElevation(2, theme) },
+  primaryBtnText: { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold },
 
   bulkBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: `${theme.error}10`, padding: Spacing.md, borderRadius: UI.borderRadius.md, borderWidth: 1, borderColor: `${theme.error}30` },
   bulkCount: { fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, color: theme.error },
@@ -606,65 +697,66 @@ const styles = StyleSheet.create({
   bulkDeleteText: { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: theme.error },
 
   listContent: { padding: Spacing.lg, paddingBottom: 100 },
-  card: { backgroundColor: theme.bgPrimary, borderRadius: UI.borderRadius.xl, marginBottom: Spacing.md, borderWidth: 1, borderColor: BORDER_COLOR, ...getElevation(1, theme), overflow: 'hidden' },
-  cardSelected: { borderColor: DARK_BLUE_ACCENT, backgroundColor: `${DARK_BLUE_ACCENT}05` },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.md, paddingBottom: 0 },
+  card: { backgroundColor: theme.bgPrimary, borderRadius: UI.borderRadius.lg, marginBottom: Spacing.md, borderWidth: 1, borderColor: theme.borderPrimary, ...getElevation(1, theme), overflow: 'hidden' },
+  cardSelected: { borderColor: theme.accentPrimary, backgroundColor: `${theme.accentPrimary}05` },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.md, paddingBottom: 0 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  checkbox: { padding: 4 },
-  typeBadge: { paddingHorizontal: 10, paddingVertical: 2, borderRadius: UI.borderRadius.pill, borderWidth: 1 },
-  typeBadgeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
-  statusIndicator: { width: 6, height: 6, borderRadius: 3, marginTop: 10 },
+  checkbox: { padding: 2 },
+  typeBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1 },
+  typeBadgeText: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase' },
+  featuredBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: Spacing.xs },
+  featuredBadgeText: { fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase' },
+  
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statusIndicator: { width: 6, height: 6, borderRadius: 3 },
+  statusLabel: { fontSize: Typography.size.xs, fontWeight: '600' },
 
-  cardBody: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md },
-  avatarBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: theme.bgSecondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: BORDER_COLOR },
-  avatarText: { fontWeight: 'bold', color: theme.textSecondary, fontSize: 16 },
-  itemName: { fontSize: Typography.size.md, fontWeight: 'bold', color: theme.textPrimary },
-  itemCode: { fontSize: Typography.size.xs, color: theme.textTertiary, marginTop: 2, fontWeight: '500' },
-  itemDesc: { fontSize: Typography.size.xs, color: theme.textSecondary, paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, lineHeight: 16 },
+  cardBody: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, paddingBottom: Spacing.sm },
+  avatarBox: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  itemName: { fontSize: Typography.size.md, fontWeight: 'bold', color: theme.textPrimary, fontFamily: theme.fonts.heading },
+  itemCode: { fontSize: Typography.size.xs, marginTop: 2, fontWeight: '600', fontFamily: theme.fonts.mono },
+  itemDesc: { fontSize: Typography.size.xs, color: theme.textSecondary, paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, lineHeight: 16, fontFamily: theme.fonts.body },
 
-  cardActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: theme.bgSecondary, backgroundColor: theme.bgSecondary + '40' },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.md, gap: 6 },
-  actionDivider: { width: 1, height: '60%', backgroundColor: BORDER_COLOR, alignSelf: 'center' },
-  actionBtnTextPrimary: { fontSize: Typography.size.xs, fontWeight: 'bold', color: DARK_BLUE_ACCENT },
-  actionBtnTextDanger: { fontSize: Typography.size.xs, fontWeight: 'bold', color: theme.error },
+  cardActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: theme.borderPrimary, backgroundColor: `${theme.bgSecondary}40` },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.sm, gap: 6 },
+  actionDivider: { width: 1, height: '60%', backgroundColor: theme.borderPrimary, alignSelf: 'center' },
+  actionBtnText: { fontSize: Typography.size.xs, fontWeight: 'bold' },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, marginTop: 60 },
   emptyIconBox: { width: 80, height: 80, borderRadius: 40, backgroundColor: theme.bgSecondary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   emptyTitle: { fontSize: Typography.size.lg, fontWeight: 'bold', color: theme.textPrimary },
   emptyDesc: { fontSize: Typography.size.sm, color: theme.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 20 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContainer: { backgroundColor: theme.bgPrimary, borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '90%', ...getElevation(3, theme) },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.xl, borderBottomWidth: 1, borderBottomColor: BORDER_COLOR },
-  modalTitle: { fontSize: Typography.size.xl, fontWeight: 'bold', color: theme.textPrimary },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContainer: { backgroundColor: theme.bgPrimary, borderTopLeftRadius: UI.borderRadius.xl, borderTopRightRadius: UI.borderRadius.xl, maxHeight: '90%', ...getElevation(3, theme) },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.xl, borderBottomWidth: 1, borderBottomColor: theme.borderPrimary },
+  modalTitle: { fontSize: Typography.size.xl, fontWeight: 'bold', color: theme.textPrimary, fontFamily: theme.fonts.heading },
   modalBody: { padding: Spacing.xl },
   formGroup: { marginBottom: Spacing.xl },
   label: { fontSize: Typography.size.xs, fontWeight: '800', color: theme.textSecondary, marginBottom: Spacing.sm, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: { backgroundColor: theme.bgSecondary, padding: Spacing.lg, borderRadius: UI.borderRadius.lg, borderWidth: 1, borderColor: BORDER_COLOR, fontSize: Typography.size.md, color: theme.textPrimary },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 24, backgroundColor: theme.bgSecondary, borderWidth: 1, borderColor: BORDER_COLOR },
-  chipActive: { backgroundColor: DARK_BLUE_ACCENT, borderColor: DARK_BLUE_ACCENT },
-  chipText: { fontSize: 12, fontWeight: 'bold', color: theme.textSecondary },
+  input: { backgroundColor: theme.bgSecondary, padding: Spacing.md, borderRadius: UI.borderRadius.md, borderWidth: 1, borderColor: theme.borderPrimary, fontSize: Typography.size.sm, color: theme.textPrimary, fontFamily: theme.fonts.body },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
+  chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: theme.bgSecondary, borderWidth: 1, borderColor: theme.borderPrimary },
+  chipText: { fontSize: 11, fontWeight: 'bold', color: theme.textSecondary },
   chipTextActive: { color: '#fff' },
 
-  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: theme.bgSecondary },
-  switchLabel: { fontSize: Typography.size.md, fontWeight: 'bold', color: theme.textPrimary },
+  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: theme.borderPrimary },
+  switchLabel: { fontSize: Typography.size.sm, fontWeight: 'bold', color: theme.textPrimary },
   switchDesc: { fontSize: Typography.size.xs, color: theme.textTertiary, marginTop: 2 },
 
-  modalFooter: { flexDirection: 'row', padding: Spacing.xl, gap: Spacing.md, borderTopWidth: 1, borderTopColor: BORDER_COLOR, paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.xl },
-  cancelBtn: { flex: 1, padding: 16, borderRadius: UI.borderRadius.xl, alignItems: 'center', backgroundColor: theme.bgSecondary, borderWidth: 1, borderColor: BORDER_COLOR },
+  modalFooter: { flexDirection: 'row', padding: Spacing.xl, gap: Spacing.md, borderTopWidth: 1, borderTopColor: theme.borderPrimary, paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.xl },
+  cancelBtn: { flex: 1, padding: 12, borderRadius: UI.borderRadius.md, alignItems: 'center', backgroundColor: theme.bgSecondary, borderWidth: 1, borderColor: theme.borderPrimary },
   cancelBtnText: { fontWeight: 'bold', color: theme.textPrimary },
-  saveBtn: { flex: 2, padding: 16, borderRadius: UI.borderRadius.xl, alignItems: 'center', backgroundColor: DARK_BLUE_ACCENT, ...getElevation(3, theme) },
-  saveBtnText: { fontWeight: 'bold', color: '#fff' },
+  saveBtn: { flex: 2, padding: 12, borderRadius: UI.borderRadius.md, alignItems: 'center', ...getElevation(2, theme) },
+  saveBtnText: { fontWeight: 'bold' },
 
-  importHelper: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: `${theme.info}10`, padding: Spacing.md, margin: Spacing.xl, borderRadius: 12, borderWidth: 1, borderColor: `${theme.info}30` },
-  importHelperText: { fontSize: 12, color: theme.info, flex: 1, lineHeight: 18 },
-  bulkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: Spacing.xl, paddingBottom: Spacing.xl, borderBottomWidth: 1, borderBottomColor: BORDER_COLOR },
+  importHelper: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: Spacing.md, margin: Spacing.xl, borderRadius: 8, borderWidth: 1 },
+  importHelperText: { fontSize: 11, flex: 1, lineHeight: 16 },
+  bulkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: Spacing.xl, paddingBottom: Spacing.xl, borderBottomWidth: 1, borderBottomColor: theme.borderPrimary },
   removeRowBtn: { padding: 4 },
-  miniChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: theme.bgSecondary, borderWidth: 1, borderColor: BORDER_COLOR },
-  miniChipActive: { backgroundColor: DARK_BLUE_ACCENT, borderColor: DARK_BLUE_ACCENT },
-  miniChipText: { fontSize: 10, fontWeight: 'bold', color: theme.textSecondary },
+  miniChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: theme.bgSecondary, borderWidth: 1, borderColor: theme.borderPrimary },
+  miniChipText: { fontSize: 9, fontWeight: 'bold', color: theme.textSecondary },
   miniChipTextActive: { color: '#fff' },
-  addRowBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: DARK_BLUE_ACCENT, borderRadius: UI.borderRadius.xl, marginBottom: 40 },
-  addRowBtnText: { fontWeight: 'bold', color: DARK_BLUE_ACCENT },
+  addRowBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderStyle: 'dashed', borderWidth: 1, borderRadius: UI.borderRadius.md, marginBottom: 40 },
+  addRowBtnText: { fontWeight: 'bold' },
 });

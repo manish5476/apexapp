@@ -99,35 +99,114 @@ export default function BranchFormScreen() {
   return (
     <PermissionGate permissions={[PERMISSIONS.BRANCH.MANAGE]}>
       <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.safeArea}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()}><Ionicons name="arrow-back" size={22} color={theme.textPrimary} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={22} color={theme.textPrimary} />
+            </TouchableOpacity>
             <ThemedText style={styles.headerTitle}>{isEdit ? 'Edit Branch' : 'Create Branch'}</ThemedText>
           </View>
-          <ScrollView contentContainerStyle={styles.content}>
-            {['name', 'branchCode', 'phoneNumber', 'managerId'].map((k) => (
-              <TextInput
-                key={k}
-                style={styles.input}
-                placeholder={k}
-                placeholderTextColor={theme.textTertiary}
-                value={form[k] || ''}
-                onChangeText={(v) => setForm((p: any) => ({ ...p, [k]: v }))}
-              />
-            ))}
-            <TextInput style={styles.input} placeholder="Street" value={form.address.street} onChangeText={(v) => setForm((p: any) => ({ ...p, address: { ...p.address, street: v } }))} />
-            <TextInput style={styles.input} placeholder="City" value={form.address.city} onChangeText={(v) => setForm((p: any) => ({ ...p, address: { ...p.address, city: v } }))} />
-            <TouchableOpacity style={styles.gpsBtn} onPress={onGps}>
-              <Ionicons name="locate-outline" size={16} color={theme.accentPrimary} />
-              <ThemedText style={styles.gpsText}>Use GPS</ThemedText>
-            </TouchableOpacity>
-            <TextInput style={styles.input} placeholder="Latitude" value={form.location.lat} onChangeText={(v) => setForm((p: any) => ({ ...p, location: { ...p.location, lat: v } }))} />
-            <TextInput style={styles.input} placeholder="Longitude" value={form.location.lng} onChangeText={(v) => setForm((p: any) => ({ ...p, location: { ...p.location, lng: v } }))} />
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <TextInput
+              style={styles.input}
+              placeholder="Branch Name"
+              placeholderTextColor={theme.textTertiary}
+              value={form.name}
+              onChangeText={(v) => setForm((p: any) => ({ ...p, name: v }))}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Branch Code (e.g. BR-JFSVIV)"
+              placeholderTextColor={theme.textTertiary}
+              value={form.branchCode}
+              onChangeText={(v) => setForm((p: any) => ({ ...p, branchCode: v }))}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Phone Number"
+              placeholderTextColor={theme.textTertiary}
+              keyboardType="phone-pad"
+              value={form.phoneNumber}
+              onChangeText={(v) => setForm((p: any) => ({ ...p, phoneNumber: v }))}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Manager ID"
+              placeholderTextColor={theme.textTertiary}
+              value={form.managerId}
+              onChangeText={(v) => setForm((p: any) => ({ ...p, managerId: v }))}
+            />
+            
+            <View style={styles.sectionDivider}>
+              <ThemedText style={styles.sectionTitle}>Address Details</ThemedText>
+            </View>
+
+            <TextInput 
+              style={styles.input} 
+              placeholder="Street Address" 
+              placeholderTextColor={theme.textTertiary}
+              value={form.address.street} 
+              onChangeText={(v) => setForm((p: any) => ({ ...p, address: { ...p.address, street: v } }))} 
+            />
+            <TextInput 
+              style={styles.input} 
+              placeholder="City" 
+              placeholderTextColor={theme.textTertiary}
+              value={form.address.city} 
+              onChangeText={(v) => setForm((p: any) => ({ ...p, address: { ...p.address, city: v } }))} 
+            />
+            <TextInput 
+              style={styles.input} 
+              placeholder="State" 
+              placeholderTextColor={theme.textTertiary}
+              value={form.address.state} 
+              onChangeText={(v) => setForm((p: any) => ({ ...p, address: { ...p.address, state: v } }))} 
+            />
+            <TextInput 
+              style={styles.input} 
+              placeholder="Zip Code" 
+              placeholderTextColor={theme.textTertiary}
+              keyboardType="numeric"
+              value={form.address.zipCode} 
+              onChangeText={(v) => setForm((p: any) => ({ ...p, address: { ...p.address, zipCode: v } }))} 
+            />
+            <TextInput 
+              style={styles.input} 
+              placeholder="Country" 
+              placeholderTextColor={theme.textTertiary}
+              value={form.address.country} 
+              onChangeText={(v) => setForm((p: any) => ({ ...p, address: { ...p.address, country: v } }))} 
+            />
+            
+            <View style={styles.sectionDivider}>
+              <ThemedText style={styles.sectionTitle}>GPS Location</ThemedText>
+              <TouchableOpacity style={styles.gpsBtn} onPress={onGps}>
+                <Ionicons name="locate-outline" size={16} color={theme.accentPrimary} />
+                <ThemedText style={styles.gpsText}>Use GPS</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <TextInput 
+              style={styles.input} 
+              placeholder="Latitude" 
+              placeholderTextColor={theme.textTertiary}
+              keyboardType="numeric"
+              value={form.location.lat} 
+              onChangeText={(v) => setForm((p: any) => ({ ...p, location: { ...p.location, lat: v } }))} 
+            />
+            <TextInput 
+              style={styles.input} 
+              placeholder="Longitude" 
+              placeholderTextColor={theme.textTertiary}
+              keyboardType="numeric"
+              value={form.location.lng} 
+              onChangeText={(v) => setForm((p: any) => ({ ...p, location: { ...p.location, lng: v } }))} 
+            />
           </ScrollView>
           <View style={styles.footer}>
             <TouchableOpacity style={styles.submit} onPress={onSubmit} disabled={saving}>
-              {saving ? <ActivityIndicator color={theme.bgPrimary} /> : <ThemedText style={styles.submitText}>Save</ThemedText>}
+              {saving ? <ActivityIndicator color={theme.bgPrimary} /> : <ThemedText style={styles.submitText}>Save Branch</ThemedText>}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -142,13 +221,61 @@ const createStyles = (theme: ThemeColors) =>
     container: { flex: 1, backgroundColor: theme.bgSecondary },
     safeArea: { flex: 1 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    header: { flexDirection: 'row', alignItems: 'center', padding: Spacing.lg, gap: Spacing.md, borderBottomWidth: 1, borderBottomColor: theme.borderPrimary },
-    headerTitle: { fontSize: Typography.size.lg, color: theme.textPrimary, fontWeight: Typography.weight.bold },
+    
+    header: { 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      paddingHorizontal: Spacing.xl,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.md,
+      gap: Spacing.md, 
+      borderBottomWidth: 1, 
+      borderBottomColor: theme.borderPrimary,
+      backgroundColor: theme.bgPrimary,
+    },
+    backButton: {
+      padding: Spacing.xs,
+    },
+    headerTitle: { 
+      fontSize: Typography.size.lg, 
+      color: theme.textPrimary, 
+      fontWeight: Typography.weight.bold,
+      fontFamily: theme.fonts.heading,
+    },
+    
     content: { padding: Spacing.lg, gap: Spacing.md },
-    input: { backgroundColor: theme.bgPrimary, borderWidth: 1, borderColor: theme.borderPrimary, borderRadius: UI.borderRadius.md, padding: Spacing.md, color: theme.textPrimary },
-    gpsBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm },
-    gpsText: { color: theme.accentPrimary },
-    footer: { padding: Spacing.lg, borderTopWidth: 1, borderTopColor: theme.borderPrimary },
+    input: { 
+      backgroundColor: theme.bgPrimary, 
+      borderWidth: 1, 
+      borderColor: theme.borderPrimary, 
+      borderRadius: UI.borderRadius.md, 
+      padding: Spacing.md, 
+      color: theme.textPrimary,
+      fontFamily: theme.fonts.body,
+      fontSize: Typography.size.sm,
+    },
+    
+    sectionDivider: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: Spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.borderPrimary,
+      paddingBottom: Spacing.xs,
+    },
+    sectionTitle: {
+      fontSize: Typography.size.xs,
+      fontWeight: Typography.weight.bold,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      color: theme.textTertiary,
+    },
+    
+    gpsBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+    gpsText: { color: theme.accentPrimary, fontSize: Typography.size.xs, fontWeight: Typography.weight.bold },
+    
+    footer: { padding: Spacing.lg, borderTopWidth: 1, borderTopColor: theme.borderPrimary, backgroundColor: theme.bgPrimary },
     submit: { backgroundColor: theme.accentPrimary, borderRadius: UI.borderRadius.md, padding: Spacing.md, alignItems: 'center' },
-    submitText: { color: theme.bgPrimary, fontWeight: Typography.weight.bold },
+    submitText: { color: theme.bgPrimary, fontWeight: Typography.weight.bold, fontSize: Typography.size.md },
   });

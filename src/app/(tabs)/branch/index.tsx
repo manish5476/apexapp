@@ -55,14 +55,29 @@ export default function BranchListScreen() {
       activeOpacity={0.7}
     >
       <View style={styles.cardIcon}>
-        <Ionicons name="business" size={24} color={theme.accentPrimary} />
+        <Ionicons name={item.isMainBranch ? "business" : "storefront-outline"} size={22} color={theme.accentPrimary} />
       </View>
       <View style={styles.cardContent}>
-        <ThemedText style={styles.branchName}>{item.name}</ThemedText>
-        <ThemedText style={styles.branchCode}>{item.code || 'NO CODE'}</ThemedText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+          <ThemedText style={styles.branchName}>{item.name}</ThemedText>
+          {item.isMainBranch && (
+            <View style={[styles.mainBadge, { backgroundColor: `${theme.success}15` }]}>
+              <ThemedText style={[styles.mainBadgeText, { color: theme.success }]}>Main</ThemedText>
+            </View>
+          )}
+        </View>
+        <View style={styles.codeRow}>
+          <ThemedText style={styles.branchCode}>{item.branchCode || item.code || 'NO CODE'}</ThemedText>
+          {item.managerId && (
+            <>
+              <ThemedText style={styles.dot}>•</ThemedText>
+              <ThemedText style={styles.managerName}>Manager: {item.managerId.name || item.managerId}</ThemedText>
+            </>
+          )}
+        </View>
         {item.address && (
           <ThemedText style={styles.branchAddress} numberOfLines={1}>
-            {item.address.city}, {item.address.state}
+            <Ionicons name="location-outline" size={10} color={theme.textTertiary} /> {item.address.street ? `${item.address.street}, ` : ''}{item.address.city}, {item.address.state}
           </ThemedText>
         )}
       </View>
@@ -123,7 +138,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.bgSecondary },
   safeArea: { flex: 1 },
   header: {
-    padding: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
     backgroundColor: theme.bgPrimary,
     borderBottomWidth: 1,
     borderBottomColor: theme.borderPrimary,
@@ -177,12 +194,37 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontWeight: Typography.weight.bold,
     color: theme.textPrimary,
   },
+  mainBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  mainBadgeText: {
+    fontFamily: theme.fonts.body,
+    fontSize: 9,
+    fontWeight: Typography.weight.bold,
+    textTransform: 'uppercase',
+  },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
   branchCode: {
     fontFamily: theme.fonts.mono,
     fontSize: 10,
     color: theme.accentPrimary,
-    marginTop: 2,
     textTransform: 'uppercase',
+  },
+  dot: {
+    fontSize: 10,
+    color: theme.textTertiary,
+    marginHorizontal: 4,
+  },
+  managerName: {
+    fontFamily: theme.fonts.body,
+    fontSize: 10,
+    color: theme.textSecondary,
   },
   branchAddress: {
     fontFamily: theme.fonts.body,
