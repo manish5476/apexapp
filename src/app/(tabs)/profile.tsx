@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 import { Spacing, ThemeColors, Typography, UI, getElevation } from '@/src/constants/theme';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
@@ -10,9 +11,11 @@ import { ThemedText } from '../../components/themed-text';
 import { ThemedView } from '../../components/themed-view';
 import { ThemeSelector } from '../../components/ThemeSelector';
 import { useAuthStore } from '../../store/auth.store';
+import { UserService } from '@/src/api/userService';
 
 export default function ProfileScreen() {
-  const { user, organization, clearAuth } = useAuthStore();
+  const { token, user, organization, session, setAuth, clearAuth } = useAuthStore();
+  const [uploading, setUploading] = React.useState(false);
   const currentTheme = useAppTheme();
   const styles = useMemo(() => createStyles(currentTheme), [currentTheme]);
   const roleLabel =
@@ -21,6 +24,52 @@ export default function ProfileScreen() {
       : typeof user?.role?.name === 'string'
         ? user.role.name.toUpperCase()
         : 'MEMBER';
+
+  const handleUploadPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== ImagePicker.PermissionStatus.GRANTED) {
+        Alert.alert('Permission Denied', 'Please grant gallery permissions to upload a photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets?.[0]) return;
+
+      setUploading(true);
+      const localUri = result.assets[0].uri;
+      const filename = localUri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename || '');
+      const type = match ? `image/${match[1]}` : `image`;
+
+      const file = {
+        uri: localUri,
+        name: filename,
+        type,
+      } as any;
+
+      const uploadRes = await UserService.uploadProfilePhoto(file);
+      const updatedUser = uploadRes.data?.user || uploadRes.data?.data?.user || uploadRes.data || uploadRes;
+      
+      // Update local storage and auth store
+      if (token) {
+        await setAuth(token, updatedUser, organization, session);
+      }
+      
+      Alert.alert('Success', 'Profile photo updated successfully!');
+    } catch (error: any) {
+      console.error('Error uploading profile photo:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to upload photo.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out of your account?', [
@@ -59,9 +108,26 @@ export default function ProfileScreen() {
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.profileCard}>
-            <View style={styles.avatarContainer}>
-              <ThemedText style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() || 'U'}</ThemedText>
-            </View>
+            <TouchableOpacity 
+              style={styles.avatarWrapper} 
+              onPress={handleUploadPhoto}
+              disabled={uploading}
+              activeOpacity={0.8}
+            >
+              <View style={styles.avatarContainer}>
+                {uploading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : user?.avatar ? (
+                  <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+                ) : (
+                  <ThemedText style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() || 'U'}</ThemedText>
+                )}
+              </View>
+              <View style={[styles.editPhotoBadge, { backgroundColor: currentTheme.accentPrimary }]}>
+                <Ionicons name="camera" size={12} color="#fff" />
+              </View>
+            </TouchableOpacity>
+            
             <View style={styles.profileInfo}>
               <ThemedText style={styles.userName}>{user?.name || 'User Name'}</ThemedText>
               <ThemedText style={styles.userEmail}>{user?.email || 'user@workspace.com'}</ThemedText>
@@ -153,14 +219,40 @@ const createStyles = (theme: ThemeColors) =>
       borderColor: theme.borderPrimary,
       ...getElevation(2, theme),
     },
+    avatarWrapper: {
+      position: 'relative',
+      marginRight: Spacing.xl,
+    },
     avatarContainer: {
       width: 64,
       height: 64,
-      borderRadius: UI.borderRadius.pill,
+      borderRadius: 32,
       backgroundColor: theme.accentPrimary,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: Spacing.xl,
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+    },
+    editPhotoBadge: {
+      position: 'absolute',
+      bottom: -4,
+      right: -4,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: theme.bgSecondary,
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 1,
     },
     avatarText: {
       fontFamily: theme.fonts.heading,

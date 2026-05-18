@@ -68,13 +68,35 @@ export default function AssetsListScreen() {
         AssetsService.getMyAssetsStat().catch(() => null) // Failsafe if stats endpoint isn't ready
       ]);
 
-      const fetchedAssets = assetsRes.data?.assets || assetsRes.data || [];
+      let fetchedAssets: AssetRecord[] = [];
+      if (assetsRes) {
+        if (Array.isArray(assetsRes)) {
+          fetchedAssets = assetsRes;
+        } else if (Array.isArray(assetsRes.assets)) {
+          fetchedAssets = assetsRes.assets;
+        } else if (assetsRes.data) {
+          if (Array.isArray(assetsRes.data)) {
+            fetchedAssets = assetsRes.data;
+          } else if (Array.isArray(assetsRes.data.assets)) {
+            fetchedAssets = assetsRes.data.assets;
+          }
+        }
+      }
       setAssets(fetchedAssets);
 
-      if (statsRes && statsRes.data) {
-        setStats(statsRes.data);
+      if (statsRes) {
+        const statsData = statsRes.data || statsRes;
+        if (statsData.totalFiles !== undefined) {
+          setStats({
+            totalFiles: Number(statsData.totalFiles),
+            totalSize: Number(statsData.totalSize || statsData.totalBytes || 0)
+          });
+        } else {
+          // Calculate mock stats if endpoint fails or doesn't have expected shape
+          const totalSize = fetchedAssets.reduce((sum: number, a: AssetRecord) => sum + a.size, 0);
+          setStats({ totalFiles: fetchedAssets.length, totalSize });
+        }
       } else {
-        // Calculate mock stats if endpoint fails
         const totalSize = fetchedAssets.reduce((sum: number, a: AssetRecord) => sum + a.size, 0);
         setStats({ totalFiles: fetchedAssets.length, totalSize });
       }
@@ -159,7 +181,7 @@ export default function AssetsListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
       {/* HEADER */}
       <View style={styles.header}>

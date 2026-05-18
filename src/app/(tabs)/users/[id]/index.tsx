@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '../../../../components/themed-text';
 import { ThemedView } from '../../../../components/themed-view';
@@ -17,6 +18,7 @@ export default function UserDetailsScreen() {
   
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -30,6 +32,47 @@ export default function UserDetailsScreen() {
       console.error('Error loading user:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUploadPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== ImagePicker.PermissionStatus.GRANTED) {
+        Alert.alert('Permission Denied', 'Please grant gallery permissions to upload a photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets?.[0]) return;
+
+      setUploading(true);
+      const localUri = result.assets[0].uri;
+      const filename = localUri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename || '');
+      const type = match ? `image/${match[1]}` : `image`;
+
+      const file = {
+        uri: localUri,
+        name: filename,
+        type,
+      } as any;
+
+      await UserService.uploadUserPhoto(id as string, file);
+      
+      Alert.alert('Success', 'Profile photo updated successfully!');
+      loadUser();
+    } catch (error: any) {
+      console.error('Error uploading profile photo:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to upload photo.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -84,6 +127,19 @@ export default function UserDetailsScreen() {
                 </View>
               )}
               <View style={[styles.statusIndicator, { backgroundColor: user.isActive ? theme.success : theme.textLabel }]} />
+              
+              <TouchableOpacity 
+                style={[styles.editPhotoBadge, { backgroundColor: theme.accentPrimary }]} 
+                onPress={handleUploadPhoto}
+                disabled={uploading}
+                activeOpacity={0.8}
+              >
+                {uploading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="camera" size={14} color="#fff" />
+                )}
+              </TouchableOpacity>
             </View>
             
             <ThemedText type="title" style={styles.userName}>{user.name}</ThemedText>
@@ -210,6 +266,23 @@ const styles = StyleSheet.create({
   avatarWrapper: {
     position: 'relative',
     marginBottom: Spacing.lg,
+  },
+  editPhotoBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
   },
   largeAvatar: {
     width: 100,

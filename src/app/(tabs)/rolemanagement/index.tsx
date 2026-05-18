@@ -19,18 +19,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, Typography, UI, getElevation } from '@/src/constants/theme';
+import { ApiService } from '@/src/api/ApiService';
 
-// Adjust this path to your actual theme file
-// import { Spacing, Themes, Typography, UI, getElevation } from './theme';
-import { ApiService, User } from '@/src/api/ApiService';
-
-// Reuse local interfaces or import from ApiService if needed
 interface Role {
   _id: string;
   name: string;
   isSuperAdmin?: boolean;
   isDefault?: boolean;
   permissions: string[];
+  userCount?: number;
 }
 
 interface Permission {
@@ -44,9 +41,6 @@ const DARK_BLUE_ACCENT = '#1d4ed8';
 const BORDER_COLOR = theme.borderSecondary;
 const BORDER_WIDTH = UI.borderWidth.base;
 
-// ==========================================
-// MAIN SCREEN
-// ==========================================
 export default function RoleManagementScreen() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -71,7 +65,7 @@ export default function RoleManagementScreen() {
     try {
       const [rolesRes, permsRes] = await Promise.all([
         ApiService.getRoles({ search: searchQuery }),
-        ApiService.permissions() // Using permissions() from ApiService
+        ApiService.permissions()
       ]);
       
       const res = rolesRes as any;
@@ -188,54 +182,99 @@ export default function RoleManagementScreen() {
   const toggleGroup = (groupItems: Permission[], isSelected: boolean) => {
     const tags = groupItems.map(i => i.tag);
     if (isSelected) {
-      // Add all tags from this group
       setSelectedPerms(prev => Array.from(new Set([...prev, ...tags])));
     } else {
-      // Remove all tags from this group
       setSelectedPerms(prev => prev.filter(tag => !tags.includes(tag)));
     }
   };
 
   // --- RENDERERS ---
   const renderRoleCard = ({ item }: { item: Role }) => {
-    let badgeStyle = { bg: `${theme.info}15`, text: theme.info, border: `${theme.info}40`, label: 'Custom' };
-    if (item.isSuperAdmin) badgeStyle = { bg: `${theme.error}15`, text: theme.error, border: `${theme.error}40`, label: 'Super Admin' };
-    else if (item.isDefault) badgeStyle = { bg: `${theme.textPrimary}15`, text: theme.textPrimary, border: `${theme.textPrimary}40`, label: 'Default' };
+    let accentColor = DARK_BLUE_ACCENT;
+    let label = 'Custom Role';
+    let iconName = 'shield-outline';
+
+    if (item.isSuperAdmin) {
+      accentColor = theme.error;
+      label = 'Super Admin';
+      iconName = 'shield-checkmark';
+    } else if (item.isDefault) {
+      accentColor = '#6b7280';
+      label = 'Default';
+      iconName = 'ribbon-outline';
+    }
 
     const isRestricted = item.isSuperAdmin;
+    const userCount = item.userCount ?? 0;
+
+    const previewPermissions = item.permissions?.slice(0, 3) || [];
+    const remainingCount = Math.max(0, (item.permissions?.length || 0) - previewPermissions.length);
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { borderLeftColor: accentColor, borderLeftWidth: 4 }]}>
         <View style={styles.cardHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.roleName}>{item.name}</Text>
-            <Text style={styles.permissionCount}>
-              {item.isSuperAdmin ? 'Full System Access' : `${item.permissions?.length || 0} permissions granted`}
-            </Text>
-          </View>
-          <View style={[styles.badge, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
-            <Text style={[styles.badgeText, { color: badgeStyle.text }]}>{badgeStyle.label}</Text>
+          <View style={styles.cardMainInfo}>
+            <View style={[styles.roleIconBg, { backgroundColor: `${accentColor}10` }]}>
+              <Ionicons name={iconName as any} size={20} color={accentColor} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.roleNameRow}>
+                <Text style={styles.roleName}>{item.name}</Text>
+                {userCount > 0 && (
+                  <View style={styles.userCountBadge}>
+                    <Ionicons name="people" size={12} color={theme.textSecondary} />
+                    <Text style={styles.userCountText}>{userCount} Users</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.permissionCount}>
+                {item.isSuperAdmin ? 'Full unrestricted database access' : `${item.permissions?.length || 0} permissions configured`}
+              </Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={[styles.actionBtn, isRestricted && styles.actionBtnDisabled]}
-            onPress={() => openEditRoleModal(item)}
-            disabled={isRestricted}
-          >
-            <Ionicons name="pencil" size={16} color={isRestricted ? theme.textTertiary : DARK_BLUE_ACCENT} />
-            <Text style={[styles.actionBtnText, { color: isRestricted ? theme.textTertiary : DARK_BLUE_ACCENT }]}>Edit</Text>
-          </TouchableOpacity>
-          <View style={styles.actionDivider} />
-          <TouchableOpacity
-            style={[styles.actionBtn, (isRestricted || item.isDefault) && styles.actionBtnDisabled]}
-            onPress={() => handleDeleteRole(item)}
-            disabled={isRestricted || item.isDefault}
-          >
-            <Ionicons name="trash" size={16} color={(isRestricted || item.isDefault) ? theme.textTertiary : theme.error} />
-            <Text style={[styles.actionBtnText, { color: (isRestricted || item.isDefault) ? theme.textTertiary : theme.error }]}>Delete</Text>
-          </TouchableOpacity>
+        {!item.isSuperAdmin && item.permissions?.length > 0 && (
+          <View style={styles.previewContainer}>
+            {previewPermissions.map((perm) => (
+              <View key={perm} style={styles.previewTag}>
+                <Text style={styles.previewTagText}>{perm.replace(':', ' ➔ ')}</Text>
+              </View>
+            ))}
+            {remainingCount > 0 && (
+              <View style={[styles.previewTag, styles.remainingTag]}>
+                <Text style={styles.remainingTagText}>+{remainingCount} more</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        <View style={styles.cardFooter}>
+          <View style={styles.roleTypeBadge}>
+            <View style={[styles.dot, { backgroundColor: accentColor }]} />
+            <Text style={[styles.roleTypeText, { color: theme.textSecondary }]}>{label}</Text>
+          </View>
+          
+          <View style={styles.actionButtonGroup}>
+            <TouchableOpacity
+              style={[styles.miniActionBtn, isRestricted && styles.miniActionBtnDisabled]}
+              onPress={() => openEditRoleModal(item)}
+              disabled={isRestricted}
+            >
+              <Ionicons name="pencil" size={14} color={isRestricted ? theme.textTertiary : DARK_BLUE_ACCENT} />
+              <Text style={[styles.miniActionBtnText, { color: isRestricted ? theme.textTertiary : DARK_BLUE_ACCENT }]}>Edit</Text>
+            </TouchableOpacity>
+
+            {!item.isSuperAdmin && !item.isDefault && (
+              <TouchableOpacity
+                style={styles.miniActionBtn}
+                onPress={() => handleDeleteRole(item)}
+              >
+                <Ionicons name="trash-outline" size={14} color={theme.error} />
+                <Text style={[styles.miniActionBtnText, { color: theme.error }]}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -243,7 +282,6 @@ export default function RoleManagementScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-
       {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
@@ -293,17 +331,15 @@ export default function RoleManagementScreen() {
       <Modal visible={isModalVisible} transparent={false} animationType="slide" onRequestClose={() => setIsModalVisible(false)}>
         <SafeAreaView style={styles.modalSafeArea}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.closeBtn}>
                 <Ionicons name="close" size={24} color={theme.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>{isEditMode ? 'Edit Role' : 'Create New Role'}</Text>
-              <View style={{ width: 32 }} /> {/* Spacer to center title */}
+              <View style={{ width: 32 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Role Name <Text style={{ color: theme.error }}>*</Text></Text>
                 <TextInput
@@ -372,16 +408,13 @@ export default function RoleManagementScreen() {
                 {isSaving ? <ActivityIndicator color={theme.bgPrimary} /> : <Text style={styles.modalApplyBtnText}>Save Role</Text>}
               </TouchableOpacity>
             </View>
-
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
-
     </SafeAreaView>
   );
 }
 
-// --- STYLES ---
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.bgSecondary },
   modalSafeArea: { flex: 1, backgroundColor: theme.bgSecondary },
@@ -403,17 +436,129 @@ const styles = StyleSheet.create({
 
   // Card
   card: { backgroundColor: theme.bgPrimary, borderRadius: UI.borderRadius.lg, marginBottom: Spacing.lg, borderWidth: BORDER_WIDTH, borderColor: BORDER_COLOR, ...getElevation(1, theme), overflow: 'hidden' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: Spacing.lg },
-  roleName: { fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: theme.textPrimary, fontFamily: theme.fonts.heading },
-  permissionCount: { fontSize: Typography.size.xs, color: theme.textSecondary, marginTop: 4 },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: UI.borderRadius.pill, borderWidth: 1, marginLeft: Spacing.md },
-  badgeText: { fontSize: 10, fontWeight: Typography.weight.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  cardHeader: { 
+    padding: Spacing.lg,
+    paddingBottom: Spacing.sm,
+  },
+  cardMainInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  roleIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roleNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  roleName: { fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: theme.textPrimary, fontFamily: theme.fonts.heading },
+  userCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${theme.bgSecondary}`,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: UI.borderRadius.pill,
+    borderWidth: 1,
+    borderColor: theme.borderSecondary,
+    gap: 4,
+  },
+  userCountText: {
+    fontSize: 10,
+    fontWeight: Typography.weight.semibold,
+    color: theme.textSecondary,
+  },
+  permissionCount: { fontSize: 11, color: theme.textSecondary, marginTop: 2 },
+  
+  // Preview Tags
+  previewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  previewTag: {
+    backgroundColor: theme.bgSecondary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: theme.borderSecondary,
+  },
+  previewTagText: {
+    fontSize: 9,
+    fontFamily: theme.fonts.mono,
+    color: theme.textTertiary,
+  },
+  remainingTag: {
+    backgroundColor: `${DARK_BLUE_ACCENT}08`,
+    borderColor: `${DARK_BLUE_ACCENT}15`,
+  },
+  remainingTagText: {
+    fontSize: 9,
+    fontWeight: Typography.weight.bold,
+    color: DARK_BLUE_ACCENT,
+  },
 
-  cardActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: theme.bgSecondary, backgroundColor: theme.bgPrimary },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.md, gap: 6 },
-  actionBtnDisabled: { opacity: 0.4 },
-  actionBtnText: { fontSize: Typography.size.sm, fontWeight: Typography.weight.bold },
-  actionDivider: { width: 1, backgroundColor: theme.bgSecondary },
+  // Footer & Actions
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: theme.bgSecondary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: `${theme.bgSecondary}40`,
+  },
+  roleTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  roleTypeText: {
+    fontSize: 9,
+    fontWeight: Typography.weight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  actionButtonGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  miniActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: theme.bgPrimary,
+    borderWidth: 1,
+    borderColor: theme.borderSecondary,
+    borderRadius: UI.borderRadius.sm,
+  },
+  miniActionBtnDisabled: {
+    opacity: 0.5,
+  },
+  miniActionBtnText: {
+    fontSize: 11,
+    fontWeight: Typography.weight.bold,
+  },
 
   // Empty State
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: Spacing['4xl'], marginTop: Spacing['2xl'] },
