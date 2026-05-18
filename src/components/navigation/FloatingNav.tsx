@@ -26,44 +26,38 @@ export function FloatingNav({ onOpenDrawer, isDrawerOpen }: { onOpenDrawer: () =
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { isNavVisible, setNavVisible } = useUIStore();
-  
-  const [isIdle, setIsIdle] = React.useState(false);
-  const idleTimer = React.useRef<any>(null);
 
-  // Auto-hide after 4 seconds of idle time
-  const resetIdleTimer = React.useCallback(() => {
-    setIsIdle(false);
-    if (idleTimer.current) clearTimeout(idleTimer.current);
-    
-    // Only start idle timer if nav is visible and drawer is closed
-    if (isNavVisible && !isDrawerOpen) {
-      idleTimer.current = setTimeout(() => {
-        setIsIdle(true);
-      }, 4000); 
-    }
-  }, [isNavVisible, isDrawerOpen]);
+  const [isManualCollapsed, setIsManualCollapsed] = React.useState(false);
 
-  // Reset visibility and timer on any navigation or state change
+  // Reset manual collapse when navigation changes
   React.useEffect(() => {
-    // If we navigate to a new screen, always show the nav initially
     setNavVisible(true);
-    resetIdleTimer();
-    
-    return () => {
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-    };
-  }, [pathname, isDrawerOpen, resetIdleTimer, setNavVisible]);
+    setIsManualCollapsed(false);
+  }, [pathname, isDrawerOpen, setNavVisible]);
 
   // Combined visibility state
-  const shouldHide = !isNavVisible || isDrawerOpen || isIdle;
+  const shouldHide = !isNavVisible || isDrawerOpen || isManualCollapsed;
 
-  // Animation for sliding down
+  // Animation for sliding down the main nav
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
         { translateY: withSpring(shouldHide ? 150 : 0, { damping: 15, stiffness: 100 }) }
       ],
-      opacity: withSpring(shouldHide ? 0 : 1),
+      opacity: withSpring(shouldHide ? 0 : 1, { damping: 20 }),
+      pointerEvents: shouldHide ? 'none' : 'auto',
+    };
+  });
+
+  // Animation for the small toggle button
+  const toggleBtnStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateY: withSpring(shouldHide ? 0 : 150, { damping: 15, stiffness: 100 }) },
+        { scale: withSpring(shouldHide ? 1 : 0.5) }
+      ],
+      opacity: withSpring(shouldHide ? 1 : 0, { damping: 20 }),
+      pointerEvents: shouldHide ? 'auto' : 'none',
     };
   });
 
@@ -81,54 +75,75 @@ export function FloatingNav({ onOpenDrawer, isDrawerOpen }: { onOpenDrawer: () =
   };
 
   const navigation = useNavigation();
-  
+
   const handleOpenDrawer = () => {
     onOpenDrawer();
   };
 
   return (
-    <Animated.View style={[styles.container, { bottom: Math.max(insets.bottom, 20) + 10 }, animatedStyle]}>
-      <BlurView intensity={Platform.OS === 'ios' ? 80 : 100} tint={theme.name.toLowerCase().includes('dark') ? 'dark' : 'light'} style={styles.island}>
-        <View style={[styles.inner, { backgroundColor: `${theme.bgSecondary}90` }]}>
-          {navItems.map((item) => {
-            const active = isActive(item.path);
-            return (
-              <TouchableOpacity
-                key={item.name}
-                style={styles.navBtn}
-                onPress={() => {
-                  resetIdleTimer();
-                  router.push(item.path as any);
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name={active ? (item.icon as any) : (`${item.icon}-outline` as any)} 
-                  size={24} 
-                  color={active ? theme.accentPrimary : theme.textTertiary} 
-                />
-                {active && <View style={[styles.activeDot, { backgroundColor: theme.accentPrimary }]} />}
-              </TouchableOpacity>
-            );
-          })}
-          
-          <View style={styles.divider} />
-          
-          <TouchableOpacity
-            style={styles.menuBtn}
-            onPress={() => {
-              resetIdleTimer();
-              handleOpenDrawer();
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.menuIconBox, { backgroundColor: theme.textPrimary }]}>
-              <Ionicons name="menu" size={20} color={theme.bgPrimary} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </BlurView>
-    </Animated.View>
+    <>
+      <Animated.View style={[styles.container, { bottom: Math.max(insets.bottom, 20) + 10 }, animatedStyle]}>
+        <BlurView intensity={Platform.OS === 'ios' ? 80 : 100} tint={theme.name.toLowerCase().includes('dark') ? 'dark' : 'light'} style={styles.island}>
+          <View style={[styles.inner, { backgroundColor: `${theme.bgSecondary}90` }]}>
+            {navItems.map((item) => {
+              const active = isActive(item.path);
+              return (
+                <TouchableOpacity
+                  key={item.name}
+                  style={styles.navBtn}
+                  onPress={() => {
+                    router.push(item.path as any);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={active ? (item.icon as any) : (`${item.icon}-outline` as any)}
+                    size={24}
+                    color={active ? theme.accentPrimary : theme.textTertiary}
+                  />
+                  {active && <View style={[styles.activeDot, { backgroundColor: theme.accentPrimary }]} />}
+                </TouchableOpacity>
+              );
+            })}
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity
+              style={styles.menuBtn}
+              onPress={() => {
+                handleOpenDrawer();
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIconBox, { backgroundColor: theme.textPrimary }]}>
+                <Ionicons name="menu" size={20} color={theme.bgPrimary} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.collapseBtn}
+              onPress={() => setIsManualCollapsed(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-down" size={20} color={theme.textTertiary} />
+            </TouchableOpacity>
+          </View>
+        </BlurView>
+      </Animated.View>
+
+      <Animated.View style={[styles.toggleContainer, { bottom: Math.max(insets.bottom, 20) + 10 }, toggleBtnStyle]}>
+        <TouchableOpacity
+          style={[styles.toggleButton, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}
+          onPress={() => {
+            setIsManualCollapsed(false);
+            setNavVisible(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="chevron-up" size={24} color={theme.textPrimary} />
+        </TouchableOpacity>
+      </Animated.View>
+    </>
   );
 }
 
@@ -187,5 +202,25 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  collapseBtn: {
+    width: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
+  },
+  toggleContainer: {
+    position: 'absolute',
+    alignSelf: 'center',
+    zIndex: 1001,
+  },
+  toggleButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    ...getElevation(3, { name: 'light' } as any),
   }
 });
