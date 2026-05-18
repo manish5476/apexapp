@@ -206,6 +206,7 @@ export default function TransactionsScreen() {
 
     try {
       const params = {
+        scope: 'all',
         page: targetPage,
         limit: pageSize,
         search: search || undefined,

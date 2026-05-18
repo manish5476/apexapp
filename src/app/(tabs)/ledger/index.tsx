@@ -214,6 +214,7 @@ export default function LedgerScreen() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [showTxnTypeModal, setShowTxnTypeModal] = useState(false);
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
 
   const branchDropdown = useMasterDropdown({ endpoint: 'branches' });
   const accountDropdown = useMasterDropdown({ endpoint: 'accounts' });
@@ -222,6 +223,20 @@ export default function LedgerScreen() {
 
   const isReportView = useMemo(() => ['summary', 'pl', 'bs'].includes(activeTab), [activeTab]);
   const selectedParty = activeTab === 'customer' ? filters.customer : filters.supplier;
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.branch) count++;
+    if (filters.search) count++;
+    if (filters.account) count++;
+    if (filters.txnType) count++;
+    if (filters.minAmount) count++;
+    if (filters.maxAmount) count++;
+    if (filters.reference) count++;
+    if (activeTab === 'customer' && filters.customer) count++;
+    if (activeTab === 'supplier' && filters.supplier) count++;
+    return count;
+  }, [filters, activeTab]);
 
   const resetDataState = useCallback(() => {
     setRows([]);
@@ -563,76 +578,93 @@ export default function LedgerScreen() {
   );
 
   const renderFilters = () => (
-    <View style={[styles.filterPanel, { backgroundColor: theme.bgSecondary, borderBottomColor: theme.borderPrimary }]}>
-      <View style={styles.filterBlock}>
-        <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Branch</Text>
-        {renderPickerButton('All Branches', filters.branch?.label ?? '', () => setShowBranchModal(true))}
-      </View>
+    <Modal visible={showFiltersModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowFiltersModal(false)}>
+      <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.bgSecondary }]}>
+        <View style={[styles.modalHeader, { borderBottomColor: theme.borderPrimary }]}>
+          <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Filter Ledger</Text>
+          <TouchableOpacity onPress={() => setShowFiltersModal(false)}>
+            <Ionicons name="close" size={24} color={theme.textPrimary} />
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.filterRow}>
-        {renderInput('Start Date', filters.startDate, (value) => setFilter('startDate', value), 'YYYY-MM-DD')}
-        {renderInput('End Date', filters.endDate, (value) => setFilter('endDate', value), 'YYYY-MM-DD')}
-      </View>
-
-      {!isReportView && activeTab === 'all' && (
-        <>
-          {renderInput('Search', filters.search, (value) => setFilter('search', value), 'Ref #, Detail...')}
-
+        <ScrollView contentContainerStyle={styles.filterModalScroll} showsVerticalScrollIndicator={false}>
           <View style={styles.filterBlock}>
-            <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Account</Text>
-            {renderPickerButton('Select Account', filters.account?.label ?? '', () => setShowAccountModal(true))}
-          </View>
-
-          <View style={styles.filterBlock}>
-            <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Type</Text>
-            {renderPickerButton(
-              'All Types',
-              filters.txnType ? filters.txnType[0].toUpperCase() + filters.txnType.slice(1) : '',
-              () => setShowTxnTypeModal(true)
-            )}
+            <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Branch</Text>
+            {renderPickerButton('All Branches', filters.branch?.label ?? '', () => setShowBranchModal(true))}
           </View>
 
           <View style={styles.filterRow}>
-            {renderInput('Min Amount', filters.minAmount, (value) => setFilter('minAmount', value), '0', 'numeric')}
-            {renderInput('Max Amount', filters.maxAmount, (value) => setFilter('maxAmount', value), '0', 'numeric')}
+            {renderInput('Start Date', filters.startDate, (value) => setFilter('startDate', value), 'YYYY-MM-DD')}
+            {renderInput('End Date', filters.endDate, (value) => setFilter('endDate', value), 'YYYY-MM-DD')}
           </View>
 
-          {renderInput('Reference', filters.reference, (value) => setFilter('reference', value), 'Reference #')}
-        </>
-      )}
+          {!isReportView && activeTab === 'all' && (
+            <>
+              {renderInput('Search', filters.search, (value) => setFilter('search', value), 'Ref #, Detail...')}
 
-      {activeTab === 'customer' && (
-        <View style={styles.filterBlock}>
-          <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Customer</Text>
-          {renderPickerButton('Select Customer', filters.customer?.label ?? '', () => setShowPartyModal(true))}
+              <View style={styles.filterBlock}>
+                <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Account</Text>
+                {renderPickerButton('Select Account', filters.account?.label ?? '', () => setShowAccountModal(true))}
+              </View>
+
+              <View style={styles.filterBlock}>
+                <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Type</Text>
+                {renderPickerButton(
+                  'All Types',
+                  filters.txnType ? filters.txnType[0].toUpperCase() + filters.txnType.slice(1) : '',
+                  () => setShowTxnTypeModal(true)
+                )}
+              </View>
+
+              <View style={styles.filterRow}>
+                {renderInput('Min Amount', filters.minAmount, (value) => setFilter('minAmount', value), '0', 'numeric')}
+                {renderInput('Max Amount', filters.maxAmount, (value) => setFilter('maxAmount', value), '0', 'numeric')}
+              </View>
+
+              {renderInput('Reference', filters.reference, (value) => setFilter('reference', value), 'Reference #')}
+            </>
+          )}
+
+          {activeTab === 'customer' && (
+            <View style={styles.filterBlock}>
+              <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Customer</Text>
+              {renderPickerButton('Select Customer', filters.customer?.label ?? '', () => setShowPartyModal(true))}
+            </View>
+          )}
+
+          {activeTab === 'supplier' && (
+            <View style={styles.filterBlock}>
+              <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Supplier</Text>
+              {renderPickerButton('Select Supplier', filters.supplier?.label ?? '', () => setShowPartyModal(true))}
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={[styles.filterModalFooter, { borderTopColor: theme.borderPrimary }]}>
+          <TouchableOpacity
+            style={[styles.secondaryAction, { borderColor: theme.borderPrimary, backgroundColor: theme.bgPrimary }]}
+            onPress={() => {
+              resetFilters();
+              setShowFiltersModal(false);
+            }}
+          >
+            <Ionicons name="refresh" size={16} color={theme.textSecondary} />
+            <Text style={[styles.secondaryActionText, { color: theme.textSecondary }]}>Reset</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.primaryAction, { backgroundColor: theme.accentPrimary }]}
+            onPress={() => {
+              applyFilters();
+              setShowFiltersModal(false);
+            }}
+          >
+            <Ionicons name="funnel" size={16} color="#fff" />
+            <Text style={styles.primaryActionText}>Apply Filters</Text>
+          </TouchableOpacity>
         </View>
-      )}
-
-      {activeTab === 'supplier' && (
-        <View style={styles.filterBlock}>
-          <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>Supplier</Text>
-          {renderPickerButton('Select Supplier', filters.supplier?.label ?? '', () => setShowPartyModal(true))}
-        </View>
-      )}
-
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={[styles.secondaryAction, { borderColor: theme.borderPrimary, backgroundColor: theme.bgPrimary }]}
-          onPress={resetFilters}
-        >
-          <Ionicons name="refresh" size={16} color={theme.textSecondary} />
-          <Text style={[styles.secondaryActionText, { color: theme.textSecondary }]}>Reset</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.primaryAction, { backgroundColor: theme.accentPrimary }]}
-          onPress={applyFilters}
-        >
-          <Ionicons name="funnel" size={16} color="#fff" />
-          <Text style={styles.primaryActionText}>Apply Filters</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      </SafeAreaView>
+    </Modal>
   );
 
   const renderReportContent = () => {
@@ -860,15 +892,25 @@ export default function LedgerScreen() {
           </View>
           <View style={styles.flex1}>
             <Text style={[styles.title, { color: theme.textPrimary }]}>Financial Ledger</Text>
-            <Text style={[styles.subtitle, { color: theme.textTertiary }]}>
-              Track transactions, reports, and balances across the organization.
+            <Text style={[styles.subtitle, { color: theme.textTertiary }]} numberOfLines={1}>
+              Track transactions, reports, and balances.
             </Text>
           </View>
+          <TouchableOpacity 
+            style={[styles.filterToggleBtn, { borderColor: theme.borderPrimary, backgroundColor: theme.bgSecondary }]}
+            onPress={() => setShowFiltersModal(true)}
+          >
+            <Ionicons name="funnel-outline" size={15} color={theme.accentPrimary} />
+            <Text style={[styles.filterToggleText, { color: theme.accentPrimary }]}>
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
+      {renderFilters()}
+
       <ScrollView style={styles.flex1} keyboardShouldPersistTaps="handled">
-        {renderFilters()}
 
         <View style={[styles.tabsWrap, { borderBottomColor: theme.borderPrimary }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContainer}>
@@ -969,6 +1011,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
+  filterToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  filterToggleText: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  filterModalScroll: {
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  filterModalFooter: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    padding: Spacing.xl,
+    borderTopWidth: 1,
+  },
   headerIconBox: {
     width: 42,
     height: 42,
@@ -984,11 +1050,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: 'Inter',
     fontSize: Typography.size.sm,
-  },
-  filterPanel: {
-    padding: Spacing.xl,
-    gap: Spacing.md,
-    borderBottomWidth: 1,
   },
   filterRow: {
     flexDirection: 'row',
