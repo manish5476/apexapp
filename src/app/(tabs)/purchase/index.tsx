@@ -1,6 +1,6 @@
+import { FilterBottomSheet, FilterFormRenderer, HeaderSearchAction } from '@/src/components/filters';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { FilterBottomSheet, FilterFormRenderer, HeaderSearchAction } from '@/src/components/filters';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,162 +15,198 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Adjust these imports to your actual paths
-import { purchaseService } from '@/src/features/purchase/services/purchase.service';
 import { extractPurchaseList, extractPurchasePagination } from '@/src/api/PurchaseService';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { getElevation, Spacing, Typography, UI } from '@/src/constants/theme';
+import { purchaseService } from '@/src/features/purchase/services/purchase.service';
 import { useAppTheme } from '@/src/hooks/use-app-theme';
 
 const DARK_BLUE_ACCENT = '#1d4ed8';
 
-// --- TYPES ---
-interface PurchaseOrder {
-  _id: string;
-  invoiceNumber: string;
-  purchaseDate: string;
-  supplierId?: { companyName: string; contactPerson?: string };
-  branchId?: { name: string };
-  items: any[];
-  grandTotal: number;
-  paidAmount: number;
-  balanceAmount: number;
-  status: 'draft' | 'received' | 'cancelled';
-  paymentStatus: 'paid' | 'partial' | 'unpaid';
-}
-
 // --- UTILS ---
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 2
-  }).format(amount || 0);
+const fmt = (n: number) => {
+  if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`;
+  if (n >= 100000) return `₹${(n / 100000).toFixed(2)}L`;
+  if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n || 0);
 };
+const fmtFull = (n: number) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n || 0);
+const fmtDate = (s: string) => s ? new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : 'N/A';
 
-const getOrderStatusTheme = (status: string) => {
+const orderStatus = (status: string) => {
   const s = status?.toLowerCase() || 'draft';
-  if (s === 'received') return { bg: '#ecfdf5', text: '#059669', border: '#34d399' };
-  if (s === 'cancelled') return { bg: '#fef2f2', text: '#dc2626', border: '#f87171' };
-  return { bg: '#f3f4f6', text: '#4b5563', border: '#9ca3af' }; // Draft
+  if (s === 'received') return { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7', icon: 'checkmark-circle' as const, stripe: '#10B981' };
+  if (s === 'cancelled') return { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5', icon: 'close-circle' as const, stripe: '#EF4444' };
+  return { bg: '#EFF6FF', text: '#1E40AF', border: '#BFDBFE', icon: 'time-outline' as const, stripe: '#3B82F6' };
 };
-
-const getPaymentStatusTheme = (status: string) => {
+const payStatus = (status: string) => {
   const s = status?.toLowerCase() || 'unpaid';
-  if (s === 'paid') return { color: '#10b981', icon: 'checkmark-circle' as const };
-  if (s === 'partial') return { color: '#f59e0b', icon: 'alert-circle' as const };
-  return { color: '#ef4444', icon: 'close-circle' as const }; // Unpaid
+  if (s === 'paid') return { color: '#059669', bg: '#D1FAE5', label: 'PAID', icon: 'shield-checkmark' as const };
+  if (s === 'partial') return { color: '#D97706', bg: '#FEF3C7', label: 'PARTIAL', icon: 'alert' as const };
+  return { color: '#DC2626', bg: '#FEE2E2', label: 'UNPAID', icon: 'warning' as const };
+};
+const AVATARS = [
+  { bg: '#EDE9FE', text: '#5B21B6' }, { bg: '#DBEAFE', text: '#1E40AF' },
+  { bg: '#D1FAE5', text: '#065F46' }, { bg: '#FEE2E2', text: '#991B1B' },
+  { bg: '#FEF3C7', text: '#92400E' }, { bg: '#FCE7F3', text: '#9D174D' },
+];
+const avatarColor = (name: string) => AVATARS[(name?.charCodeAt(0) || 0) % AVATARS.length];
+const initials = (name: string) => {
+  if (!name) return 'S';
+  const p = name.trim().split(' ');
+  return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
+};
+const METHOD_ICON: Record<string, any> = {
+  cash: 'cash-outline', bank: 'business-outline',
+  cheque: 'document-text-outline', upi: 'phone-portrait-outline', credit: 'card-outline',
 };
 
 // ==========================================
-// MEMOIZED PURCHASE CARD
+// PREMIUM PURCHASE CARD
 // ==========================================
 const PurchaseCard = React.memo(({ item, theme, styles }: { item: any, theme: any, styles: any }) => {
-  const orderTheme = getOrderStatusTheme(item.status);
-  const paymentTheme = getPaymentStatusTheme(item.paymentStatus);
-  const itemCount = item.items?.length || 0;
+  const os = orderStatus(item.status);
+  const ps = payStatus(item.paymentStatus);
+  const av = avatarColor(item.supplierId?.companyName || '');
+  const ini = initials(item.supplierId?.companyName || '');
+  const cnt = item.items?.length || 0;
+  const pct = item.grandTotal > 0 ? Math.min(100, Math.round((item.paidAmount / item.grandTotal) * 100)) : 0;
+  const names = (item.items || []).slice(0, 2).map((i: any) => i.name || i.productId?.name || 'Item');
+  const mIcon = METHOD_ICON[item.paymentMethod?.toLowerCase()] || 'card-outline';
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.6}
-      onPress={() => router.push(`/(tabs)/purchase/${item._id}` as any)}
-    >
-      {/* Header */}
-      <View style={styles.cardHeader}>
-        <View style={styles.identityGroup}>
-          <View style={styles.iconBox}>
-            <Ionicons name="cart-outline" size={20} color={DARK_BLUE_ACCENT} />
+    <TouchableOpacity style={styles.card} activeOpacity={0.75}
+      onPress={() => router.push(`/(tabs)/purchase/${item._id}` as any)}>
+      <View style={[styles.stripe, { backgroundColor: os.stripe }]} />
+      <View style={styles.cardInner}>
+        {/* Row 1 – Header */}
+        <View style={styles.hRow}>
+          <View style={[styles.supAvatar, { backgroundColor: av.bg }]}>
+            <ThemedText style={[styles.supInitials, { color: av.text }]}>{ini}</ThemedText>
           </View>
-          <View>
-            <ThemedText style={styles.invoiceNumber}>{item.invoiceNumber || 'Draft PO'}</ThemedText>
-            <ThemedText style={styles.branchName}>{item.branchId?.name || 'Main Branch'}</ThemedText>
-          </View>
-        </View>
-        <View style={[styles.badge, { backgroundColor: orderTheme.bg, borderColor: orderTheme.border }]}>
-          <ThemedText style={[styles.badgeText, { color: orderTheme.text }]}>{item.status}</ThemedText>
-        </View>
-      </View>
-
-      {/* Body */}
-      <View style={styles.cardBody}>
-        <View style={styles.supplierRow}>
-          <View style={styles.avatar}>
-            <ThemedText style={styles.avatarText}>
-              {item.supplierId?.companyName?.charAt(0)?.toUpperCase() || 'S'}
-            </ThemedText>
-          </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText style={styles.supplierName} numberOfLines={1}>
+          <View style={styles.hMid}>
+            <ThemedText style={styles.supName} numberOfLines={1}>
               {item.supplierId?.companyName || 'Unknown Supplier'}
             </ThemedText>
-            {item.supplierId?.contactPerson && (
-              <ThemedText style={styles.contactPerson} numberOfLines={1}>
-                <Ionicons name="person-outline" size={10} color={theme.textTertiary} /> {item.supplierId.contactPerson}
-              </ThemedText>
-            )}
-            <View style={styles.metaInfoRow}>
-              <Ionicons name="cube-outline" size={12} color={theme.textTertiary} />
-              <ThemedText style={styles.metaInfoText}>{itemCount} Items</ThemedText>
-              <ThemedText style={styles.metaInfoDot}>•</ThemedText>
-              <Ionicons name="calendar-outline" size={12} color={theme.textTertiary} />
-              <ThemedText style={styles.metaInfoText}>
-                {item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString('en-IN') : 'N/A'}
-              </ThemedText>
-              {item.paymentMethod && (
-                <>
-                  <ThemedText style={styles.metaInfoDot}>•</ThemedText>
-                  <ThemedText style={[styles.metaInfoText, { textTransform: 'uppercase', fontSize: 10 }]}>
-                    {item.paymentMethod}
-                  </ThemedText>
-                </>
-              )}
+            <View style={styles.invoiceRow}>
+              <Ionicons name="receipt-outline" size={11} color={theme.textTertiary} />
+              <ThemedText style={styles.invNo}>#{item.invoiceNumber || '—'}</ThemedText>
+              <View style={styles.dot} />
+              <Ionicons name="calendar-outline" size={11} color={theme.textTertiary} />
+              <ThemedText style={styles.invDate}>{fmtDate(item.purchaseDate)}</ThemedText>
             </View>
           </View>
-        </View>
-        
-        {/* Financial Breakdown (Mini) */}
-        <View style={styles.financialMiniRow}>
-           <View style={styles.miniCol}>
-             <ThemedText style={styles.miniLabel}>Sub Total</ThemedText>
-             <ThemedText style={styles.miniValue}>{formatCurrency(item.subTotal || 0)}</ThemedText>
-           </View>
-           <View style={styles.miniCol}>
-             <ThemedText style={styles.miniLabel}>Tax</ThemedText>
-             <ThemedText style={styles.miniValue}>{formatCurrency(item.totalTax || 0)}</ThemedText>
-           </View>
-           <View style={styles.miniColRight}>
-             <ThemedText style={styles.miniLabel}>Paid</ThemedText>
-             <ThemedText style={[styles.miniValue, { color: '#10b981' }]}>{formatCurrency(item.paidAmount || 0)}</ThemedText>
-           </View>
-        </View>
-      </View>
-
-      {/* Footer */}
-      <View style={styles.cardFooter}>
-        <View>
-          <ThemedText style={styles.financialLabel}>Grand Total</ThemedText>
-          <ThemedText style={styles.grandTotal}>{formatCurrency(item.grandTotal)}</ThemedText>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <ThemedText style={styles.financialLabel}>Balance Due</ThemedText>
-          <View style={styles.balanceGroup}>
-            <ThemedText style={[styles.balanceTotal, item.balanceAmount > 0 && { color: theme.error }]}>
-              {formatCurrency(item.balanceAmount)}
+          <View style={[styles.statusBadge, { backgroundColor: os.bg, borderColor: os.border }]}>
+            <Ionicons name={os.icon} size={10} color={os.text} />
+            <ThemedText style={[styles.statusText, { color: os.text }]}>
+              {(item.status || 'draft').toUpperCase()}
             </ThemedText>
-            <View style={[styles.paymentStatusBadge, { borderColor: paymentTheme.color }]}>
-              <Ionicons name={paymentTheme.icon} size={12} color={paymentTheme.color} />
-              <ThemedText style={[styles.paymentStatusText, { color: paymentTheme.color }]}>
-                {item.paymentStatus}
+          </View>
+        </View>
+
+        {/* Row 2 – Item chips */}
+        <View style={styles.chipRow}>
+          {names.map((n: string, i: number) => (
+            <View key={i} style={[styles.itemChip, { backgroundColor: theme.bgSecondary }]}>
+              <Ionicons name="cube-outline" size={10} color={theme.textTertiary} />
+              <ThemedText style={styles.chipTxt} numberOfLines={1}>{n}</ThemedText>
+            </View>
+          ))}
+          {cnt > 2 && (
+            <View style={[styles.itemChip, { backgroundColor: `${DARK_BLUE_ACCENT}12` }]}>
+              <ThemedText style={[styles.chipTxt, { color: DARK_BLUE_ACCENT, fontWeight: '700' }]}>+{cnt - 2} more</ThemedText>
+            </View>
+          )}
+        </View>
+
+        {/* Row 3 – Financials */}
+        <View style={[styles.finGrid, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
+          <View style={styles.finCell}>
+            <ThemedText style={styles.finLbl}>SUBTOTAL</ThemedText>
+            <ThemedText style={styles.finVal}>{fmt(item.subTotal || 0)}</ThemedText>
+          </View>
+          <View style={styles.finDiv} />
+          <View style={styles.finCell}>
+            <ThemedText style={styles.finLbl}>TAX</ThemedText>
+            <ThemedText style={[styles.finVal, { color: '#D97706' }]}>+{fmt(item.totalTax || 0)}</ThemedText>
+          </View>
+          <View style={styles.finDiv} />
+          <View style={styles.finCell}>
+            <ThemedText style={styles.finLbl}>SKUs</ThemedText>
+            <ThemedText style={styles.finVal}>{cnt}</ThemedText>
+          </View>
+          <View style={styles.finDiv} />
+          <View style={[styles.finCell, { alignItems: 'flex-end' }]}>
+            <ThemedText style={styles.finLbl}>TOTAL</ThemedText>
+            <ThemedText style={[styles.finValBig, { color: DARK_BLUE_ACCENT }]}>{fmt(item.grandTotal || 0)}</ThemedText>
+          </View>
+        </View>
+
+        {/* Row 4 – Payment progress */}
+        <View style={styles.paySection}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: ps.color }]} />
+          </View>
+          <View style={styles.payMeta}>
+            <View style={styles.payLeft}>
+              <View style={[styles.payPill, { backgroundColor: ps.bg }]}>
+                <Ionicons name={ps.icon} size={10} color={ps.color} />
+                <ThemedText style={[styles.payPillTxt, { color: ps.color }]}>{ps.label}</ThemedText>
+              </View>
+              <View style={styles.methodPill}>
+                <Ionicons name={mIcon} size={10} color={theme.textTertiary} />
+                <ThemedText style={styles.methodTxt}>{(item.paymentMethod || 'cash').toUpperCase()}</ThemedText>
+              </View>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <ThemedText style={styles.balLbl}>{item.balanceAmount > 0 ? 'DUE' : 'CLEARED'}</ThemedText>
+              <ThemedText style={[styles.balVal, { color: item.balanceAmount > 0 ? '#DC2626' : '#059669' }]}>
+                {item.balanceAmount > 0 ? fmtFull(item.balanceAmount) : fmtFull(item.paidAmount)}
               </ThemedText>
             </View>
           </View>
+        </View>
+
+        {/* Row 5 – Footer */}
+        <View style={[styles.ftrRow, { borderTopColor: theme.borderPrimary }]}>
+          <View style={styles.ftrItem}>
+            <Ionicons name="location-outline" size={11} color={theme.textTertiary} />
+            <ThemedText style={styles.ftrTxt}>{item.branchId?.name || 'Main Branch'}</ThemedText>
+          </View>
+          <View style={styles.ftrItem}>
+            <Ionicons name="person-outline" size={11} color={theme.textTertiary} />
+            <ThemedText style={styles.ftrTxt}>{item.createdBy?.name || 'System'}</ThemedText>
+          </View>
+          <Ionicons name="chevron-forward" size={14} color={theme.textTertiary} />
         </View>
       </View>
     </TouchableOpacity>
   );
 });
 PurchaseCard.displayName = 'PurchaseCard';
+
+
+// --- TYPES ---
+interface PurchaseOrder {
+  _id: string;
+  invoiceNumber: string;
+  purchaseDate: string;
+  supplierId?: { companyName: string; contactPerson?: string; phone?: string };
+  branchId?: { name: string };
+  items: any[];
+  subTotal: number;
+  totalTax: number;
+  totalDiscount: number;
+  grandTotal: number;
+  paidAmount: number;
+  balanceAmount: number;
+  status: 'draft' | 'received' | 'cancelled';
+  paymentStatus: 'paid' | 'partial' | 'unpaid';
+  paymentMethod: string;
+  createdBy?: { name: string };
+}
 
 // ==========================================
 // MAIN SCREEN
@@ -244,7 +280,7 @@ export default function PurchaseListScreen() {
       console.error('Fetch purchases error:', err);
       // Stop the infinite loop!
       setHasNextPage(false);
-      
+
       // Only alert on manual refresh or initial load to prevent spam
       if (pageNum === 1 || isRefresh) {
         Alert.alert('Error', err?.response?.data?.message || 'Failed to load purchase orders.');
@@ -315,15 +351,15 @@ export default function PurchaseListScreen() {
               <ThemedText style={styles.primaryBtnText}>New</ThemedText>
             </TouchableOpacity>
             <HeaderSearchAction
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmit={handleSearchSubmit}
-                onOpenFilters={() => setShowFilters(true)}
-                filterActive={activeFilterCount > 0}
-                filterCount={activeFilterCount}
-                placeholder="Invoice no"
-                theme={theme}
-              />
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmit={handleSearchSubmit}
+              onOpenFilters={() => setShowFilters(true)}
+              filterActive={activeFilterCount > 0}
+              filterCount={activeFilterCount}
+              placeholder="Invoice no"
+              theme={theme}
+            />
           </View>
           <View style={styles.quickRow}>
             {['', 'draft', 'received', 'cancelled'].map((status) => (
@@ -479,38 +515,53 @@ const createStyles = (theme: any) => StyleSheet.create({
   listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 },
 
   // CARD
-  card: { backgroundColor: theme.bgPrimary, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.borderSecondary, ...getElevation(1, theme), overflow: 'hidden' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: theme.borderSecondary },
-  identityGroup: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBox: { width: 36, height: 36, borderRadius: 8, backgroundColor: `${DARK_BLUE_ACCENT}15`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${DARK_BLUE_ACCENT}40` },
-  invoiceNumber: { fontFamily: theme.fonts.heading, fontSize: 15, fontWeight: 'bold', color: theme.textPrimary },
-  branchName: { fontFamily: theme.fonts.body, fontSize: 12, color: theme.textTertiary, marginTop: 2 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1 },
-  badgeText: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
+  card: { flexDirection: 'row', backgroundColor: theme.bgPrimary, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: theme.borderPrimary, ...getElevation(2, theme), overflow: 'hidden' },
+  stripe: { width: 4 },
+  cardInner: { flex: 1, padding: 12 },
 
-  cardBody: { padding: 12 },
-  supplierRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar: { width: 40, height: 40, borderRadius: 8, backgroundColor: theme.bgSecondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.borderSecondary },
-  avatarText: { fontFamily: theme.fonts.heading, fontSize: 18, fontWeight: 'bold', color: theme.textSecondary },
-  supplierName: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: theme.textPrimary },
-  contactPerson: { fontFamily: theme.fonts.body, fontSize: 12, color: theme.textSecondary, marginTop: 2 },
-  metaInfoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  metaInfoText: { fontFamily: theme.fonts.body, fontSize: 11, color: theme.textTertiary, marginLeft: 4 },
-  metaInfoDot: { fontSize: 10, color: theme.textTertiary, marginHorizontal: 6 },
+  // Header row
+  hRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  supAvatar: { width: 42, height: 42, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  supInitials: { fontFamily: theme.fonts.heading, fontSize: 15, fontWeight: '800' },
+  hMid: { flex: 1 },
+  supName: { fontFamily: theme.fonts.heading, fontSize: 14, fontWeight: '700', color: theme.textPrimary },
+  invoiceRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  invNo: { fontFamily: theme.fonts.mono, fontSize: 11, color: DARK_BLUE_ACCENT, fontWeight: '600' },
+  dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: theme.textTertiary },
+  invDate: { fontFamily: theme.fonts.body, fontSize: 11, color: theme.textTertiary },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 6, borderWidth: 1, flexShrink: 0 },
+  statusText: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
 
-  financialMiniRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.bgSecondary, borderStyle: 'dashed' },
-  miniCol: { flex: 1 },
-  miniColRight: { flex: 1, alignItems: 'flex-end' },
-  miniLabel: { fontFamily: theme.fonts.body, fontSize: 10, color: theme.textTertiary, textTransform: 'uppercase', marginBottom: 2 },
-  miniValue: { fontFamily: theme.fonts.heading, fontSize: 13, fontWeight: '600', color: theme.textSecondary },
+  // Item chips
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 10 },
+  itemChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5, maxWidth: 150 },
+  chipTxt: { fontFamily: theme.fonts.body, fontSize: 10, color: theme.textSecondary, fontWeight: '500' },
 
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, backgroundColor: theme.bgSecondary, borderTopWidth: 1, borderTopColor: theme.borderSecondary },
-  financialLabel: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: 'bold', color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-  grandTotal: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: theme.textPrimary },
-  balanceGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  balanceTotal: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: 'bold', color: theme.textPrimary },
-  paymentStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: theme.bgPrimary, borderWidth: 1, borderColor: theme.borderSecondary },
-  paymentStatusText: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
+  // Financial grid
+  finGrid: { flexDirection: 'row', borderRadius: 8, borderWidth: 1, padding: 8, marginBottom: 10 },
+  finCell: { flex: 1, alignItems: 'flex-start' },
+  finDiv: { width: 1, backgroundColor: theme.borderPrimary, marginHorizontal: 6 },
+  finLbl: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '700', color: theme.textTertiary, textTransform: 'uppercase', marginBottom: 2 },
+  finVal: { fontFamily: theme.fonts.heading, fontSize: 12, fontWeight: '700', color: theme.textPrimary },
+  finValBig: { fontFamily: theme.fonts.heading, fontSize: 14, fontWeight: '800' },
+
+  // Payment progress
+  paySection: { marginBottom: 10 },
+  progressTrack: { height: 4, borderRadius: 2, backgroundColor: theme.bgSecondary, marginBottom: 7, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 2 },
+  payMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  payLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  payPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
+  payPillTxt: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+  methodPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 5, backgroundColor: theme.bgSecondary },
+  methodTxt: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '700', color: theme.textTertiary },
+  balLbl: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '700', color: theme.textTertiary, textTransform: 'uppercase' },
+  balVal: { fontFamily: theme.fonts.heading, fontSize: 13, fontWeight: '800' },
+
+  // Footer row
+  ftrRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, marginTop: 4 },
+  ftrItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ftrTxt: { fontFamily: theme.fonts.body, fontSize: 11, color: theme.textTertiary },
 
   // EMPTY STATE
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: 64, marginTop: 48 },
@@ -525,7 +576,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   modalTitle: { fontFamily: theme.fonts.heading, fontSize: 18, fontWeight: 'bold', color: theme.textPrimary },
   closeBtn: { padding: 4, backgroundColor: theme.bgSecondary, borderRadius: 20 },
   filterGroupLabel: { fontFamily: theme.fonts.body, fontSize: 14, fontWeight: 'bold', color: theme.textSecondary, marginBottom: 12 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 32 },
+  filterChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 32 },
   chip: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, backgroundColor: theme.bgPrimary, borderWidth: 1, borderColor: theme.borderSecondary },
   chipActive: { backgroundColor: DARK_BLUE_ACCENT, borderColor: DARK_BLUE_ACCENT },
   chipText: { fontFamily: theme.fonts.body, fontSize: 13, fontWeight: 'bold', color: theme.textSecondary, textTransform: 'capitalize' },

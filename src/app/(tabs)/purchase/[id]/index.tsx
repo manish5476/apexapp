@@ -28,6 +28,14 @@ const DARK_BLUE_ACCENT = '#1d4ed8';
 const BORDER_COLOR = theme.borderSecondary;
 const BORDER_WIDTH = UI.borderWidth.base;
 
+const PAYMENT_METHODS = [
+  { label: 'Cash', value: 'cash' },
+  { label: 'Bank Transfer', value: 'bank_transfer' },
+  { label: 'UPI', value: 'upi' },
+  { label: 'Cheque', value: 'cheque' },
+  { label: 'Card', value: 'card' },
+];
+
 // --- UTILS ---
 const formatCurrency = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val || 0);
 const formatDate = (dateStr: string) => dateStr ? new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
@@ -232,7 +240,7 @@ export default function PurchaseDetailsScreen() {
   const paymentTheme = getPaymentTheme(purchase.paymentStatus);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -254,51 +262,74 @@ export default function PurchaseDetailsScreen() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={DARK_BLUE_ACCENT} />}
       >
 
-        {/* TOP STATUS ROW */}
-        <View style={styles.statusRow}>
-          <View style={[styles.statusBadge, { backgroundColor: orderTheme.bg, borderColor: orderTheme.border }]}>
-            <Text style={[styles.statusText, { color: orderTheme.text }]}>ORDER: {purchase.status}</Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: paymentTheme.bg, borderColor: paymentTheme.color }]}>
-            <Text style={[styles.statusText, { color: paymentTheme.color }]}>PAYMENT: {purchase.paymentStatus}</Text>
-          </View>
-        </View>
-
-        {/* SUPPLIER CARD */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.avatarBox}><Ionicons name="business" size={24} color={DARK_BLUE_ACCENT} /></View>
-            <View style={{ flex: 1, marginLeft: Spacing.md }}>
-              <Text style={styles.cardLabel}>SUPPLIER</Text>
-              <Text style={styles.supplierName}>{purchase.supplierId?.companyName}</Text>
+        {/* ── HERO SECTION ── */}
+        <View style={styles.heroCard}>
+          {/* Supplier row */}
+          <View style={styles.heroSupRow}>
+            <View style={styles.heroAvatar}>
+              <Text style={styles.heroAvatarTxt}>{purchase.supplierId?.companyName?.substring(0,2).toUpperCase() || 'SU'}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.heroSupName} numberOfLines={1}>{purchase.supplierId?.companyName || 'Unknown Supplier'}</Text>
+              <View style={styles.heroMetaRow}>
+                <Ionicons name="receipt-outline" size={11} color="rgba(255,255,255,0.6)" />
+                <Text style={styles.heroMeta}>#{purchase.invoiceNumber}</Text>
+                <Text style={styles.heroMetaDot}>·</Text>
+                <Ionicons name="calendar-outline" size={11} color="rgba(255,255,255,0.6)" />
+                <Text style={styles.heroMeta}>{formatDate(purchase.purchaseDate)}</Text>
+              </View>
+            </View>
+            <View style={[styles.heroStatusBadge, { backgroundColor: orderTheme.bg }]}>
+              <Ionicons name={purchase.status === 'received' ? 'checkmark-circle' : purchase.status === 'cancelled' ? 'close-circle' : 'time-outline'} size={10} color={orderTheme.text} />
+              <Text style={[styles.heroStatusTxt, { color: orderTheme.text }]}>{purchase.status.toUpperCase()}</Text>
             </View>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.supplierMetaRow}>
-            <View style={styles.metaItem}><Ionicons name="call-outline" size={14} color={theme.textTertiary} /><Text style={styles.metaText}>{purchase.supplierId?.phone || 'N/A'}</Text></View>
-            <View style={styles.metaItem}><Ionicons name="location-outline" size={14} color={theme.textTertiary} /><Text style={styles.metaText}>{purchase.supplierId?.city || 'N/A'}</Text></View>
-          </View>
-          <View style={styles.supplierMetaRow}>
-            <View style={styles.metaItem}><Ionicons name="storefront-outline" size={14} color={theme.textTertiary} /><Text style={styles.metaText}>Branch: {purchase.branchId?.name}</Text></View>
-            <View style={styles.metaItem}><Ionicons name="calendar-outline" size={14} color={theme.textTertiary} /><Text style={styles.metaText}>Due: {formatDate(purchase.dueDate)}</Text></View>
-          </View>
-        </View>
 
-        {/* METRICS GRID */}
-        <View style={styles.metricsGrid}>
-          <View style={[styles.metricCard, styles.metricCardPrimary]}>
-            <Text style={styles.metricLabelWhite}>Grand Total</Text>
-            <Text style={styles.metricValueWhite}>{formatCurrency(purchase.grandTotal)}</Text>
+          {/* Grand total */}
+          <Text style={styles.heroTotalLabel}>GRAND TOTAL</Text>
+          <Text style={styles.heroTotalVal}>{formatCurrency(purchase.grandTotal)}</Text>
+
+          {/* Progress bar */}
+          <View style={styles.heroProgressTrack}>
+            <View style={[styles.heroProgressFill, {
+              width: `${purchase.grandTotal > 0 ? Math.min(100, Math.round((purchase.paidAmount / purchase.grandTotal) * 100)) : 0}%` as any,
+              backgroundColor: purchase.paymentStatus === 'paid' ? '#34D399' : purchase.paymentStatus === 'partial' ? '#FCD34D' : '#F87171'
+            }]} />
           </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Amount Paid</Text>
-            <Text style={[styles.metricValue, { color: theme.success }]}>{formatCurrency(purchase.paidAmount)}</Text>
+
+          {/* Financial summary row */}
+          <View style={styles.heroFinRow}>
+            <View style={styles.heroFinCol}>
+              <Text style={styles.heroFinLbl}>SUBTOTAL</Text>
+              <Text style={styles.heroFinVal}>{formatCurrency(purchase.subTotal)}</Text>
+            </View>
+            <View style={styles.heroFinCol}>
+              <Text style={styles.heroFinLbl}>TAX</Text>
+              <Text style={[styles.heroFinVal, { color: '#FCD34D' }]}>+{formatCurrency(purchase.totalTax)}</Text>
+            </View>
+            <View style={styles.heroFinCol}>
+              <Text style={styles.heroFinLbl}>PAID</Text>
+              <Text style={[styles.heroFinVal, { color: '#34D399' }]}>{formatCurrency(purchase.paidAmount)}</Text>
+            </View>
+            <View style={styles.heroFinCol}>
+              <Text style={styles.heroFinLbl}>DUE</Text>
+              <Text style={[styles.heroFinVal, { color: purchase.balanceAmount > 0 ? '#F87171' : '#34D399' }]}>{formatCurrency(purchase.balanceAmount)}</Text>
+            </View>
           </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Balance Due</Text>
-            <Text style={[styles.metricValue, purchase.balanceAmount > 0 ? { color: theme.error } : { color: theme.textTertiary }]}>
-              {formatCurrency(purchase.balanceAmount)}
-            </Text>
+
+          {/* Bottom meta */}
+          <View style={styles.heroFootRow}>
+            <View style={styles.heroFootItem}>
+              <Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.5)" />
+              <Text style={styles.heroFootTxt}>{purchase.branchId?.name || 'Main Branch'}</Text>
+            </View>
+            <View style={styles.heroFootItem}>
+              <Ionicons name="person-outline" size={11} color="rgba(255,255,255,0.5)" />
+              <Text style={styles.heroFootTxt}>{purchase.createdBy?.name || 'System'}</Text>
+            </View>
+            <View style={[styles.heroPayBadge, { backgroundColor: paymentTheme.bg }]}>
+              <Text style={[styles.heroPayTxt, { color: paymentTheme.color }]}>{purchase.paymentStatus.toUpperCase()}</Text>
+            </View>
           </View>
         </View>
 
@@ -329,23 +360,38 @@ export default function PurchaseDetailsScreen() {
           {/* ITEMS TAB */}
           {activeTab === 'items' && (
             <View>
-              {items.map((item, i) => (
-                <View key={i} style={styles.listItem}>
-                  <View style={styles.listItemHeader}>
-                    <Text style={styles.itemTitle}>{item.productId?.name || item.name || 'Purchase item'}</Text>
-                    <Text style={styles.itemTotal}>
-                      {formatCurrency((item.quantity || 0) * (item.purchasePrice || 0) + ((item.quantity || 0) * (item.purchasePrice || 0) * (item.taxRate || 0)) / 100 - (item.discount || 0))}
-                    </Text>
+              {items.map((item, i) => {
+                const lineBase = (item.quantity || 0) * (item.purchasePrice || 0);
+                const lineTax = lineBase * ((item.taxRate || 0) / 100);
+                const lineTotal = lineBase + lineTax - (item.discount || 0);
+                return (
+                  <View key={i} style={styles.itemCard}>
+                    {/* Left index stripe */}
+                    <View style={[styles.itemStripe, { backgroundColor: DARK_BLUE_ACCENT }]}>
+                      <Text style={styles.itemIdx}>{i + 1}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.itemCardTop}>
+                        <Text style={styles.itemName} numberOfLines={2}>{item.productId?.name || item.name || 'Item'}</Text>
+                        <Text style={styles.itemLineTotal}>{formatCurrency(lineTotal)}</Text>
+                      </View>
+                      {item.productId?.sku && <Text style={styles.itemSku}>SKU: {item.productId.sku}</Text>}
+                      <View style={styles.itemPillRow}>
+                        <View style={styles.itemPill}><Text style={styles.itemPillTxt}>Qty {item.quantity}</Text></View>
+                        <View style={styles.itemPill}><Text style={styles.itemPillTxt}>₹{item.purchasePrice}/unit</Text></View>
+                        {item.taxRate > 0 && <View style={[styles.itemPill, styles.itemPillTax]}><Text style={[styles.itemPillTxt, { color: '#D97706' }]}>GST {item.taxRate}%</Text></View>}
+                        {item.discount > 0 && <View style={[styles.itemPill, styles.itemPillDisc]}><Text style={[styles.itemPillTxt, { color: '#DC2626' }]}>-₹{item.discount}</Text></View>}
+                      </View>
+                    </View>
                   </View>
-                  <Text style={styles.itemSub}>SKU: {item.productId?.sku || 'N/A'}</Text>
-                  <View style={styles.itemMetricsRow}>
-                    <Text style={styles.itemMetric}>Qty: {item.quantity}</Text>
-                    <Text style={styles.itemMetric}>Price: ₹{item.purchasePrice}</Text>
-                    <Text style={styles.itemMetric}>Tax: {item.taxRate}%</Text>
-                    {item.discount > 0 && <Text style={[styles.itemMetric, { color: theme.error }]}>Disc: -₹{item.discount}</Text>}
-                  </View>
-                </View>
-              ))}
+                );
+              })}
+              {/* Items summary footer */}
+              <View style={styles.itemsSummary}>
+                <View style={styles.itemsSumRow}><Text style={styles.itemsSumLbl}>Subtotal</Text><Text style={styles.itemsSumVal}>{formatCurrency(purchase.subTotal)}</Text></View>
+                <View style={styles.itemsSumRow}><Text style={styles.itemsSumLbl}>Total Tax</Text><Text style={[styles.itemsSumVal, { color: '#D97706' }]}>+{formatCurrency(purchase.totalTax)}</Text></View>
+                <View style={[styles.itemsSumRow, styles.itemsSumTotal]}><Text style={styles.itemsSumTotalLbl}>Grand Total</Text><Text style={styles.itemsSumTotalVal}>{formatCurrency(purchase.grandTotal)}</Text></View>
+              </View>
             </View>
           )}
 
@@ -359,19 +405,38 @@ export default function PurchaseDetailsScreen() {
                 </View>
               ) : (
                 payments.map((pay, i) => (
-                  <View key={i} style={styles.listItem}>
-                    <View style={styles.listItemHeader}>
-                      <Text style={styles.itemTitle}>{formatDate(pay.paymentDate)}</Text>
-                      <Text style={[styles.itemTotal, { color: theme.success }]}>{formatCurrency(pay.amount)}</Text>
+                  <View key={i} style={styles.payCard}>
+                    {/* Receipt header */}
+                    <View style={styles.payCardHeader}>
+                      <View style={[styles.payIconBox, { backgroundColor: '#D1FAE5' }]}>
+                        <Ionicons name="checkmark-circle" size={20} color="#059669" />
+                      </View>
+                      <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                        <Text style={styles.payAmount}>{formatCurrency(pay.amount)}</Text>
+                        <Text style={styles.payDate}>{formatDate(pay.paymentDate)}</Text>
+                      </View>
+                      <View style={[styles.payStatusPill, { backgroundColor: pay.status === 'completed' ? '#D1FAE5' : '#FEF3C7' }]}>
+                        <Text style={[styles.payStatusTxt, { color: pay.status === 'completed' ? '#059669' : '#D97706' }]}>{(pay.status || 'completed').toUpperCase()}</Text>
+                      </View>
                     </View>
-                    <View style={styles.itemMetricsRow}>
-                      <Text style={styles.itemMetric}>Method: {pay.paymentMethod.toUpperCase()}</Text>
-                      <Text style={styles.itemMetric}>Ref: {pay.referenceNumber || 'N/A'}</Text>
+                    <View style={styles.payDivider} />
+                    <View style={styles.payMetaGrid}>
+                      <View style={styles.payMetaItem}>
+                        <Text style={styles.payMetaLbl}>METHOD</Text>
+                        <Text style={styles.payMetaVal}>{(pay.paymentMethod || 'N/A').toUpperCase()}</Text>
+                      </View>
+                      <View style={styles.payMetaItem}>
+                        <Text style={styles.payMetaLbl}>REFERENCE</Text>
+                        <Text style={styles.payMetaVal}>{pay.referenceNumber || 'N/A'}</Text>
+                      </View>
                     </View>
-                    <TouchableOpacity style={styles.deleteBtn} onPress={() => deletePayment(pay._id, pay.amount)}>
-                      <Ionicons name="trash" size={16} color={theme.error} />
-                      <Text style={styles.deleteBtnText}>Delete</Text>
-                    </TouchableOpacity>
+                    {pay.remarks && <Text style={styles.payRemarks}>{pay.remarks}</Text>}
+                    {purchase.status !== 'cancelled' && (
+                      <TouchableOpacity style={styles.deleteBtn} onPress={() => deletePayment(pay._id, pay.amount)}>
+                        <Ionicons name="trash-outline" size={14} color={theme.error} />
+                        <Text style={styles.deleteBtnText}>Remove</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ))
               )}
@@ -500,8 +565,26 @@ export default function PurchaseDetailsScreen() {
                 <Text style={styles.inputHint}>Balance Due: ₹{purchase.balanceAmount}</Text>
               </View>
               <View style={styles.inputGroup}>
+                <Text style={styles.label}>Payment Method</Text>
+                <View style={styles.methodRow}>
+                  {PAYMENT_METHODS.map(m => (
+                    <TouchableOpacity
+                      key={m.value}
+                      style={[styles.methodChip, paymentForm.paymentMethod === m.value && styles.methodChipActive]}
+                      onPress={() => setPaymentForm({ ...paymentForm, paymentMethod: m.value })}
+                    >
+                      <Text style={[styles.methodChipText, paymentForm.paymentMethod === m.value && styles.methodChipTextActive]}>{m.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.inputGroup}>
                 <Text style={styles.label}>Reference Number</Text>
                 <TextInput style={styles.input} value={paymentForm.reference} onChangeText={t => setPaymentForm({ ...paymentForm, reference: t })} placeholder="Cheque No / UPI Ref" />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Notes (optional)</Text>
+                <TextInput style={styles.input} value={paymentForm.notes} onChangeText={t => setPaymentForm({ ...paymentForm, notes: t })} placeholder="e.g. Advance payment" />
               </View>
               <TouchableOpacity style={styles.submitModalBtn} onPress={handlePaymentSubmit} disabled={isSubmitting}>
                 {isSubmitting ? <ActivityIndicator color={theme.bgPrimary} /> : <Text style={styles.submitModalBtnText}>Save Payment</Text>}
@@ -590,8 +673,15 @@ const styles = StyleSheet.create({
   itemMetricsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: theme.bgSecondary },
   itemMetric: { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: theme.textSecondary },
 
-  deleteBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginTop: Spacing.md, padding: Spacing.xs },
-  deleteBtnText: { color: theme.error, fontSize: Typography.size.sm, marginLeft: 4 },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginTop: Spacing.md, paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, borderRadius: UI.borderRadius.sm, borderWidth: 1, borderColor: `${theme.error}40`, backgroundColor: `${theme.error}08` },
+  deleteBtnText: { color: theme.error, fontSize: Typography.size.sm, marginLeft: 4, fontWeight: Typography.weight.bold },
+
+  // Payment Method Chips
+  methodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.xs },
+  methodChip: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: UI.borderRadius.pill, borderWidth: 1, borderColor: BORDER_COLOR, backgroundColor: theme.bgSecondary },
+  methodChipActive: { borderColor: DARK_BLUE_ACCENT, backgroundColor: `${DARK_BLUE_ACCENT}15` },
+  methodChipText: { fontSize: Typography.size.sm, color: theme.textSecondary, fontWeight: Typography.weight.bold },
+  methodChipTextActive: { color: DARK_BLUE_ACCENT },
 
   uploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.lg, backgroundColor: theme.bgPrimary, borderWidth: BORDER_WIDTH, borderColor: DARK_BLUE_ACCENT, borderStyle: 'dashed', borderRadius: UI.borderRadius.md, marginBottom: Spacing.lg },
   uploadBtnText: { color: DARK_BLUE_ACCENT, fontWeight: Typography.weight.bold, marginLeft: Spacing.sm },
@@ -624,4 +714,67 @@ const styles = StyleSheet.create({
   inputHint: { fontSize: Typography.size.xs, color: theme.textTertiary, marginTop: 4 },
   submitModalBtn: { alignItems: 'center', justifyContent: 'center', backgroundColor: DARK_BLUE_ACCENT, padding: Spacing.xl, borderRadius: UI.borderRadius.md, borderWidth: BORDER_WIDTH, borderColor: DARK_BLUE_ACCENT, marginTop: Spacing.md },
   submitModalBtnText: { color: theme.bgPrimary, fontWeight: Typography.weight.bold, fontSize: Typography.size.md },
+
+  // ── HERO CARD ──
+  heroCard: { margin: Spacing.lg, borderRadius: 16, backgroundColor: DARK_BLUE_ACCENT, padding: Spacing.xl, marginBottom: Spacing.md },
+  heroSupRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: Spacing.xl },
+  heroAvatar: { width: 44, height: 44, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  heroAvatarTxt: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: '800', color: '#fff' },
+  heroSupName: { fontFamily: theme.fonts.heading, fontSize: 15, fontWeight: '700', color: '#fff' },
+  heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  heroMeta: { fontFamily: theme.fonts.body, fontSize: 11, color: 'rgba(255,255,255,0.7)' },
+  heroMetaDot: { color: 'rgba(255,255,255,0.4)', fontSize: 12 },
+  heroStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  heroStatusTxt: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
+  heroTotalLabel: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  heroTotalVal: { fontFamily: theme.fonts.heading, fontSize: 32, fontWeight: '800', color: '#fff', marginBottom: Spacing.md },
+  heroProgressTrack: { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)', marginBottom: Spacing.lg, overflow: 'hidden' },
+  heroProgressFill: { height: '100%', borderRadius: 3 },
+  heroFinRow: { flexDirection: 'row', marginBottom: Spacing.lg },
+  heroFinCol: { flex: 1 },
+  heroFinLbl: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', marginBottom: 3 },
+  heroFinVal: { fontFamily: theme.fonts.heading, fontSize: 13, fontWeight: '700', color: '#fff' },
+  heroFootRow: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)', paddingTop: Spacing.md, gap: Spacing.md },
+  heroFootItem: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
+  heroFootTxt: { fontFamily: theme.fonts.body, fontSize: 11, color: 'rgba(255,255,255,0.6)' },
+  heroPayBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5 },
+  heroPayTxt: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
+
+  // ── ITEM CARDS ──
+  itemCard: { flexDirection: 'row', backgroundColor: theme.bgPrimary, borderRadius: 10, borderWidth: BORDER_WIDTH, borderColor: BORDER_COLOR, marginBottom: Spacing.md, overflow: 'hidden' },
+  itemStripe: { width: 32, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 12 },
+  itemIdx: { fontFamily: theme.fonts.heading, fontSize: 11, fontWeight: '800', color: '#fff' },
+  itemCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: Spacing.md, paddingBottom: 2 },
+  itemName: { fontFamily: theme.fonts.heading, fontSize: 13, fontWeight: '700', color: theme.textPrimary, flex: 1, marginRight: 8 },
+  itemLineTotal: { fontFamily: theme.fonts.heading, fontSize: 14, fontWeight: '800', color: DARK_BLUE_ACCENT },
+  itemSku: { fontFamily: theme.fonts.mono, fontSize: 10, color: theme.textTertiary, paddingHorizontal: Spacing.md, marginBottom: Spacing.xs },
+  itemPillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, padding: Spacing.md, paddingTop: Spacing.xs },
+  itemPill: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5, backgroundColor: theme.bgSecondary },
+  itemPillTax: { backgroundColor: '#FEF3C7' },
+  itemPillDisc: { backgroundColor: '#FEE2E2' },
+  itemPillTxt: { fontFamily: theme.fonts.body, fontSize: 10, fontWeight: '600', color: theme.textSecondary },
+
+  // ── ITEMS SUMMARY ──
+  itemsSummary: { backgroundColor: theme.bgPrimary, borderRadius: 10, borderWidth: BORDER_WIDTH, borderColor: BORDER_COLOR, padding: Spacing.lg, marginTop: Spacing.sm },
+  itemsSumRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.xs },
+  itemsSumLbl: { fontFamily: theme.fonts.body, fontSize: 12, color: theme.textSecondary },
+  itemsSumVal: { fontFamily: theme.fonts.heading, fontSize: 13, fontWeight: '700', color: theme.textPrimary },
+  itemsSumTotal: { borderTopWidth: 1, borderTopColor: BORDER_COLOR, marginTop: Spacing.sm, paddingTop: Spacing.sm },
+  itemsSumTotalLbl: { fontFamily: theme.fonts.body, fontSize: 13, fontWeight: '700', color: theme.textPrimary },
+  itemsSumTotalVal: { fontFamily: theme.fonts.heading, fontSize: 16, fontWeight: '800', color: DARK_BLUE_ACCENT },
+
+  // ── PAYMENT CARDS ──
+  payCard: { backgroundColor: theme.bgPrimary, borderRadius: 10, borderWidth: BORDER_WIDTH, borderColor: BORDER_COLOR, marginBottom: Spacing.md, padding: Spacing.lg },
+  payCardHeader: { flexDirection: 'row', alignItems: 'center' },
+  payIconBox: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  payAmount: { fontFamily: theme.fonts.heading, fontSize: 18, fontWeight: '800', color: '#059669' },
+  payDate: { fontFamily: theme.fonts.body, fontSize: 11, color: theme.textTertiary, marginTop: 2 },
+  payStatusPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  payStatusTxt: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
+  payDivider: { height: 1, backgroundColor: BORDER_COLOR, marginVertical: Spacing.md },
+  payMetaGrid: { flexDirection: 'row', gap: Spacing.xl },
+  payMetaItem: {},
+  payMetaLbl: { fontFamily: theme.fonts.body, fontSize: 9, fontWeight: '700', color: theme.textTertiary, textTransform: 'uppercase', marginBottom: 2 },
+  payMetaVal: { fontFamily: theme.fonts.heading, fontSize: 13, fontWeight: '700', color: theme.textPrimary },
+  payRemarks: { fontFamily: theme.fonts.body, fontSize: 12, color: theme.textSecondary, marginTop: Spacing.sm, fontStyle: 'italic' },
 });
