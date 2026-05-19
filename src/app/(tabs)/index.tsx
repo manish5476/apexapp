@@ -17,29 +17,42 @@ import { Note } from '@/src/types/note';
 import { LinearGradient } from 'expo-linear-gradient';
 
 
-// ─── KPI Mini Card ─────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+function fmt(v?: number): string {
+  if (v === undefined || v === null) return '—';
+  if (Math.abs(v) >= 1_00_00_000) return `₹${(v/1_00_00_000).toFixed(1)}Cr`;
+  if (Math.abs(v) >= 1_00_000) return `₹${(v/1_00_000).toFixed(1)}L`;
+  if (Math.abs(v) >= 1_000) return `₹${(v/1_000).toFixed(1)}K`;
+  return `₹${v}`;
+}
+const fmtNum = (v?: number) => v?.toLocaleString('en-IN') ?? '—';
 
-function MiniKpi({ label, value, icon, color, theme }: { label: string; value: string; icon: any; color: string; theme: ThemeColors }) {
+// ─── Stat Pill ─────────────────────────────────────────────────────────────────
+function StatPill({ label, value, color, icon }: { label: string; value: string; color: string; icon: any }) {
   return (
-    <View style={[miniStyles.card, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
-      <View style={[miniStyles.iconWrap, { backgroundColor: `${color}15` }]}>
-        <Ionicons name={icon} size={16} color={color} />
+    <View style={{ flex: 1, alignItems: 'center', gap: 3 }}>
+      <View style={[D.pillIcon, { backgroundColor: `${color}18` }]}>
+        <Ionicons name={icon} size={14} color={color} />
       </View>
-      <ThemedText style={[miniStyles.value, { color: theme.textPrimary }]}>{value}</ThemedText>
-      <ThemedText style={[miniStyles.label, { color: theme.textSecondary }]}>{label}</ThemedText>
+      <ThemedText style={[D.pillVal]}>{value}</ThemedText>
+      <ThemedText style={D.pillLbl}>{label}</ThemedText>
     </View>
   );
 }
 
-const miniStyles = StyleSheet.create({
-  card: { flex: 1, borderWidth: 1, borderRadius: 12, padding: 10, alignItems: 'center', gap: 3 },
-  iconWrap: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  value: { fontSize: 15, fontWeight: '800' },
-  label: { fontSize: 9, fontWeight: '600', textAlign: 'center', textTransform: 'uppercase' },
-});
+// ─── Section Header ────────────────────────────────────────────────────────────
+function SectionHead({ title, icon, color }: { title: string; icon: any; color: string }) {
+  return (
+    <View style={D.secHead}>
+      <View style={[D.secIconBox, { backgroundColor: `${color}15` }]}>
+        <Ionicons name={icon} size={14} color={color} />
+      </View>
+      <ThemedText style={D.secTitle}>{title}</ThemedText>
+    </View>
+  );
+}
 
 // ─── Quick Action ─────────────────────────────────────────────────────────────
-
 function QuickAction({ label, icon, color, onPress, theme }: { label: string; icon: any; color: string; onPress: () => void; theme: ThemeColors }) {
   return (
     <TouchableOpacity style={qaStyles.card} activeOpacity={0.7} onPress={onPress}>
@@ -57,57 +70,15 @@ const qaStyles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
 });
 
-// ─── Format currency ───────────────────────────────────────────────────────────
-
-function fmt(v?: number): string {
-  if (v === undefined || v === null) return '—';
-  if (v >= 1_00_000) return `₹${(v / 1_00_000).toFixed(1)}L`;
-  if (v >= 1000) return `₹${(v / 1000).toFixed(1)}K`;
-  return `₹${v}`;
-}
-
-// ─── Customer Intelligence ───────────────────────────────────────────────────
-
-function CustomerInsights({ data, theme }: { data: any; theme: ThemeColors }) {
-  const segments = data || [];
-  const total = segments.reduce((acc: number, s: any) => acc + s.count, 0) || 1;
-  
-  return (
-    <View style={[styles_home.card, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary, ...getElevation(1, theme) }]}>
-      <View style={styles_home.cardHeader}>
-        <Ionicons name="people" size={18} color={theme.accentPrimary} />
-        <ThemedText style={styles_home.cardTitleText}>Customer Health</ThemedText>
-      </View>
-      <View style={styles_home.segmentRow}>
-        {segments.map((s: any) => {
-          const percent = (s.count / total) * 100;
-          const color = s._id === 'Champion' ? theme.success : s._id === 'At Risk' ? theme.error : theme.accentPrimary;
-          return (
-            <View key={s._id} style={{ flex: 1, gap: 4 }}>
-              <View style={styles_home.segmentBarTrack}>
-                <View style={[styles_home.segmentBarFill, { width: `${percent}%`, backgroundColor: color }]} />
-              </View>
-              <ThemedText style={styles_home.segmentLabel}>{s._id}</ThemedText>
-              <ThemedText style={styles_home.segmentValue}>{s.count}</ThemedText>
-            </View>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
 // ─── Recent Notes ─────────────────────────────────────────────────────────────
-
 function RecentNotes({ notes, theme }: { notes: Note[]; theme: ThemeColors }) {
   if (!notes || notes.length === 0) return null;
-  
   return (
     <View style={styles_home.section}>
       <ThemedText style={styles_home.sectionTitle}>Recent Notes</ThemedText>
       {notes.map((note) => (
-        <TouchableOpacity 
-          key={note._id} 
+        <TouchableOpacity
+          key={note._id}
           style={[styles_home.noteItem, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}
           activeOpacity={0.7}
         >
@@ -127,8 +98,35 @@ function RecentNotes({ notes, theme }: { notes: Note[]; theme: ThemeColors }) {
   );
 }
 
+// ─── Customer Insights ────────────────────────────────────────────────────────
+function CustomerInsights({ data, theme }: { data: any; theme: ThemeColors }) {
+  const segments = data || [];
+  const total = segments.reduce((acc: number, s: any) => acc + s.count, 0) || 1;
+  return (
+    <View style={[styles_home.card, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
+      <View style={styles_home.cardHeader}>
+        <Ionicons name="people" size={18} color={theme.accentPrimary} />
+        <ThemedText style={styles_home.cardTitleText}>Customer Health</ThemedText>
+      </View>
+      <View style={styles_home.segmentRow}>
+        {segments.map((s: any) => {
+          const percent = (s.count / total) * 100;
+          const color = s._id === 'Champion' ? theme.success : s._id === 'At Risk' ? theme.error : theme.accentPrimary;
+          return (
+            <View key={s._id} style={{ flex: 1, gap: 4 }}>
+              <View style={styles_home.segmentBarTrack}>
+                <View style={[styles_home.segmentBarFill, { width: `${percent}%` as any, backgroundColor: color }]} />
+              </View>
+              <ThemedText style={styles_home.segmentLabel}>{s._id}</ThemedText>
+              <ThemedText style={styles_home.segmentValue}>{s.count}</ThemedText>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const { user, organization } = useAuthStore();
@@ -190,18 +188,25 @@ export default function HomeScreen() {
 
 
   const f = kpiData?.financial;
+  const inv = kpiData?.inventory;
+  const leaders = kpiData?.leaders;
+  const insights = kpiData?.insights?.insights || [];
+  const cats = kpiData?.topCategories || [];
+  const ops = kpiData?.operations;
+  const payPct = f?.totalRevenue?.value > 0
+    ? Math.min(100, Math.round((f.netProfit?.value / f.totalRevenue?.value) * 100))
+    : 0;
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent} 
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
-
-          {/* Header */}
+          {/* ── Header ── */}
           <View style={styles.header}>
             <View>
               <ThemedText style={styles.welcomeText}>{greeting}</ThemedText>
@@ -210,7 +215,7 @@ export default function HomeScreen() {
             <NotificationBell />
           </View>
 
-          {/* Org Hero Card */}
+          {/* ── Org + Role card ── */}
           <View style={styles.statusCard}>
             <View style={styles.statusHeader}>
               <View style={styles.orgInfo}>
@@ -223,37 +228,192 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Live KPIs */}
-          <View style={styles.sectionHeaderRow}>
-            <ThemedText style={styles.sectionTitle}>Financial Performance</ThemedText>
-            {loading && <ActivityIndicator size="small" color={currentTheme.accentPrimary} />}
-          </View>
-          <View style={styles.kpiRow}>
-            <MiniKpi label="Revenue" value={fmt(f?.totalRevenue?.value)} icon="trending-up" color={currentTheme.success} theme={currentTheme} />
-            <MiniKpi label="Expenses" value={fmt(f?.totalExpense?.value)} icon="trending-down" color={currentTheme.error} theme={currentTheme} />
-            <MiniKpi label="Profit" value={fmt(f?.netProfit?.value)} icon="stats-chart" color={currentTheme.accentPrimary} theme={currentTheme} />
+          {/* ── Financial Hero ── */}
+          <View style={D.heroCard}>
+            <View style={D.heroTop}>
+              <View>
+                <ThemedText style={D.heroLbl}>NET PROFIT</ThemedText>
+                <ThemedText style={[D.heroVal, { color: (f?.netProfit?.value ?? 0) >= 0 ? '#34D399' : '#F87171' }]}>
+                  {fmt(f?.netProfit?.value)}
+                </ThemedText>
+                <ThemedText style={D.heroMargin}>Margin: {f?.netProfit?.margin?.toFixed(1) ?? 0}%</ThemedText>
+              </View>
+              <View style={[D.heroBadge, { backgroundColor: f?.netProfit?.status === 'profitable' ? '#D1FAE5' : '#FEE2E2' }]}>
+                <Ionicons name={f?.netProfit?.status === 'profitable' ? 'trending-up' : 'trending-down'} size={14} color={f?.netProfit?.status === 'profitable' ? '#059669' : '#DC2626'} />
+                <ThemedText style={[D.heroBadgeTxt, { color: f?.netProfit?.status === 'profitable' ? '#059669' : '#DC2626' }]}>
+                  {f?.netProfit?.status?.toUpperCase() ?? 'N/A'}
+                </ThemedText>
+              </View>
+            </View>
+            {/* Progress bar: revenue vs expense */}
+            <View style={D.heroProgTrack}>
+              <View style={[D.heroProgFill, { width: `${Math.min(100, Math.round(((f?.totalRevenue?.value ?? 0) / Math.max(1, (f?.totalExpense?.value ?? 1))) * 100))}%` as any }]} />
+            </View>
+            <ThemedText style={D.heroProgLbl}>Revenue covers {Math.min(100, Math.round(((f?.totalRevenue?.value ?? 0) / Math.max(1, (f?.totalExpense?.value ?? 1))) * 100))}% of expenses</ThemedText>
+            {/* 4-stat row */}
+            <View style={D.heroStatRow}>
+              <StatPill label="Revenue" value={fmt(f?.totalRevenue?.value)} color="#10B981" icon="trending-up" />
+              <StatPill label="Expenses" value={fmt(f?.totalExpense?.value)} color="#EF4444" icon="trending-down" />
+              <StatPill label="Receivables" value={fmt(f?.outstanding?.receivables)} color="#3B82F6" icon="wallet-outline" />
+              <StatPill label="Payables" value={fmt(f?.outstanding?.payables)} color="#F59E0B" icon="card-outline" />
+            </View>
           </View>
 
-          {/* Customer Insights */}
-          <View style={styles_home.section}>
-            <ThemedText style={styles_home.sectionTitle}>Customer Insights</ThemedText>
-            <CustomerInsights data={customerData} theme={currentTheme} />
+          {/* ── Insights Strip ── */}
+          {insights.length > 0 && (
+            <View style={D.insightRow}>
+              {insights.map((ins: any, i: number) => {
+                const c = ins.type === 'positive' ? '#059669' : ins.type === 'warning' ? '#D97706' : '#3B82F6';
+                const bg = ins.type === 'positive' ? '#D1FAE5' : ins.type === 'warning' ? '#FEF3C7' : '#EFF6FF';
+                const ic = ins.type === 'positive' ? 'checkmark-circle' : ins.type === 'warning' ? 'alert' : 'information-circle';
+                return (
+                  <View key={i} style={[D.insightCard, { backgroundColor: bg, borderLeftColor: c }]}>
+                    <Ionicons name={ic} size={14} color={c} />
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={[D.insightTitle, { color: c }]}>{ins.title}</ThemedText>
+                      <ThemedText style={D.insightMsg} numberOfLines={2}>{ins.message}</ThemedText>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* ── Inventory Health ── */}
+          <View style={D.card}>
+            <SectionHead title="Inventory Health" icon="cube-outline" color="#6366F1" />
+            <View style={D.invRow}>
+              <View style={D.invStat}>
+                <ThemedText style={[D.invStatVal, { color: '#EF4444' }]}>{inv?.summary?.criticalAlerts ?? 0}</ThemedText>
+                <ThemedText style={D.invStatLbl}>Critical</ThemedText>
+              </View>
+              <View style={D.invStat}>
+                <ThemedText style={[D.invStatVal, { color: '#F59E0B' }]}>{(inv?.summary?.totalAlerts ?? 0) - (inv?.summary?.criticalAlerts ?? 0)}</ThemedText>
+                <ThemedText style={D.invStatLbl}>Warning</ThemedText>
+              </View>
+              <View style={D.invStat}>
+                <ThemedText style={[D.invStatVal, { color: '#6366F1' }]}>{fmtNum(inv?.inventoryValuation?.productCount)}</ThemedText>
+                <ThemedText style={D.invStatLbl}>Products</ThemedText>
+              </View>
+              <View style={D.invStat}>
+                <ThemedText style={[D.invStatVal, { color: '#10B981' }]}>{fmt(inv?.inventoryValuation?.totalValue)}</ThemedText>
+                <ThemedText style={D.invStatLbl}>Value</ThemedText>
+              </View>
+            </View>
+            {/* Health score bar */}
+            <View style={{ marginTop: 8 }}>
+              <View style={D.healthTrack}>
+                <View style={[D.healthFill, { width: `${inv?.healthScore ?? 0}%` as any, backgroundColor: (inv?.healthScore ?? 0) >= 70 ? '#10B981' : '#F59E0B' }]} />
+              </View>
+              <ThemedText style={D.healthLbl}>Stock Health Score: {inv?.healthScore ?? 0}%</ThemedText>
+            </View>
+            {/* Top 3 critical items */}
+            {(inv?.lowStockAlerts ?? []).slice(0, 3).map((a: any, i: number) => (
+              <View key={i} style={D.alertRow}>
+                <View style={[D.alertDot, { backgroundColor: a.urgency === 'critical' ? '#EF4444' : '#F59E0B' }]} />
+                <ThemedText style={D.alertName} numberOfLines={1}>{a.name}</ThemedText>
+                <ThemedText style={D.alertStock}>{a.currentStock}/{a.reorderLevel}</ThemedText>
+              </View>
+            ))}
+            {(inv?.summary?.totalAlerts ?? 0) > 3 && (
+              <TouchableOpacity onPress={() => router.push('/(tabs)/product/low-stock' as any)}>
+                <ThemedText style={D.viewAll}>View all {inv?.summary?.totalAlerts} alerts →</ThemedText>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* ── Top Products ── */}
+          {(leaders?.topProducts?.length ?? 0) > 0 && (
+            <View style={D.card}>
+              <SectionHead title="Top Products" icon="star-outline" color="#F59E0B" />
+              {leaders.topProducts.map((p: any, i: number) => (
+                <View key={i} style={D.leaderRow}>
+                  <View style={[D.leaderRank, { backgroundColor: i === 0 ? '#FEF3C7' : i === 1 ? '#F3F4F6' : '#FEF3C7' }]}>
+                    <ThemedText style={[D.leaderRankTxt, { color: i === 0 ? '#D97706' : '#6B7280' }]}>#{i + 1}</ThemedText>
+                  </View>
+                  <ThemedText style={D.leaderName} numberOfLines={1}>{p.name}</ThemedText>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <ThemedText style={D.leaderVal}>{fmt(p.revenue)}</ThemedText>
+                    <ThemedText style={D.leaderSub}>Qty: {p.soldQty}</ThemedText>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* ── Top Customers ── */}
+          {(leaders?.topCustomers?.length ?? 0) > 0 && (
+            <View style={D.card}>
+              <SectionHead title="Top Customers" icon="people-outline" color="#10B981" />
+              {leaders.topCustomers.map((c: any, i: number) => (
+                <View key={i} style={D.leaderRow}>
+                  <View style={[D.custAvatar]}>
+                    <ThemedText style={D.custAvatarTxt}>{c.name?.charAt(0)?.toUpperCase() ?? 'C'}</ThemedText>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={D.leaderName}>{c.name}</ThemedText>
+                    <ThemedText style={D.leaderSub}>{c.transactions} orders</ThemedText>
+                  </View>
+                  <ThemedText style={D.leaderVal}>{fmt(c.totalSpent)}</ThemedText>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* ── Top Categories ── */}
+          {cats.length > 0 && (
+            <View style={D.card}>
+              <SectionHead title="Top Categories" icon="grid-outline" color="#8B5CF6" />
+              {cats.map((cat: any, i: number) => {
+                const maxRev = cats[0]?.revenue || 1;
+                return (
+                  <View key={i} style={D.catRow}>
+                    <ThemedText style={D.catName} numberOfLines={1}>{cat.name}</ThemedText>
+                    <View style={D.catBarTrack}>
+                      <View style={[D.catBarFill, { width: `${Math.round((cat.revenue / maxRev) * 100)}%` as any }]} />
+                    </View>
+                    <ThemedText style={D.catVal}>{fmt(cat.revenue)}</ThemedText>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* ── Operations ── */}
+          {ops && (
+            <View style={D.card}>
+              <SectionHead title="Operations" icon="settings-outline" color="#0EA5E9" />
+              <View style={D.heroStatRow}>
+                <StatPill label="Avg Order" value={fmt(ops.orderEfficiency?.averageOrderValue)} color="#0EA5E9" icon="receipt-outline" />
+                <StatPill label="Cancel Rate" value={`${ops.orderEfficiency?.cancellationRate ?? 0}%`} color="#EF4444" icon="close-circle-outline" />
+                <StatPill label="Discount" value={fmt(ops.discountMetrics?.totalDiscount)} color="#8B5CF6" icon="pricetag-outline" />
+              </View>
+              {(ops.topStaff?.length ?? 0) > 0 && (
+                <View style={[D.leaderRow, { marginTop: 10 }]}>
+                  <View style={D.custAvatar}>
+                    <ThemedText style={D.custAvatarTxt}>{ops.topStaff[0].name?.charAt(0) ?? 'S'}</ThemedText>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={D.leaderName}>{ops.topStaff[0].name}</ThemedText>
+                    <ThemedText style={D.leaderSub}>Top performer · {ops.topStaff[0].count} orders</ThemedText>
+                  </View>
+                  <ThemedText style={D.leaderVal}>{fmt(ops.topStaff[0].revenue)}</ThemedText>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── Quick Actions ── */}
+          <ThemedText style={[D.secTitle, { marginTop: 4, marginBottom: 12 }]}>QUICK ACTIONS</ThemedText>
+          <View style={styles.actionRow}>
+            <QuickAction label="Low Stock" icon="alert-circle-outline" color={currentTheme.error} onPress={() => router.push('/(tabs)/product/low-stock' as any)} theme={currentTheme} />
+            <QuickAction label="HRMS" icon="clipboard-outline" color={currentTheme.accentPrimary} onPress={() => router.push('/(tabs)/hrms' as any)} theme={currentTheme} />
+            <QuickAction label="Analytics" icon="bar-chart-outline" color={currentTheme.success} onPress={() => router.push('/(tabs)/analytics' as any)} theme={currentTheme} />
+            <QuickAction label="Invoices" icon="document-text-outline" color={currentTheme.warning} onPress={() => router.push('/(tabs)/invoice' as any)} theme={currentTheme} />
           </View>
 
           {/* Recent Notes */}
           <RecentNotes notes={notes} theme={currentTheme} />
-
-          {/* Quick Actions */}
-          <View style={styles_home.section}>
-            <ThemedText style={styles_home.sectionTitle}>Quick Actions</ThemedText>
-            <View style={styles.actionRow}>
-              <QuickAction label="Low Stock" icon="alert-circle-outline" color={currentTheme.error} onPress={() => router.push('/(tabs)/product/low-stock' as any)} theme={currentTheme} />
-              <QuickAction label="HRMS" icon="clipboard-outline" color={currentTheme.accentPrimary} onPress={() => router.push('/(tabs)/hrms' as any)} theme={currentTheme} />
-              <QuickAction label="Analytics" icon="bar-chart-outline" color={currentTheme.success} onPress={() => router.push('/(tabs)/analytics' as any)} theme={currentTheme} />
-              <QuickAction label="Invoices" icon="document-text-outline" color={currentTheme.warning} onPress={() => router.push('/(tabs)/invoice' as any)} theme={currentTheme} />
-            </View>
-          </View>
-
 
         </ScrollView>
       </SafeAreaView>
@@ -359,3 +519,55 @@ const styles_home = StyleSheet.create({
     marginTop: 2,
   },
 });
+
+// ── Dashboard styles (D) ──────────────────────────────────────────────────────
+const D = StyleSheet.create({
+  heroCard: { marginBottom: 16, borderRadius: 16, backgroundColor: '#1E293B', padding: 18 },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
+  heroLbl: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  heroVal: { fontSize: 30, fontWeight: '800', color: '#fff' },
+  heroMargin: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 3 },
+  heroBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  heroBadgeTxt: { fontSize: 10, fontWeight: '800' },
+  heroProgTrack: { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.15)', marginBottom: 6, overflow: 'hidden' },
+  heroProgFill: { height: '100%', borderRadius: 3, backgroundColor: '#34D399' },
+  heroProgLbl: { fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 16 },
+  heroStatRow: { flexDirection: 'row', gap: 0, marginTop: 8 },
+  pillIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  pillVal: { fontSize: 13, fontWeight: '800' },
+  pillLbl: { fontSize: 9, fontWeight: '600', textTransform: 'uppercase', opacity: 0.6, textAlign: 'center' },
+  insightRow: { gap: 8, marginBottom: 16 },
+  insightCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, borderLeftWidth: 3 },
+  insightTitle: { fontSize: 12, fontWeight: '700', marginBottom: 2 },
+  insightMsg: { fontSize: 11, color: '#374151', lineHeight: 16 },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#E5E7EB' },
+  secHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  secIconBox: { width: 28, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  secTitle: { fontSize: 12, fontWeight: '800', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.8 },
+  invRow: { flexDirection: 'row', marginBottom: 12 },
+  invStat: { flex: 1, alignItems: 'center' },
+  invStatVal: { fontSize: 20, fontWeight: '800' },
+  invStatLbl: { fontSize: 9, fontWeight: '600', color: '#9CA3AF', textTransform: 'uppercase', marginTop: 2 },
+  healthTrack: { height: 6, borderRadius: 3, backgroundColor: '#F3F4F6', overflow: 'hidden' },
+  healthFill: { height: '100%', borderRadius: 3 },
+  healthLbl: { fontSize: 10, color: '#9CA3AF', marginTop: 5, marginBottom: 8 },
+  alertRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  alertDot: { width: 7, height: 7, borderRadius: 4 },
+  alertName: { flex: 1, fontSize: 12, fontWeight: '600', color: '#374151' },
+  alertStock: { fontSize: 11, fontWeight: '700', color: '#6B7280' },
+  viewAll: { fontSize: 12, fontWeight: '700', color: '#6366F1', marginTop: 10, textAlign: 'center' },
+  leaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F9FAFB' },
+  leaderRank: { width: 28, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  leaderRankTxt: { fontSize: 11, fontWeight: '800' },
+  leaderName: { flex: 1, fontSize: 13, fontWeight: '700', color: '#111827' },
+  leaderVal: { fontSize: 13, fontWeight: '800', color: '#1E293B' },
+  leaderSub: { fontSize: 10, color: '#9CA3AF', marginTop: 1 },
+  custAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
+  custAvatarTxt: { fontSize: 13, fontWeight: '800', color: '#3B82F6' },
+  catRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
+  catName: { width: 90, fontSize: 11, fontWeight: '600', color: '#374151' },
+  catBarTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: '#F3F4F6', overflow: 'hidden' },
+  catBarFill: { height: '100%', borderRadius: 3, backgroundColor: '#8B5CF6' },
+  catVal: { width: 46, fontSize: 11, fontWeight: '700', color: '#374151', textAlign: 'right' },
+});
+

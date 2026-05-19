@@ -268,38 +268,67 @@ const CustomerSegmentationRenderer = ({ data, theme }: { data: any; theme: any }
 };
 
 const CashFlowRenderer = ({ data, theme }: { data: any; theme: any }) => {
-  const modes = data?.paymentModes || [];
-  const aging = data?.agingReport || [];
-  if (modes.length === 0 && aging.length === 0) return null;
+  const cashFlow = data?.cashFlow || {};
+  const modes = cashFlow.paymentModes || data?.paymentModes || [];
+  const aging = data?.receivables?.aging || cashFlow.agingReport || data?.agingReport || [];
+  const summary = data?.summary || {};
 
   const totalInflow = modes.reduce((acc: number, m: any) => acc + m.value, 0);
 
+  const fmt = (v?: number) => {
+    if (v === undefined || v === null) return '—';
+    if (v >= 100000) return `₹${(v / 100000).toFixed(1)}L`;
+    if (v >= 1000) return `₹${(v / 1000).toFixed(1)}K`;
+    return `₹${v}`;
+  };
+
+  const pieData = modes.map((p: any) => ({
+    label: p.name.toUpperCase(),
+    value: p.value
+  }));
+
   return (
-    <View style={styles.comparisonContainer}>
-      <View style={styles.comparisonHeader}>
-        <ThemedText style={styles.comparisonTitle}>Liquidity Breakdown</ThemedText>
-        <ThemedText style={[styles.comparisonSubtitle, { color: theme.textSecondary }]}>
-          Payment modes and incoming cash flow
-        </ThemedText>
+    <View style={{ gap: 16, marginTop: 8 }}>
+      <View style={CF.row}>
+        <View style={[CF.metricCard, { backgroundColor: theme.bgSecondary, borderTopColor: theme.success }]}>
+          <ThemedText style={CF.metricLabel}>CASH INFLOW</ThemedText>
+          <ThemedText style={CF.metricValue}>{fmt(totalInflow)}</ThemedText>
+        </View>
+        <View style={[CF.metricCard, { backgroundColor: theme.bgSecondary, borderTopColor: theme.error }]}>
+          <ThemedText style={CF.metricLabel}>OUTFLOW (EXPENSES)</ThemedText>
+          <ThemedText style={CF.metricValue}>{fmt(summary.expenses?.value)}</ThemedText>
+        </View>
       </View>
 
-      <View style={{ gap: Spacing.md }}>
-        <ThemedText style={styles.label}>Inflow by Method</ThemedText>
-        {modes.map((m: any) => (
-          <View key={m.name} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <ThemedText style={{ fontSize: 13, fontWeight: '600' }}>{m.name || 'Other'}</ThemedText>
-            <ThemedText style={{ fontSize: 13, fontWeight: '800', color: theme.success }}>₹{m.value?.toLocaleString()}</ThemedText>
-          </View>
-        ))}
-      </View>
+      {pieData.length > 0 && (
+        <AppChart
+          title="Liquidity Breakdown"
+          subtitle="Inflow by payment mode"
+          type="pie"
+          data={pieData}
+          color={theme.accentPrimary}
+          height={200}
+        />
+      )}
 
-      <View style={{ marginTop: Spacing.xl, gap: Spacing.md }}>
-        <ThemedText style={styles.label}>Debtor Aging (Receivables)</ThemedText>
-        <DebtorAgingRenderer data={aging} theme={theme} />
-      </View>
+      {aging.length > 0 && (
+        <View style={[CF.section, { borderColor: theme.borderPrimary, backgroundColor: theme.bgSecondary }]}>
+          <ThemedText style={CF.sectionTitle}>Debtor Aging (Receivables)</ThemedText>
+          <DebtorAgingRenderer data={aging} theme={theme} />
+        </View>
+      )}
     </View>
   );
 };
+
+const CF = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 12 },
+  metricCard: { flex: 1, padding: 16, borderRadius: 16, borderTopWidth: 4, alignItems: 'center', justifyContent: 'center' },
+  metricLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, opacity: 0.7, marginBottom: 4 },
+  metricValue: { fontSize: 24, fontWeight: '800', fontFamily: 'Plus Jakarta Sans' },
+  section: { borderRadius: 16, borderWidth: 1, padding: 16 },
+  sectionTitle: { fontSize: 14, fontWeight: '800', marginBottom: 16 },
+});
 
 const DebtorAgingRenderer = ({ data, theme }: { data: any; theme: any }) => {
   const aging = Array.isArray(data) ? data : [];
@@ -329,42 +358,415 @@ const DebtorAgingRenderer = ({ data, theme }: { data: any; theme: any }) => {
   );
 };
 
-const SecurityPulseRenderer = ({ data, theme }: { data: any; theme: any }) => {
-  const events = data?.recentEvents || [];
-  const riskCount = data?.riskyActions || 0;
+const LiveMonitorRenderer = ({ data, theme }: { data: any; theme: any }) => {
+  const alerts = data?.alerts || {};
+  const security = data?.security || {};
+  const monitoring = data?.monitoring || {};
+
+  const criticalAlerts: any[] = alerts.critical || [];
+  const warningAlerts: any[] = alerts.warning || [];
+  const totalAlerts: number = alerts.total || 0;
+  const recentEvents: any[] = security.recentEvents || [];
+  const riskyActions: number = security.riskyActions || 0;
+
+  const actionLabel = (action: string) => action.replace(/:/g, ': ').replace(/([a-z])([A-Z])/g, '$1 $2');
+  const deviceIcon = (ua: string) => ua?.includes('okhttp') ? 'phone-portrait-outline' : 'desktop-outline';
+  const timeAgo = (iso: string) => {
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+  };
 
   return (
-    <View style={styles.comparisonContainer}>
-      <View style={[styles.rawCard, { backgroundColor: theme.error + '10', borderColor: theme.error + '30', padding: 20, marginTop: 0 }]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View>
-            <ThemedText style={{ fontSize: 12, fontWeight: '700', color: theme.error, textTransform: 'uppercase' }}>Security Risk Alerts</ThemedText>
-            <ThemedText style={{ fontSize: 32, fontWeight: '800', color: theme.error }}>{riskCount}</ThemedText>
-          </View>
-          <Ionicons name="shield-half-outline" size={32} color={theme.error} />
+    <View style={{ gap: 14, marginTop: 8 }}>
+
+      {/* ── Status Header ── */}
+      <View style={[LM.statusCard, { borderColor: riskyActions > 0 ? '#FCA5A5' : '#BBF7D0', backgroundColor: riskyActions > 0 ? '#FEF2F2' : '#F0FDF4' }]}>
+        <View style={[LM.statusIcon, { backgroundColor: riskyActions > 0 ? '#EF444420' : '#10B98120' }]}>
+          <Ionicons name={riskyActions > 0 ? 'warning' : 'shield-checkmark'} size={26} color={riskyActions > 0 ? '#EF4444' : '#10B981'} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <ThemedText style={[LM.statusTitle, { color: riskyActions > 0 ? '#991B1B' : '#065F46' }]}>
+            {riskyActions > 0 ? `${riskyActions} Risky Actions Detected` : 'System Secure'}
+          </ThemedText>
+          <ThemedText style={[LM.statusSub, { color: riskyActions > 0 ? '#B91C1C' : '#047857' }]}>
+            Last updated: {monitoring.lastUpdated ? new Date(monitoring.lastUpdated).toLocaleTimeString() : '—'}
+          </ThemedText>
+        </View>
+        <View style={[LM.totalBadge, { backgroundColor: riskyActions > 0 ? '#EF4444' : '#10B981' }]}>
+          <ThemedText style={LM.totalBadgeTxt}>{totalAlerts}</ThemedText>
+          <ThemedText style={LM.totalBadgeLbl}>ALERTS</ThemedText>
         </View>
       </View>
 
-      <ThemedText style={styles.comparisonTitle}>Activity Timeline</ThemedText>
-      <View style={{ gap: Spacing.md }}>
-        {events.length === 0 && <ThemedText style={{ opacity: 0.5, textAlign: 'center', marginTop: 20 }}>No recent security events</ThemedText>}
-        {events.map((ev: any, idx: number) => (
-          <View key={ev._id || idx} style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{ alignItems: 'center' }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.accentPrimary }} />
-              {idx !== events.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: theme.borderPrimary, marginVertical: 4 }} />}
-            </View>
-            <View style={{ flex: 1, paddingBottom: 20 }}>
-              <ThemedText style={{ fontSize: 13, fontWeight: '700' }}>{ev.action}</ThemedText>
-              <ThemedText style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{ev.module} • {ev.userId?.name || 'System'}</ThemedText>
-              <ThemedText style={{ fontSize: 10, color: theme.textTertiary, marginTop: 4 }}>{new Date(ev.createdAt).toLocaleString()}</ThemedText>
-            </View>
+      {/* ── Alert Counts Row ── */}
+      <View style={LM.countRow}>
+        <View style={[LM.countCard, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+          <Ionicons name="close-circle" size={18} color="#EF4444" />
+          <ThemedText style={[LM.countVal, { color: '#EF4444' }]}>{criticalAlerts.length}</ThemedText>
+          <ThemedText style={[LM.countLbl, { color: '#B91C1C' }]}>CRITICAL</ThemedText>
+        </View>
+        <View style={[LM.countCard, { backgroundColor: '#FFFBEB', borderColor: '#FCD34D' }]}>
+          <Ionicons name="alert-circle" size={18} color="#F59E0B" />
+          <ThemedText style={[LM.countVal, { color: '#F59E0B' }]}>{warningAlerts.length}</ThemedText>
+          <ThemedText style={[LM.countLbl, { color: '#92400E' }]}>WARNING</ThemedText>
+        </View>
+        <View style={[LM.countCard, { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' }]}>
+          <Ionicons name="time" size={18} color="#3B82F6" />
+          <ThemedText style={[LM.countVal, { color: '#3B82F6' }]}>{recentEvents.length}</ThemedText>
+          <ThemedText style={[LM.countLbl, { color: '#1E40AF' }]}>EVENTS</ThemedText>
+        </View>
+      </View>
+
+      {/* ── Warning Alerts List ── */}
+      {warningAlerts.length > 0 && (
+        <View style={LM.section}>
+          <View style={LM.secRow}>
+            <View style={[LM.secDot, { backgroundColor: '#F59E0B' }]} />
+            <ThemedText style={LM.secTitle}>Active Warnings ({warningAlerts.length})</ThemedText>
           </View>
-        ))}
+          {warningAlerts.map((a, i) => (
+            <View key={i} style={[LM.alertRow, { borderLeftColor: '#F59E0B' }]}>
+              <Ionicons name="cube-outline" size={13} color="#F59E0B" />
+              <ThemedText style={LM.alertMsg} numberOfLines={1}>{a.message}</ThemedText>
+              <ThemedText style={LM.alertTime}>{timeAgo(a.timestamp)}</ThemedText>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* ── Critical Alerts ── */}
+      {criticalAlerts.length > 0 && (
+        <View style={LM.section}>
+          <View style={LM.secRow}>
+            <View style={[LM.secDot, { backgroundColor: '#EF4444' }]} />
+            <ThemedText style={LM.secTitle}>Critical Alerts ({criticalAlerts.length})</ThemedText>
+          </View>
+          {criticalAlerts.map((a, i) => (
+            <View key={i} style={[LM.alertRow, { borderLeftColor: '#EF4444', backgroundColor: '#FEF2F2' }]}>
+              <Ionicons name="warning-outline" size={13} color="#EF4444" />
+              <ThemedText style={LM.alertMsg} numberOfLines={1}>{a.message}</ThemedText>
+              <ThemedText style={LM.alertTime}>{timeAgo(a.timestamp)}</ThemedText>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* ── Recent Security Events (Timeline) ── */}
+      {recentEvents.length > 0 && (
+        <View style={LM.section}>
+          <View style={LM.secRow}>
+            <View style={[LM.secDot, { backgroundColor: '#6366F1' }]} />
+            <ThemedText style={LM.secTitle}>Security Timeline</ThemedText>
+          </View>
+          {recentEvents.map((ev, idx) => (
+            <View key={ev._id || idx} style={LM.evRow}>
+              {/* Timeline line */}
+              <View style={LM.evLineCol}>
+                <View style={[LM.evDot, { backgroundColor: '#6366F1' }]} />
+                {idx < recentEvents.length - 1 && <View style={LM.evLine} />}
+              </View>
+              {/* Event card */}
+              <View style={LM.evCard}>
+                <View style={LM.evCardTop}>
+                  <View style={[LM.evActionPill, { backgroundColor: '#EEF2FF' }]}>
+                    <ThemedText style={LM.evActionTxt} numberOfLines={1}>{actionLabel(ev.action)}</ThemedText>
+                  </View>
+                  <ThemedText style={LM.evTime}>{timeAgo(ev.createdAt)}</ThemedText>
+                </View>
+                <View style={LM.evMeta}>
+                  <Ionicons name={deviceIcon(ev.userAgent)} size={11} color="#9CA3AF" />
+                  <ThemedText style={LM.evMetaTxt}>{ev.userId?.name || 'System'}</ThemedText>
+                  <ThemedText style={LM.evMetaDot}>·</ThemedText>
+                  <ThemedText style={LM.evMetaTxt}>{ev.ip?.replace('::ffff:', '')}</ThemedText>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
+const AuditLogsRenderer = ({ data, theme }: { data: any; theme: any }) => {
+  const events = data?.recentEvents || [];
+  const riskyActions = data?.riskyActions || 0;
+
+  const actionColor = (action: string) => {
+    if (action.includes('delete') || action.includes('remove')) return theme.error;
+    if (action.includes('update') || action.includes('edit')) return theme.warning;
+    if (action.includes('create') || action.includes('add')) return theme.success;
+    return theme.accentPrimary;
+  };
+
+  const actionLabel = (action: string) => action.replace(/:/g, ': ').replace(/([a-z])([A-Z])/g, '$1 $2').toUpperCase();
+  const deviceIcon = (ua: string) => ua?.includes('okhttp') || ua?.includes('Mobile') ? 'phone-portrait-outline' : 'desktop-outline';
+
+  return (
+    <View style={{ gap: 14, marginTop: 8 }}>
+      <View style={[AL.headerCard, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
+        <View style={{ flex: 1 }}>
+          <ThemedText style={AL.headerTitle}>Audit Trail</ThemedText>
+          <ThemedText style={[AL.headerSub, { color: theme.textSecondary }]}>System activity and access logs</ThemedText>
+        </View>
+        <View style={[AL.riskBadge, { backgroundColor: riskyActions > 0 ? `${theme.error}15` : `${theme.success}15` }]}>
+          <Ionicons name={riskyActions > 0 ? 'warning' : 'shield-checkmark'} size={16} color={riskyActions > 0 ? theme.error : theme.success} />
+          <ThemedText style={[AL.riskText, { color: riskyActions > 0 ? theme.error : theme.success }]}>
+            {riskyActions > 0 ? `${riskyActions} RISKS` : 'SECURE'}
+          </ThemedText>
+        </View>
+      </View>
+
+      <View style={AL.list}>
+        {events.length === 0 && (
+          <ThemedText style={{ textAlign: 'center', opacity: 0.5, padding: 20 }}>No audit logs found.</ThemedText>
+        )}
+        {events.map((ev: any, idx: number) => {
+          const color = actionColor(ev.action);
+          return (
+            <View key={ev._id || idx} style={[AL.logCard, { borderColor: theme.borderPrimary, backgroundColor: theme.bgSecondary }]}>
+              <View style={AL.logTop}>
+                <View style={[AL.actionBadge, { backgroundColor: `${color}15` }]}>
+                  <ThemedText style={[AL.actionText, { color }]}>{actionLabel(ev.action)}</ThemedText>
+                </View>
+                <ThemedText style={[AL.timeText, { color: theme.textTertiary }]}>{new Date(ev.createdAt).toLocaleString()}</ThemedText>
+              </View>
+              
+              <View style={AL.logMetaRow}>
+                <View style={AL.metaItem}>
+                  <Ionicons name="person-outline" size={14} color={theme.textSecondary} />
+                  <ThemedText style={[AL.metaText, { color: theme.textPrimary }]}>{ev.userId?.name || 'System'}</ThemedText>
+                </View>
+                <View style={AL.metaItem}>
+                  <Ionicons name={deviceIcon(ev.userAgent)} size={14} color={theme.textSecondary} />
+                  <ThemedText style={[AL.metaText, { color: theme.textPrimary }]}>{ev.ip?.replace('::ffff:', '')}</ThemedText>
+                </View>
+              </View>
+              
+              {ev.meta?.request && (
+                <View style={[AL.requestBox, { backgroundColor: theme.bgPrimary }]}>
+                  <ThemedText style={[AL.methodText, { color: theme.accentPrimary }]}>{ev.meta.request.method}</ThemedText>
+                  <ThemedText style={[AL.pathText, { color: theme.textSecondary }]} numberOfLines={1}>{ev.meta.request.path}</ThemedText>
+                </View>
+              )}
+            </View>
+          );
+        })}
       </View>
     </View>
   );
 };
+
+const AL = StyleSheet.create({
+  headerCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 14, borderWidth: 1 },
+  headerTitle: { fontSize: 16, fontWeight: '800' },
+  headerSub: { fontSize: 11, marginTop: 2 },
+  riskBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  riskText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  list: { gap: 12 },
+  logCard: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 10 },
+  logTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  actionBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  actionText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  timeText: { fontSize: 10, fontWeight: '600' },
+  logMetaRow: { flexDirection: 'row', gap: 16 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaText: { fontSize: 12, fontWeight: '600' },
+  requestBox: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8, borderRadius: 8 },
+  methodText: { fontSize: 10, fontWeight: '800' },
+  pathText: { flex: 1, fontSize: 11, fontFamily: 'monospace' },
+});
+
+const FinancialDashboardRenderer = ({ data, theme }: { data: any; theme: any }) => {
+  const summary = data?.summary || {};
+  const prof = data?.profitability || {};
+  const tax = data?.tax || {};
+  const pModes = data?.cashFlow?.paymentModes || [];
+  const recs = data?.recommendations?.recommendations || [];
+  const credit = data?.credit?.emiAnalytics || [];
+
+  const fmt = (v?: number) => {
+    if (v === undefined || v === null) return '—';
+    const isNeg = v < 0;
+    const absV = Math.abs(v);
+    let str = '';
+    if (absV >= 100000) str = `₹${(absV / 100000).toFixed(1)}L`;
+    else if (absV >= 1000) str = `₹${(absV / 1000).toFixed(1)}K`;
+    else str = `₹${absV}`;
+    return isNeg ? `-${str}` : str;
+  };
+
+  const pieData = pModes.map((p: any) => ({
+    label: p.name.toUpperCase(),
+    value: p.value
+  }));
+
+  const recColor = (impact: string) => {
+    if (impact === 'high') return theme.error;
+    if (impact === 'medium') return theme.warning;
+    return theme.info;
+  };
+
+  return (
+    <View style={{ gap: 16, marginTop: 8 }}>
+      {/* Summary Row */}
+      <View style={FD.row}>
+        <View style={[FD.metricCard, { backgroundColor: theme.bgSecondary, borderTopColor: theme.success }]}>
+          <ThemedText style={FD.metricLabel}>REVENUE</ThemedText>
+          <ThemedText style={FD.metricValue}>{fmt(summary.revenue?.value)}</ThemedText>
+          {summary.revenue?.growth ? <ThemedText style={[FD.metricSub, { color: theme.success }]}>+{summary.revenue.growth}% vs last</ThemedText> : null}
+        </View>
+        <View style={[FD.metricCard, { backgroundColor: theme.bgSecondary, borderTopColor: theme.error }]}>
+          <ThemedText style={FD.metricLabel}>EXPENSES</ThemedText>
+          <ThemedText style={FD.metricValue}>{fmt(summary.expenses?.value)}</ThemedText>
+          {summary.expenses?.growth ? <ThemedText style={[FD.metricSub, { color: theme.error }]}>+{summary.expenses.growth}% vs last</ThemedText> : null}
+        </View>
+      </View>
+
+      <View style={[FD.metricCard, { backgroundColor: theme.bgSecondary, borderTopColor: theme.accentPrimary, paddingVertical: 20 }]}>
+        <ThemedText style={FD.metricLabel}>NET PROFIT</ThemedText>
+        <ThemedText style={[FD.metricValue, { fontSize: 32, color: summary.profit?.value >= 0 ? theme.accentPrimary : theme.error }]}>
+          {fmt(summary.profit?.value)}
+        </ThemedText>
+        <View style={[FD.profitBadge, { backgroundColor: summary.profit?.value >= 0 ? `${theme.accentPrimary}20` : `${theme.error}20` }]}>
+          <ThemedText style={[FD.profitMargin, { color: summary.profit?.value >= 0 ? theme.accentPrimary : theme.error }]}>
+            Margin: {summary.profit?.margin ?? prof.marginPercent?.toFixed(1) ?? '0'}%
+          </ThemedText>
+        </View>
+      </View>
+
+      {/* Financial Details */}
+      <View style={[FD.detailsBox, { backgroundColor: theme.bgSecondary, borderColor: theme.borderPrimary }]}>
+        <View style={FD.detailRow}>
+          <ThemedText style={FD.detailLabel}>Gross Profit</ThemedText>
+          <ThemedText style={FD.detailValue}>{fmt(prof.grossProfit)}</ThemedText>
+        </View>
+        <View style={[FD.detailRow, { borderTopWidth: 1, borderTopColor: theme.borderPrimary, paddingTop: 10 }]}>
+          <ThemedText style={FD.detailLabel}>Cost of Goods Sold (COGS)</ThemedText>
+          <ThemedText style={FD.detailValue}>{fmt(prof.costOfGoodsSold)}</ThemedText>
+        </View>
+        <View style={[FD.detailRow, { borderTopWidth: 1, borderTopColor: theme.borderPrimary, paddingTop: 10 }]}>
+          <ThemedText style={FD.detailLabel}>Tax Liability (Net Payable)</ThemedText>
+          <ThemedText style={[FD.detailValue, { color: tax.netPayable > 0 ? theme.error : theme.success }]}>{fmt(tax.netPayable)}</ThemedText>
+        </View>
+      </View>
+
+      {/* Payment Modes Chart */}
+      {pieData.length > 0 && (
+        <AppChart
+          title="Payment Distribution"
+          subtitle="Cash flow by payment mode"
+          type="pie"
+          data={pieData}
+          color={theme.accentPrimary}
+          height={180}
+        />
+      )}
+
+      {/* Credit Portfolio (if active) */}
+      {credit.length > 0 && (
+        <View style={[FD.section, { borderColor: theme.borderPrimary, backgroundColor: theme.bgSecondary }]}>
+          <ThemedText style={FD.sectionTitle}>Credit Portfolio (EMI)</ThemedText>
+          {credit.map((c: any, idx: number) => (
+            <View key={idx} style={FD.creditRow}>
+              <View>
+                <ThemedText style={FD.creditLabel}>Total Portfolio</ThemedText>
+                <ThemedText style={FD.creditValue}>{fmt(c.totalPortfolio)}</ThemedText>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <ThemedText style={FD.creditLabel}>Collection Eff.</ThemedText>
+                <ThemedText style={[FD.creditValue, { color: theme.success }]}>{(c.collectionEfficiency * 100).toFixed(0)}%</ThemedText>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Recommendations */}
+      {recs.length > 0 && (
+        <View style={FD.recList}>
+          <ThemedText style={[FD.sectionTitle, { marginLeft: 4 }]}>AI Financial Advice</ThemedText>
+          {recs.map((r: any, idx: number) => {
+            const color = recColor(r.impact);
+            return (
+              <View key={idx} style={[FD.recCard, { backgroundColor: `${color}10`, borderColor: `${color}30` }]}>
+                <View style={[FD.recIconWrap, { backgroundColor: color }]}>
+                  <Ionicons name="bulb-outline" size={16} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={[FD.recAction, { color }]}>{r.action}</ThemedText>
+                  <ThemedText style={[FD.recReason, { color: theme.textSecondary }]}>{r.reason}</ThemedText>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+};
+
+const FD = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 12 },
+  metricCard: { flex: 1, padding: 16, borderRadius: 16, borderTopWidth: 4, alignItems: 'center', justifyContent: 'center' },
+  metricLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, opacity: 0.7, marginBottom: 4 },
+  metricValue: { fontSize: 24, fontWeight: '800', fontFamily: 'Plus Jakarta Sans' },
+  metricSub: { fontSize: 10, fontWeight: '700', marginTop: 4 },
+  profitBadge: { marginTop: 8, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  profitMargin: { fontSize: 12, fontWeight: '800' },
+  detailsBox: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 10 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  detailLabel: { fontSize: 12, fontWeight: '600', opacity: 0.8 },
+  detailValue: { fontSize: 14, fontWeight: '800' },
+  section: { borderRadius: 16, borderWidth: 1, padding: 16 },
+  sectionTitle: { fontSize: 14, fontWeight: '800', marginBottom: 12 },
+  creditRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  creditLabel: { fontSize: 11, fontWeight: '700', opacity: 0.6, marginBottom: 2 },
+  creditValue: { fontSize: 18, fontWeight: '800' },
+  recList: { gap: 10, marginTop: 8 },
+  recCard: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: 16, borderWidth: 1 },
+  recIconWrap: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  recAction: { fontSize: 13, fontWeight: '800', marginBottom: 2 },
+  recReason: { fontSize: 11, lineHeight: 16 },
+});
+
+const LM = StyleSheet.create({
+  statusCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 14, borderWidth: 1 },
+  statusIcon: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  statusTitle: { fontSize: 14, fontWeight: '800' },
+  statusSub: { fontSize: 11, marginTop: 2 },
+  totalBadge: { alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  totalBadgeTxt: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  totalBadgeLbl: { fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.8)', letterSpacing: 0.5 },
+  countRow: { flexDirection: 'row', gap: 10 },
+  countCard: { flex: 1, alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, gap: 3 },
+  countVal: { fontSize: 22, fontWeight: '800' },
+  countLbl: { fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
+  section: { gap: 6 },
+  secRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 4 },
+  secDot: { width: 8, height: 8, borderRadius: 4 },
+  secTitle: { fontSize: 13, fontWeight: '800', color: '#1F2937' },
+  alertRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 10, borderLeftWidth: 3, borderRadius: 6, backgroundColor: '#FFFBEB' },
+  alertMsg: { flex: 1, fontSize: 12, fontWeight: '600', color: '#374151' },
+  alertTime: { fontSize: 10, color: '#9CA3AF', fontWeight: '600' },
+  moreHint: { fontSize: 11, color: '#6366F1', fontWeight: '700', textAlign: 'center', paddingVertical: 4 },
+  evRow: { flexDirection: 'row', gap: 10 },
+  evLineCol: { alignItems: 'center', width: 16 },
+  evDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
+  evLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 3 },
+  evCard: { flex: 1, paddingBottom: 14 },
+  evCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
+  evActionPill: { flex: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  evActionTxt: { fontSize: 11, fontWeight: '700', color: '#4F46E5' },
+  evTime: { fontSize: 10, color: '#9CA3AF', fontWeight: '600' },
+  evMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  evMetaTxt: { fontSize: 10, color: '#9CA3AF' },
+  evMetaDot: { color: '#D1D5DB', fontSize: 10 },
+});
+
+
 
 
 
@@ -499,24 +901,26 @@ export default function AdminAnalyticsScreen({ slug }: Props) {
           </View>
         </View>
 
-        <View style={styles.metricGrid}>
-          {(loading ? Array.from({ length: 4 }) : topMetrics.slice(0, 4)).map((metric: any, idx) => (
-            <ThemedView key={metric?.label ?? `skeleton-${idx}`} style={[styles.metricCard, { borderColor: theme.borderPrimary, ...getElevation(1, theme) }]}>
-              {loading ? (
-                <>
-                  <View style={[styles.skeletonLineShort, { backgroundColor: theme.bgPrimary }]} />
-                  <View style={[styles.skeletonLineLong, { backgroundColor: theme.bgPrimary }]} />
-                </>
-              ) : (
-                <>
-                  <View style={styles.cardAccent} />
-                  <ThemedText style={[styles.metricLabel, { color: theme.textSecondary }]}>{metric.label}</ThemedText>
-                  <ThemedText style={styles.metricValue}>{metric.value}</ThemedText>
-                </>
-              )}
-            </ThemedView>
-          ))}
-        </View>
+        {slug !== 'live-monitor' && slug !== 'audit-logs' && slug !== 'finance-main' && slug !== 'cash-flow' && (
+          <View style={styles.metricGrid}>
+            {(loading ? Array.from({ length: 4 }) : topMetrics.slice(0, 4)).map((metric: any, idx) => (
+              <ThemedView key={metric?.label ?? `skeleton-${idx}`} style={[styles.metricCard, { borderColor: theme.borderPrimary, ...getElevation(1, theme) }]}>
+                {loading ? (
+                  <>
+                    <View style={[styles.skeletonLineShort, { backgroundColor: theme.bgPrimary }]} />
+                    <View style={[styles.skeletonLineLong, { backgroundColor: theme.bgPrimary }]} />
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.cardAccent} />
+                    <ThemedText style={[styles.metricLabel, { color: theme.textSecondary }]}>{metric.label}</ThemedText>
+                    <ThemedText style={styles.metricValue}>{metric.value}</ThemedText>
+                  </>
+                )}
+              </ThemedView>
+            ))}
+          </View>
+        )}
 
 
         {loading ? (
@@ -527,13 +931,15 @@ export default function AdminAnalyticsScreen({ slug }: Props) {
           </ThemedView>
         ) : (
           <>
-            <AppChart
-              title={`${config.title} Trend`}
-              subtitle="Visual summary of top metrics"
-              type={chartType}
-              data={chartData}
-              noDataMessage="No chartable metrics for selected filters."
-            />
+            {slug !== 'live-monitor' && slug !== 'audit-logs' && slug !== 'finance-main' && slug !== 'cash-flow' && (
+              <AppChart
+                title={`${config.title} Trend`}
+                subtitle="Visual summary of top metrics"
+                type={chartType}
+                data={chartData}
+                noDataMessage="No chartable metrics for selected filters."
+              />
+            )}
             {slug === 'branch-compare' ? (
               <BranchComparisonRenderer data={result} theme={theme} groupBy={filters.groupBy || 'revenue'} />
             ) : slug === 'staff-performance' || slug === 'operational' ? (
@@ -545,7 +951,11 @@ export default function AdminAnalyticsScreen({ slug }: Props) {
             ) : slug === 'debtor-aging' ? (
               <DebtorAgingRenderer data={result} theme={theme} />
             ) : slug === 'live-monitor' ? (
-              <SecurityPulseRenderer data={result} theme={theme} />
+              <LiveMonitorRenderer data={result?.data ?? result} theme={theme} />
+            ) : slug === 'audit-logs' ? (
+              <AuditLogsRenderer data={result?.data ?? result} theme={theme} />
+            ) : slug === 'finance-main' ? (
+              <FinancialDashboardRenderer data={result?.data ?? result} theme={theme} />
             ) : (
 
               <View style={styles.metricGrid}>
